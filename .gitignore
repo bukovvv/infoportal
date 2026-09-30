@@ -1,0 +1,25 @@
+# zależności i buildy
+node_modules/
+web/dist/
+public/assets/
+public/index.html
+
+# dane lokalne
+server/storage/*
+!server/storage/.gitkeep
+server/config/local.php
+server/config/admin-password.php
+
+# stary kod — tylko źródła
+legacy/node_modules/
+legacy/deploy/
+legacy/public/assets/dist/
+legacy/public/data/*.json
+legacy/storage/*.sqlite*
+legacy/config/admin-password.php
+
+# paczki wdrożeniowe
+release/
+
+.DS_Store
+Thumbs.db

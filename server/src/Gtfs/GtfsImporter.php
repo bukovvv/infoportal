@@ -1,0 +1,384 @@
+<?php
+
+declare(strict_types=1);
+
+namespace KwInfo\Gtfs;
+
+use KwInfo\Clock;
+use KwInfo\Config;
+use KwInfo\Net\HttpClient;
+use PDO;
+use RuntimeException;
+
+/**
+ * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy jednego przewoźnika i buduje gtfs.sqlite.
+ * Nowa baza zastępuje starą dopiero po pozytywnej walidacji.
+ */
+final class GtfsImporter
+{
+    /** @var callable(string): void */
+    private $log;
+
+    public function __construct(?callable $log = null)
+    {
+        $this->log = $log ?? static function (string $line): void {
+        };
+    }
+
+    /** @return array<string, mixed> */
+    public function run(bool $force = false, ?string $localFile = null): array
+    {
+        $storage = Config::path('storage');
+        if (!is_dir($storage)) {
+            mkdir($storage, 0775, true);
+        }
+        $zipPath = $localFile ?? $storage . '/polish_trains.zip';
+        if ($localFile === null) {
+            $downloaded = $this->download($zipPath, $force);
+            if (!$downloaded && !$force && is_file(Config::path('gtfs_db'))) {
+                ($this->log)('Rozkład bez zmian od ostatniego importu.');
+                return ['skipped' => true];
+            }
+        }
+
+        $started = microtime(true);
+        $tmp = $storage . '/gtfs.building.sqlite';
+        @unlink($tmp);
+        $stats = $this->build(new GtfsSource($zipPath), $tmp);
+        $this->validate($stats);
+        $this->swap($tmp, Config::path('gtfs_db'));
+        $stats['seconds'] = round(microtime(true) - $started, 1);
+        ($this->log)(sprintf(
+            'Zaimportowano: %d kursów, %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
+            $stats['trips'], $stats['stations'], $stats['shapes'], $stats['validFrom'], $stats['validUntil'], $stats['seconds']
+        ));
+
+        return $stats;
+    }
+
+    private function download(string $zipPath, bool $force): bool
+    {
+        $metaFile = Config::path('storage') . '/gtfs-download.json';
+        $meta = is_file($metaFile) ? (json_decode((string) file_get_contents($metaFile), true) ?: []) : [];
+        $headers = [];
+        if (!$force && is_file($zipPath) && !empty($meta['lastModified'])) {
+            $headers[] = 'If-Modified-Since: ' . $meta['lastModified'];
+        }
+        ($this->log)('Pobieranie ' . Config::get('gtfs_url') . ' …');
+        $part = $zipPath . '.part';
+        $response = HttpClient::get((string) Config::get('gtfs_url'), $headers, 300, $part);
+        if ($response['status'] === 304) {
+            @unlink($part);
+            return false;
+        }
+        if ($response['status'] !== 200 || filesize($part) < 1_000_000) {
+            @unlink($part);
+            throw new RuntimeException('Pobieranie rozkładu nie powiodło się (HTTP ' . $response['status'] . ').');
+        }
+        @unlink($zipPath);
+        rename($part, $zipPath);
+        file_put_contents($metaFile, json_encode([
+            'lastModified' => $response['headers']['last-modified'] ?? null,
+            'downloadedAt' => Clock::now()->format(DATE_ATOM),
+        ]));
+
+        return true;
+    }
+
+    /** @return array<string, mixed> */
+    private function build(GtfsSource $src, string $path): array
+    {
+        $agency = (string) Config::get('agency_id');
+        $pdo = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $pdo->exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;');
+        $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
+        $pdo->beginTransaction();
+
+        // routes
+        $routes = [];
+        $insRoute = $pdo->prepare('INSERT INTO routes VALUES (?,?,?,?,?,?)');
+        foreach ($src->rows('routes.txt') as $r) {
+            if ($r['agency_id'] !== $agency) {
+                continue;
+            }
+            $routes[$r['route_id']] = true;
+            $insRoute->execute([$r['route_id'], $r['route_short_name'], $r['route_long_name'], (int) $r['route_type'],
+                $r['route_color'] !== '' ? '#' . $r['route_color'] : null, $r['route_text_color'] !== '' ? '#' . $r['route_text_color'] : null]);
+        }
+        ($this->log)('Linie: ' . count($routes));
+
+        // trips
+        $trips = [];
+        $services = [];
+        $shapesNeeded = [];
+        $insTrip = $pdo->prepare('INSERT INTO trips VALUES (?,?,?,?,?,?,?,?,?,?)');
+        $insNumber = $pdo->prepare('INSERT OR IGNORE INTO trip_numbers VALUES (?,?)');
+        $busRoutes = [];
+        foreach ($pdo->query('SELECT route_id, type FROM routes') as $row) {
+            $busRoutes[$row['route_id']] = (int) $row['type'] === 3;
+        }
+        foreach ($src->rows('trips.txt') as $t) {
+            if (!isset($routes[$t['route_id']])) {
+                continue;
+            }
+            $id = $t['trip_id'];
+            $trips[$id] = true;
+            $services[$t['service_id']] = true;
+            if ($t['shape_id'] !== '') {
+                $shapesNeeded[$t['shape_id']] = true;
+            }
+            $short = $t['trip_short_name'] !== '' ? $t['trip_short_name'] : ($t['plk_train_number'] ?? '');
+            $insTrip->execute([$id, $t['route_id'], $t['service_id'], $t['shape_id'] ?: null, $short, $t['trip_headsign'],
+                $t['plk_category_code'] ?? null, ($t['plk_train_name'] ?? '') ?: null,
+                preg_replace('/_LEG\d+$/', '', $id), $busRoutes[$t['route_id']] ? 1 : 0]);
+            foreach (self::splitNumbers($short) as $number) {
+                $insNumber->execute([$number, $id]);
+            }
+        }
+        ($this->log)('Kursy: ' . count($trips));
+
+        // stops → stacje (poziom stacji nadrzędnej)
+        $stops = [];
+        foreach ($src->rows('stops.txt') as $s) {
+            $stops[$s['stop_id']] = $s;
+        }
+        $stationOf = static function (string $stopId) use ($stops): string {
+            $parent = $stops[$stopId]['parent_station'] ?? '';
+            return $parent !== '' && isset($stops[$parent]) ? $parent : $stopId;
+        };
+
+        // stop_times (największy plik — strumieniowo)
+        $stations = [];
+        $insStop = $pdo->prepare('INSERT INTO stop_times VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+        $rows = 0;
+        foreach ($src->rows('stop_times.txt') as $s) {
+            if (!isset($trips[$s['trip_id']])) {
+                continue;
+            }
+            $arr = Clock::parseGtfsTime($s['arrival_time']);
+            $dep = Clock::parseGtfsTime($s['departure_time']);
+            $arr ??= $dep;
+            $dep ??= $arr;
+            $stationId = $stationOf($s['stop_id']);
+            if (isset($stops[$stationId])) {
+                $stations[$stationId] = $stops[$stationId];
+            }
+            $insStop->execute([$s['trip_id'], (int) $s['stop_sequence'], $stationId, $s['stop_id'], $arr, $dep,
+                $s['shape_dist_traveled'] !== '' ? (float) $s['shape_dist_traveled'] : null,
+                ($s['platform'] ?? '') ?: null, ($s['track'] ?? '') ?: null, (int) ($s['pickup_type'] ?: 0), (int) ($s['drop_off_type'] ?: 0)]);
+            $rows++;
+        }
+        ($this->log)('Postoje: ' . $rows);
+
+        $insStation = $pdo->prepare('INSERT INTO stations (id, name, lat, lon) VALUES (?,?,?,?)');
+        foreach ($stations as $st) {
+            $insStation->execute([$st['stop_id'], $st['stop_name'], (float) $st['stop_lat'], (float) $st['stop_lon']]);
+        }
+        unset($stops);
+
+        // kalendarz
+        $insDate = $pdo->prepare('INSERT OR IGNORE INTO service_dates VALUES (?,?)');
+        $removed = [];
+        if ($src->has('calendar.txt')) {
+            foreach ($src->rows('calendar.txt') as $c) {
+                if (!isset($services[$c['service_id']])) {
+                    continue;
+                }
+                $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                for ($d = (int) $c['start_date']; $d <= (int) $c['end_date']; $d = Clock::addDays($d, 1)) {
+                    if ($c[$days[(int) Clock::midnight($d)->format('N') - 1]] === '1') {
+                        $insDate->execute([$c['service_id'], $d]);
+                    }
+                }
+            }
+        }
+        foreach ($src->rows('calendar_dates.txt') as $c) {
+            if (!isset($services[$c['service_id']])) {
+                continue;
+            }
+            if ($c['exception_type'] === '1') {
+                $insDate->execute([$c['service_id'], (int) $c['date']]);
+            } else {
+                $removed[] = [$c['service_id'], (int) $c['date']];
+            }
+        }
+        $del = $pdo->prepare('DELETE FROM service_dates WHERE service_id = ? AND date = ?');
+        foreach ($removed as $r) {
+            $del->execute($r);
+        }
+
+        // kształty — upraszczane, z zachowaniem odległości do estymacji pozycji
+        $insShape = $pdo->prepare('INSERT INTO shapes VALUES (?,?)');
+        $current = null;
+        $points = [];
+        $flush = function () use (&$current, &$points, $insShape): void {
+            if ($current !== null && count($points) > 1) {
+                usort($points, static fn (array $a, array $b): int => $a[3] <=> $b[3]);
+                $simplified = self::simplify(array_map(static fn (array $p): array => [$p[0], $p[1], $p[2]], $points), 0.00004);
+                $insShape->execute([$current, json_encode($simplified)]);
+            }
+            $points = [];
+        };
+        foreach ($src->rows('shapes.txt') as $p) {
+            if (!isset($shapesNeeded[$p['shape_id']])) {
+                continue;
+            }
+            if ($p['shape_id'] !== $current) {
+                $flush();
+                $current = $p['shape_id'];
+            }
+            $points[] = [round((float) $p['shape_pt_lat'], 6), round((float) $p['shape_pt_lon'], 6),
+                $p['shape_dist_traveled'] !== '' ? round((float) $p['shape_dist_traveled'], 3) : null, (int) $p['shape_pt_sequence']];
+        }
+        $flush();
+
+        // meta i statystyki
+        $feed = iterator_to_array($src->rows('feed_info.txt'))[0] ?? [];
+        $range = $pdo->query('SELECT MIN(date), MAX(date) FROM service_dates')->fetch(PDO::FETCH_NUM);
+        $otherAgencies = [];
+        foreach ($src->rows('agency.txt') as $a) {
+            if ($a['agency_id'] !== $agency) {
+                $otherAgencies[$a['agency_id']] = true;
+            }
+        }
+        $attribution = [];
+        foreach ($src->rows('attributions.txt') as $a) {
+            if (!isset($otherAgencies[$a['attribution_id'] ?? ''])) {
+                $attribution[] = $a['organization_name'];
+            }
+        }
+        $pdo->commit();
+        $pdo->exec(file_get_contents(__DIR__ . '/indexes.sql'));
+
+        // liczba odjazdów na stacji w najbardziej obciążonym dniu (do sortowania podpowiedzi)
+        $busiest = (int) $pdo->query('SELECT sd.date FROM service_dates sd JOIN trips t ON t.service_id = sd.service_id GROUP BY sd.date ORDER BY COUNT(*) DESC LIMIT 1')->fetchColumn();
+        $pdo->prepare('UPDATE stations SET daily = (SELECT COUNT(*) FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ? WHERE st.station_id = stations.id)')->execute([$busiest]);
+        $lines = [];
+        foreach ($pdo->query('SELECT DISTINCT st.station_id, r.short_name FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN routes r ON r.route_id = t.route_id WHERE r.type = 2 ORDER BY r.short_name', PDO::FETCH_NUM) as [$stationId, $line]) {
+            $lines[$stationId][] = $line;
+        }
+        $updLines = $pdo->prepare('UPDATE stations SET lines = ? WHERE id = ?');
+        foreach ($lines as $stationId => $list) {
+            $updLines->execute([implode(',', $list), $stationId]);
+        }
+
+        $stats = [
+            'feedVersion' => $feed['feed_version'] ?? '',
+            'validFrom' => Clock::isoDate((int) ($range[0] ?? 0)),
+            'validUntil' => Clock::isoDate((int) ($range[1] ?? 0)),
+            'importedAt' => Clock::now()->format(DATE_ATOM),
+            'agency' => $agency,
+            'routes' => (int) $pdo->query('SELECT COUNT(*) FROM routes')->fetchColumn(),
+            'trips' => (int) $pdo->query('SELECT COUNT(*) FROM trips')->fetchColumn(),
+            'stopTimes' => (int) $pdo->query('SELECT COUNT(*) FROM stop_times')->fetchColumn(),
+            'stations' => (int) $pdo->query('SELECT COUNT(*) FROM stations')->fetchColumn(),
+            'shapes' => (int) $pdo->query('SELECT COUNT(*) FROM shapes')->fetchColumn(),
+            'attribution' => $attribution,
+            'source' => Config::get('gtfs_url'),
+        ];
+        $insMeta = $pdo->prepare('INSERT INTO meta VALUES (?,?)');
+        foreach ($stats as $key => $value) {
+            $insMeta->execute([$key, is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : (string) $value]);
+        }
+        $pdo->exec('ANALYZE');
+        $pdo = null;
+
+        return $stats;
+    }
+
+    /** @param array<string, mixed> $stats */
+    private function validate(array $stats): void
+    {
+        $today = Clock::isoDate(Clock::today());
+        if ($stats['trips'] < 100 || $stats['stations'] < 50 || $stats['stopTimes'] < 2000) {
+            throw new RuntimeException('Nowy rozkład wygląda na niekompletny — pozostawiono poprzedni.');
+        }
+        if ($stats['validUntil'] < $today) {
+            throw new RuntimeException('Nowy rozkład jest już nieaktualny (do ' . $stats['validUntil'] . ') — pozostawiono poprzedni.');
+        }
+    }
+
+    private function swap(string $tmp, string $target): void
+    {
+        if (@rename($tmp, $target)) {
+            return;
+        }
+        // Windows nie nadpisuje otwartego pliku przez rename
+        for ($i = 0; $i < 5; $i++) {
+            @unlink($target);
+            if (@rename($tmp, $target)) {
+                return;
+            }
+            usleep(200_000);
+        }
+        throw new RuntimeException('Nie udało się podmienić pliku bazy rozkładu.');
+    }
+
+    /** „77610/1” → ['77610', '77611'] */
+    public static function splitNumbers(string $value): array
+    {
+        $parts = array_values(array_filter(array_map('trim', explode('/', $value)), static fn (string $p): bool => $p !== ''));
+        if ($parts === []) {
+            return [];
+        }
+        $base = $parts[0];
+        $out = [$base];
+        foreach (array_slice($parts, 1) as $part) {
+            $out[] = strlen($part) < strlen($base) ? substr($base, 0, strlen($base) - strlen($part)) . $part : $part;
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * Douglas–Peucker na [lat, lon, dist].
+     * @param array<int, array{0: float, 1: float, 2: float|null}> $pts
+     * @return array<int, array{0: float, 1: float, 2: float|null}>
+     */
+    public static function simplify(array $pts, float $eps): array
+    {
+        $n = count($pts);
+        if ($n < 3) {
+            return $pts;
+        }
+        $keep = array_fill(0, $n, false);
+        $keep[0] = $keep[$n - 1] = true;
+        $stack = [[0, $n - 1]];
+        while ($stack !== []) {
+            [$a, $b] = array_pop($stack);
+            $max = 0.0;
+            $idx = -1;
+            [$ax, $ay] = $pts[$a];
+            [$bx, $by] = $pts[$b];
+            $dx = $bx - $ax;
+            $dy = $by - $ay;
+            $len = $dx * $dx + $dy * $dy;
+            for ($i = $a + 1; $i < $b; $i++) {
+                [$px, $py] = $pts[$i];
+                if ($len == 0.0) {
+                    $d = hypot($px - $ax, $py - $ay);
+                } else {
+                    $t = max(0.0, min(1.0, (($px - $ax) * $dx + ($py - $ay) * $dy) / $len));
+                    $d = hypot($px - ($ax + $t * $dx), $py - ($ay + $t * $dy));
+                }
+                if ($d > $max) {
+                    $max = $d;
+                    $idx = $i;
+                }
+            }
+            if ($max > $eps && $idx > 0) {
+                $keep[$idx] = true;
+                $stack[] = [$a, $idx];
+                $stack[] = [$idx, $b];
+            }
+        }
+        $out = [];
+        foreach ($pts as $i => $p) {
+            if ($keep[$i]) {
+                $out[] = $p;
+            }
+        }
+
+        return $out;
+    }
+}

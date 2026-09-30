@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+// Front controller API. Katalog server/ leży obok public/ (zalecane) albo wewnątrz katalogu dokumentów
+// (hosting bez zmiany docroot — wtedy chroniony przez .htaccess).
+$server = getenv('KW_SERVER_DIR') ?: null;
+foreach ([dirname(__DIR__, 2) . '/server', dirname(__DIR__) . '/server'] as $candidate) {
+    if ($server === null && is_file($candidate . '/bootstrap.php')) {
+        $server = $candidate;
+    }
+}
+if ($server === null) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo '{"error":"Brak katalogu server/."}';
+    exit;
+}
+
+require $server . '/bootstrap.php';
+/** @var KwInfo\Http\Router $router */
+$router = require $server . '/routes.php';
+
+$path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+$path = preg_replace('#^.*?/api(?=/|$)#', '', $path) ?? '/';
+$router->dispatch((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), $path)->send();

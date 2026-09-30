@@ -1,0 +1,7 @@
+/node_modules/
+/public/assets/dist/
+.DS_Store
+Thumbs.db
+/storage/*.sqlite*
+/config/admin-password.php
+/deploy/
