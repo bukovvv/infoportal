@@ -15,7 +15,7 @@ const tag = computed(() => {
   if (props.skipped) return { cls: 'tag-error', icon: 'do_not_disturb_on', text: 'Bez postoju' }
   if (props.delay === null || props.delay === undefined) {
     return props.estimated
-      ? { cls: 'tag-est', icon: 'route', text: 'Estymowana' }
+      ? { cls: 'tag-est', icon: 'route', text: 'Wg rozkładu' }
       : { cls: 'tag-neutral', icon: 'schedule', text: 'Rozkład' }
   }
   if (props.delay >= 2) return { cls: 'tag-delay', icon: 'schedule', text: `+${props.delay} min` }

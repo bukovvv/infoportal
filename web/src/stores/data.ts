@@ -4,16 +4,16 @@ import { api } from '@/api/client'
 import type { Live, LiveTrain, Notice, Station, Status } from '@/api/types'
 import { normalize } from '@/utils/format'
 
-/** Uruchamia funkcję cyklicznie, wstrzymując ją, gdy karta jest w tle. */
+/** Uruchamia funkcję od razu, potem cyklicznie — kolejne odświeżenia wstrzymuje, gdy karta jest w tle. */
 function poll(fn: () => Promise<void>, everyMs: number) {
   let timer: number | undefined
-  const tick = async () => {
+  const tick = async (force = false) => {
     window.clearTimeout(timer)
-    if (document.visibilityState === 'visible') await fn().catch(() => undefined)
+    if (force || document.visibilityState === 'visible') await fn().catch(() => undefined)
     timer = window.setTimeout(tick, everyMs)
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void tick() })
-  void tick()
+  void tick(true)
 }
 
 export const useStations = defineStore('stations', () => {

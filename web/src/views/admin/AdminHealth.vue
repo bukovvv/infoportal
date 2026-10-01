@@ -69,9 +69,9 @@ const kb = (n: number) => (n > 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : 
       <v-card color="surface-container-low" rounded="xl" prepend-icon="satellite_alt" title="Dane na żywo">
         <v-card-text class="text-body-medium">
           <p>Wygenerowane: {{ dateTime(health.live.generatedAt) }} ({{ health.live.ageSeconds ?? '–' }} s temu)</p>
-          <p>GPS: {{ health.live.gps?.ok ? `${health.live.gps.provider}, ${health.live.gps.count} pozycji` : `błąd — ${health.live.gps?.error ?? 'brak danych'}` }}</p>
+          <p>GPS: {{ health.live.gps?.enabled === false ? 'wyłączony (gps_enabled w konfiguracji) — pozycje z rozkładu' : health.live.gps?.ok ? `${health.live.gps.provider}, ${health.live.gps.count} pozycji` : `błąd — ${health.live.gps?.error ?? 'brak danych'}` }}</p>
           <p>GTFS-RT: {{ health.live.rt?.ok ? `${health.live.rt.count} kursów, feed ${dateTime(health.live.rt.feedTime)}` : `błąd — ${health.live.rt?.error ?? 'brak danych'}` }}</p>
-          <p>Pociągi na mapie: {{ health.live.trains }} (z GPS: {{ health.live.gpsTrains }})</p>
+          <p>Pociągi na mapie: {{ health.live.trains }} (z opóźnieniem PLK: {{ health.live.rtTrains ?? 0 }})</p>
         </v-card-text>
       </v-card>
       <v-card color="surface-container-low" rounded="xl" prepend-icon="dns" title="Serwer">

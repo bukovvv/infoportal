@@ -182,6 +182,8 @@ export interface Status {
     ageSeconds: number | null
     trains: number
     gpsTrains: number
+    rtTrains?: number
+    gpsEnabled?: boolean
     gps: (SourceState & { provider: string | null; count: number }) | null
     rt: (SourceState & { count: number; feedTime: string | null }) | null
   }

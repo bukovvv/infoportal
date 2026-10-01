@@ -12,16 +12,23 @@ const rows = computed(() => {
   const rt = st.live.rt
   const tt = st.timetable
   return [
-    {
-      icon: 'satellite_alt',
-      title: 'Pozycje GPS',
-      text: gps?.ok ? `${st.live.gpsTrains} ${plural(st.live.gpsTrains, 'pociąg', 'pociągi', 'pociągów')} · ${gps.provider ?? ''}` : 'Chwilowo niedostępne — pokazujemy pozycje z rozkładu',
-      ok: !!gps?.ok && st.live.ok,
-    },
+    st.live.gpsEnabled === false
+      ? {
+          icon: 'route',
+          title: 'Pozycje pociągów',
+          text: `Wyliczane z rozkładu i opóźnień PKP PLK · ${st.live.trains} ${plural(st.live.trains, 'pociąg', 'pociągi', 'pociągów')} w ruchu`,
+          ok: st.live.ok,
+        }
+      : {
+          icon: 'satellite_alt',
+          title: 'Pozycje GPS',
+          text: gps?.ok ? `${st.live.gpsTrains} ${plural(st.live.gpsTrains, 'pociąg', 'pociągi', 'pociągów')} · ${gps.provider ?? ''}` : 'Chwilowo niedostępne — pokazujemy pozycje z rozkładu',
+          ok: !!gps?.ok && st.live.ok,
+        },
     {
       icon: 'schedule',
       title: 'Opóźnienia (PKP PLK)',
-      text: rt?.ok ? `${rt.count} ${plural(rt.count, 'kurs', 'kursy', 'kursów')} z danymi na żywo` : 'Chwilowo niedostępne',
+      text: rt?.ok ? `${rt.count} ${plural(rt.count, 'kurs', 'kursy', 'kursów')} z danymi na żywo` : 'Chwilowo niedostępne — pokazujemy godziny z rozkładu',
       ok: !!rt?.ok && st.live.ok,
     },
     {
@@ -53,7 +60,7 @@ const rows = computed(() => {
         </template>
       </v-list-item>
     </v-list>
-    <p v-if="s?.timetable.attribution?.length" class="text-body-small muted px-4 pb-4">Źródła: {{ s.timetable.attribution.join(' · ') }}, Mapa BILKOM.</p>
+    <p v-if="s?.timetable.attribution?.length" class="text-body-small muted px-4 pb-4">Źródła: {{ s.timetable.attribution.join(' · ') }}{{ s.live.gpsEnabled ? ', Mapa BILKOM' : '' }}.</p>
   </v-card>
 </template>
 

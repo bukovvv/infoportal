@@ -177,7 +177,7 @@ final class LiveBuilder
             count(array_filter($trains, static fn (array $t): bool => $t['source'] === 'gps')),
             count(array_filter($trains, static fn (array $t): bool => $t['source'] === 'est')),
             count($unmatched),
-            $gpsSource['ok'] ? $gpsSource['provider'] . ' ' . $gpsSource['count'] : 'błąd (' . $gpsSource['error'] . ')',
+            !$gpsSource['enabled'] ? 'wyłączony' : ($gpsSource['ok'] ? $gpsSource['provider'] . ' ' . $gpsSource['count'] : 'błąd (' . $gpsSource['error'] . ')'),
             $rtSource['ok'] ? $rtSource['count'] . ' kursów' . (!empty($rtSource['notModified']) ? ' (bez zmian)' : '') : 'błąd (' . $rtSource['error'] . ')'
         ));
 
@@ -214,13 +214,16 @@ final class LiveBuilder
     /** @return array{0: array<int, GpsTrain>, 1: array<string, mixed>} */
     private function fetchGps(): array
     {
+        if (!Config::get('gps_enabled')) {
+            return [[], ['enabled' => false, 'ok' => false, 'provider' => null, 'count' => 0, 'fetchedAt' => null, 'error' => null]];
+        }
         $errors = [];
         foreach ([new BilkomMapClient(), new BackupGpsClient()] as $client) {
             try {
                 $trains = $client->trains(self::BOUNDS);
                 $provider = $client instanceof BilkomMapClient ? 'Mapa BILKOM' : BackupGpsClient::PROVIDER;
                 if ($trains !== [] || $client instanceof BackupGpsClient) {
-                    return [$trains, ['ok' => true, 'provider' => $provider, 'count' => count($trains), 'fetchedAt' => Clock::now()->format(DATE_ATOM), 'error' => $errors ? implode('; ', $errors) : null]];
+                    return [$trains, ['enabled' => true, 'ok' => true, 'provider' => $provider, 'count' => count($trains), 'fetchedAt' => Clock::now()->format(DATE_ATOM), 'error' => $errors ? implode('; ', $errors) : null]];
                 }
                 $errors[] = $provider . ': pusta lista';
             } catch (Throwable $e) {
@@ -228,7 +231,7 @@ final class LiveBuilder
             }
         }
 
-        return [[], ['ok' => false, 'provider' => null, 'count' => 0, 'fetchedAt' => null, 'error' => implode('; ', $errors)]];
+        return [[], ['enabled' => true, 'ok' => false, 'provider' => null, 'count' => 0, 'fetchedAt' => null, 'error' => implode('; ', $errors)]];
     }
 
     /** @return array{0: array<string, array<string, mixed>>, 1: array<string, mixed>} */

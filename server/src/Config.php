@@ -42,6 +42,8 @@ final class Config
             'cacert' => $root . '/config/cacert.pem',
             'gtfs_url' => 'https://mkuran.pl/gtfs/polish_trains.zip',
             'gtfs_rt_url' => 'https://mkuran.pl/gtfs/polish_trains/updates.pb',
+            // GPS (Mapa BILKOM + zapas) — wyłączony, bo źródło od dawna nie zwraca pozycji; włączenie: local.php
+            'gps_enabled' => false,
             'backup_gps_url' => 'https://kierownik-plus-v2.jak-ste139.workers.dev/',
             'agency_id' => 'KW',
             'rt_trip_prefix' => 'PLK_KW_',

@@ -8,8 +8,8 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 |---|---|---|
 | Rozkład jazdy | GTFS `polish_trains.zip` z [mkuran.pl](https://mkuran.pl/gtfs/) (PKP PLK), filtr agencji KW | codziennie (CRON) |
 | Opóźnienia, odwołania | GTFS-Realtime mkuran.pl | co ok. 2 min |
-| Pozycje GPS | Mapa BILKOM, zapasowo własny worker GPS | co minutę |
-| Pozycje bez GPS | wyliczane z rozkładu wzdłuż kształtu trasy | co minutę |
+| Pozycje GPS | wyłączone (`gps_enabled`), bo Mapa BILKOM od dawna nie zwraca pozycji | — |
+| Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
 | Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
 
 Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.

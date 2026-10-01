@@ -35,19 +35,20 @@ const routeLine = shallowRef<GeoJSON.Feature | null>(null)
 let map: MlMap | null = null
 
 const keyOf = (t: LiveTrain) => t.key ?? `gps:${t.number}`
-const stateOf = (t: LiveTrain) => (t.source === 'est' && t.delay === null ? 'est' : (t.delay ?? 0) >= 2 ? 'delay' : t.source === 'est' ? 'est' : 'ontime')
+// kolor: opóźnienie znane (PLK lub GPS) → planowo/opóźniony; brak danych na żywo → tylko rozkład
+const stateOf = (t: LiveTrain) => (t.delay === null ? 'est' : t.delay >= 2 ? 'delay' : 'ontime')
 
 const visible = computed(() => {
   const q = normalize(query.value)
   return live.trains
-    .filter((t) => filter.value === 'all' || (filter.value === 'late' ? (t.delay ?? 0) >= 2 : t.source === 'est'))
+    .filter((t) => filter.value === 'all' || (filter.value === 'late' ? (t.delay ?? 0) >= 2 : t.delay === null))
     .filter((t) => !q || t.number.includes(q) || [t.origin, t.destination, t.next?.name, t.prev?.name].some((s) => s && normalize(s).includes(q)))
     .sort((a, b) => Number(keyOf(b) === selectedKey.value) - Number(keyOf(a) === selectedKey.value) || (b.delay ?? 0) - (a.delay ?? 0) || a.number.localeCompare(b.number, 'pl', { numeric: true }))
 })
 const stats = computed(() => ({
   all: live.trains.length,
   late: live.trains.filter((t) => (t.delay ?? 0) >= 2).length,
-  gps: live.trains.filter((t) => t.source === 'gps').length,
+  live: live.trains.filter((t) => t.delay !== null).length,
 }))
 
 function colors() {
@@ -232,7 +233,7 @@ const whereText = (t: LiveTrain) => {
 const filters = [
   { value: 'all', label: 'Wszystkie' },
   { value: 'late', label: 'Opóźnione' },
-  { value: 'est', label: 'Bez GPS' },
+  { value: 'est', label: 'Tylko rozkład' },
 ] as const
 </script>
 
@@ -242,7 +243,7 @@ const filters = [
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error" rounded="lg">{{ mapError }}</v-alert>
 
     <div class="legend" aria-hidden="true">
-      <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Pozycja z rozkładu</span>
+      <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span>
     </div>
     <div class="controls">
       <v-btn icon="add" color="surface-container-high" rounded="lg" size="40" elevation="2" aria-label="Przybliż" @click="zoom(1)" />
@@ -257,7 +258,7 @@ const filters = [
         <div class="stats" aria-live="polite">
           <div><strong class="tnum">{{ stats.all }}</strong><span class="text-label-medium muted">w ruchu</span></div>
           <div><strong class="tnum">{{ stats.late }}</strong><span class="text-label-medium muted">opóźnione</span></div>
-          <div><strong class="tnum">{{ stats.gps }}</strong><span class="text-label-medium muted">z GPS</span></div>
+          <div><strong class="tnum">{{ stats.live }}</strong><span class="text-label-medium muted">z danymi PLK</span></div>
         </div>
         <template v-if="mdAndUp || expanded">
           <v-text-field v-model="query" label="Numer pociągu lub stacja" prepend-inner-icon="search" density="compact" hide-details clearable />

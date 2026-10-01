@@ -67,6 +67,8 @@ final class StatusService
             'ageSeconds' => $age,
             'trains' => count($trains),
             'gpsTrains' => count(array_filter($trains, static fn (array $t): bool => $t['source'] === 'gps')),
+            'rtTrains' => count(array_filter($trains, static fn (array $t): bool => ($t['delaySource'] ?? null) === 'rt')),
+            'gpsEnabled' => (bool) ($liveData['sources']['gps']['enabled'] ?? Config::get('gps_enabled')),
             'gps' => $liveData['sources']['gps'] ?? null,
             'rt' => $liveData['sources']['rt'] ?? null,
         ];
@@ -76,7 +78,7 @@ final class StatusService
                 ? 'Dane na żywo nie są jeszcze dostępne. Pokazujemy rozkład.'
                 : 'Dane na żywo są nieaktualne (ostatnio ' . date('H:i', strtotime((string) $liveData['generatedAt'])) . '). Pokazujemy rozkład.'];
         } else {
-            if (!($live['gps']['ok'] ?? false)) {
+            if ($live['gpsEnabled'] && !($live['gps']['ok'] ?? false)) {
                 $raise('degraded');
                 $messages[] = ['level' => 'warning', 'text' => 'Pozycje GPS są chwilowo niedostępne. Na mapie widać pozycje wyliczone z rozkładu.'];
             }

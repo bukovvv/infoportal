@@ -75,7 +75,11 @@ $live = Realtime::readJson(Config::path('live_file'));
 $age = isset($live['generatedAt']) ? time() - strtotime((string) $live['generatedAt']) : null;
 $line('Dane na żywo (live.json)' . ($age !== null ? " — {$age} s temu" : ''), $age !== null && $age < 300, 'Dodaj CRON z refresh-live.php co minutę.', true);
 if ($age !== null) {
-    $line('GPS: ' . ($live['sources']['gps']['provider'] ?? 'brak'), (bool) ($live['sources']['gps']['ok'] ?? false), 'GPS: ' . ($live['sources']['gps']['error'] ?? 'brak danych'), true);
+    if ($live['sources']['gps']['enabled'] ?? false) {
+        $line('GPS: ' . ($live['sources']['gps']['provider'] ?? 'brak'), (bool) ($live['sources']['gps']['ok'] ?? false), 'GPS: ' . ($live['sources']['gps']['error'] ?? 'brak danych'), true);
+    } else {
+        echo "[INFO]  GPS wyłączony — pozycje wyliczane z rozkładu i opóźnień PLK" . PHP_EOL;
+    }
     $line('GTFS-RT (opóźnienia PKP PLK)', (bool) ($live['sources']['rt']['ok'] ?? false), 'GTFS-RT: ' . ($live['sources']['rt']['error'] ?? 'brak danych'), true);
 }
 

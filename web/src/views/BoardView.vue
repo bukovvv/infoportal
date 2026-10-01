@@ -134,7 +134,7 @@ const when = (iso: string) => {
         <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" text="Z tej stacji nie odjeżdża dziś ani jutro rano żaden pociąg KW." />
       </template>
     </v-card>
-    <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK i pozycji GPS.</p>
+    <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>
   </div>
 </template>
 
