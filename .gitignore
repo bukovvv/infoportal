@@ -3,6 +3,8 @@ node_modules/
 web/dist/
 public/assets/
 public/index.html
+public/favicon.svg
+public/manifest.webmanifest
 
 # dane lokalne
 server/storage/*

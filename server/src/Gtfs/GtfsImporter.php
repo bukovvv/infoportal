@@ -33,9 +33,10 @@ final class GtfsImporter
             mkdir($storage, 0775, true);
         }
         $zipPath = $localFile ?? $storage . '/polish_trains.zip';
+        $download = null;
         if ($localFile === null) {
-            $downloaded = $this->download($zipPath, $force);
-            if (!$downloaded && !$force && is_file(Config::path('gtfs_db'))) {
+            $download = $this->download($zipPath, $force);
+            if ($download === null && !$force && is_file(Config::path('gtfs_db'))) {
                 ($this->log)('Rozkład bez zmian od ostatniego importu.');
                 return ['skipped' => true];
             }
@@ -47,6 +48,10 @@ final class GtfsImporter
         $stats = $this->build(new GtfsSource($zipPath), $tmp);
         $this->validate($stats);
         $this->swap($tmp, Config::path('gtfs_db'));
+        // znacznik pobrania zapisujemy dopiero po udanej podmianie — nieudany import zostanie powtórzony
+        if ($download !== null) {
+            file_put_contents($this->downloadMetaFile(), json_encode($download));
+        }
         $stats['seconds'] = round(microtime(true) - $started, 1);
         ($this->log)(sprintf(
             'Zaimportowano: %d kursów, %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
@@ -56,9 +61,15 @@ final class GtfsImporter
         return $stats;
     }
 
-    private function download(string $zipPath, bool $force): bool
+    private function downloadMetaFile(): string
     {
-        $metaFile = Config::path('storage') . '/gtfs-download.json';
+        return Config::path('storage') . '/gtfs-download.json';
+    }
+
+    /** @return array{lastModified: string|null, downloadedAt: string}|null null — plik bez zmian (HTTP 304) */
+    private function download(string $zipPath, bool $force): ?array
+    {
+        $metaFile = $this->downloadMetaFile();
         $meta = is_file($metaFile) ? (json_decode((string) file_get_contents($metaFile), true) ?: []) : [];
         $headers = [];
         if (!$force && is_file($zipPath) && !empty($meta['lastModified'])) {
@@ -69,7 +80,7 @@ final class GtfsImporter
         $response = HttpClient::get((string) Config::get('gtfs_url'), $headers, 300, $part);
         if ($response['status'] === 304) {
             @unlink($part);
-            return false;
+            return null;
         }
         if ($response['status'] !== 200 || filesize($part) < 1_000_000) {
             @unlink($part);
@@ -77,12 +88,11 @@ final class GtfsImporter
         }
         @unlink($zipPath);
         rename($part, $zipPath);
-        file_put_contents($metaFile, json_encode([
+
+        return [
             'lastModified' => $response['headers']['last-modified'] ?? null,
             'downloadedAt' => Clock::now()->format(DATE_ATOM),
-        ]));
-
-        return true;
+        ];
     }
 
     /** @return array<string, mixed> */

@@ -1,0 +1,11 @@
+{
+  "name": "Infoportal KW",
+  "short_name": "Infoportal KW",
+  "description": "Rozkład, odjazdy, mapa pociągów i komunikaty Kolei Wielkopolskich. Nieoficjalny serwis pasażerski.",
+  "lang": "pl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFF8F7",
+  "theme_color": "#B3122D",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

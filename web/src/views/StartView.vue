@@ -1,0 +1,194 @@
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { api } from '@/api/client'
+import type { ConnectionsResult } from '@/api/types'
+import ConnectionCard from '@/components/ConnectionCard.vue'
+import DataStatusCard from '@/components/DataStatusCard.vue'
+import JourneyCard from '@/components/JourneyCard.vue'
+import NoticeItem from '@/components/NoticeItem.vue'
+import StationField from '@/components/StationField.vue'
+import StatusBanner from '@/components/StatusBanner.vue'
+import { useNotices, useStatus } from '@/stores/data'
+import { useJourneys } from '@/stores/journeys'
+import { read, write } from '@/stores/ui'
+import { plural, warsawNow } from '@/utils/format'
+
+const route = useRoute()
+const router = useRouter()
+const notices = useNotices()
+const status = useStatus()
+const journeys = useJourneys()
+
+const initial = warsawNow()
+const last = read<{ from?: string; to?: string }>('kw_last_search', {})
+const from = ref<string | null>((route.query.z as string) || last.from || null)
+const to = ref<string | null>((route.query.do as string) || last.to || null)
+const date = ref((route.query.data as string) || initial.date)
+const time = ref((route.query.godz as string) || initial.time)
+const direct = ref(route.query.bezp === '1')
+const result = ref<ConnectionsResult | null>(null)
+const searching = ref(false)
+const error = ref<string | null>(null)
+const now = ref(Date.now())
+const resultsEl = ref<HTMLElement | null>(null)
+
+const range = computed(() => ({ min: status.status?.timetable.validFrom, max: status.status?.timetable.validUntil }))
+
+async function search(scroll = true) {
+  error.value = null
+  if (!from.value || !to.value) { error.value = 'Wybierz stację początkową i docelową z listy podpowiedzi.'; return }
+  if (from.value === to.value) { error.value = 'Stacja początkowa i docelowa muszą się różnić.'; return }
+  searching.value = true
+  try {
+    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, direct: direct.value })
+    write('kw_last_search', { from: from.value, to: to.value })
+    void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...(direct.value ? { bezp: '1' } : {}) }, hash: route.hash })
+    if (scroll) requestAnimationFrame(() => resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  } catch (e) {
+    error.value = (e as Error).message
+    result.value = null
+  } finally {
+    searching.value = false
+  }
+}
+
+function swap() {
+  ;[from.value, to.value] = [to.value, from.value]
+  if (result.value) void search(false)
+}
+function toggleDirect() {
+  direct.value = !direct.value
+  if (result.value) void search(false)
+}
+function later() {
+  const lastConn = result.value?.connections.at(-1)
+  if (!lastConn) return
+  const next = new Date(new Date(lastConn.departure).getTime() + 60_000)
+  const w = warsawNow(next)
+  date.value = w.date
+  time.value = w.time
+  void search(false)
+}
+
+let timer: number | undefined
+onMounted(() => {
+  if (route.query.z && route.query.do) void search(false)
+  timer = window.setInterval(() => { now.value = Date.now() }, 20_000)
+  void journeys.refresh()
+  if (route.hash === '#szukaj') requestAnimationFrame(() => document.getElementById('skad')?.focus())
+})
+onBeforeUnmount(() => window.clearInterval(timer))
+watch(() => route.hash, (h) => { if (h === '#szukaj') document.getElementById('skad')?.focus() })
+const journeyTimer = window.setInterval(() => void journeys.refresh(), 60_000)
+onBeforeUnmount(() => window.clearInterval(journeyTimer))
+</script>
+
+<template>
+  <div class="page">
+    <div class="start">
+      <StatusBanner class="full" />
+
+      <div class="col">
+        <form id="szukaj" class="search" aria-labelledby="search-title" @submit.prevent="search()">
+          <div class="d-flex align-end justify-space-between flex-wrap ga-3">
+            <h1 id="search-title" class="text-headline-small">Dokąd jedziesz?</h1>
+          </div>
+          <div class="route-fields">
+            <div class="stack">
+              <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details />
+              <StationField v-model="to" label="Dokąd" icon="location_on" hide-details />
+            </div>
+            <v-btn icon="swap_vert" variant="outlined" aria-label="Zamień stacje" @click="swap" />
+          </div>
+          <div class="search-row">
+            <v-text-field v-model="date" type="date" label="Data" :min="range.min" :max="range.max" hide-details class="f-date" />
+            <v-text-field v-model="time" type="time" label="Odjazd od" hide-details class="f-time" />
+            <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
+              Tylko bezpośrednie
+            </v-chip>
+            <v-btn type="submit" size="large" prepend-icon="search" :loading="searching" class="search-btn">Szukaj połączeń</v-btn>
+          </div>
+          <v-alert v-if="error" color="error-container" icon="error" density="compact" rounded="lg">{{ error }}</v-alert>
+        </form>
+
+        <section ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
+          <template v-if="result">
+            <div class="d-flex align-baseline justify-space-between flex-wrap ga-2 px-1">
+              <h2 id="results-title" class="text-title-medium">{{ result.from.name }} → {{ result.to.name }}</h2>
+              <span class="text-body-small muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} od {{ result.time }}</span>
+            </div>
+            <ConnectionCard v-for="c in result.connections" :key="c.legs.map((l) => l.key).join('+')" :connection="c" />
+            <v-empty-state
+              v-if="!result.connections.length"
+              icon="search_off"
+              title="Brak połączeń KW w ciągu 12 godzin"
+              :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
+            />
+            <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" class="justify-self-start" @click="later">Późniejsze połączenia</v-btn>
+          </template>
+        </section>
+      </div>
+
+      <div class="col">
+        <section id="moje-podroze" aria-labelledby="journeys-title">
+          <div class="section-head"><h2 id="journeys-title" class="text-title-large">Moje podróże</h2></div>
+          <div class="gap-grid">
+            <JourneyCard v-for="j in journeys.sorted" :key="j.id" :journey="j" :now="now" />
+            <div v-if="!journeys.list.length" class="empty">
+              <v-icon icon="bookmark" />
+              <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
+              <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy.</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="notices-title">
+          <div class="section-head">
+            <h2 id="notices-title" class="text-title-large">Komunikaty</h2>
+            <v-btn variant="text" append-icon="chevron_right" to="/komunikaty">Wszystkie</v-btn>
+          </div>
+          <v-card color="surface-container-low">
+            <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact />
+            <p v-if="notices.loaded && !notices.list.length" class="pa-4 text-body-medium muted">Brak aktywnych komunikatów. Ruch odbywa się zgodnie z rozkładem, o ile pojedynczy pociąg nie ma opóźnienia.</p>
+            <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line" color="transparent" />
+          </v-card>
+        </section>
+
+        <section id="stan-danych" aria-labelledby="status-title">
+          <div class="section-head"><h2 id="status-title" class="text-title-large">Stan danych</h2></div>
+          <DataStatusCard />
+        </section>
+
+        <p class="text-body-small muted footnote">
+          Infoportal KW to nieoficjalny serwis pasażerski, niezwiązany z Kolejami Wielkopolskimi. Bilety kupisz na stronie przewoźnika.
+        </p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.start { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
+.col { display: grid; gap: 24px; align-content: start; min-width: 0; }
+@media (min-width: 1145px) {
+  .start { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .full { grid-column: 1 / -1; }
+}
+.search { display: grid; gap: 20px; padding: 24px; border-radius: 28px; background: rgb(var(--v-theme-surface-container-low)); }
+.route-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.stack { display: grid; gap: 12px; min-width: 0; }
+.search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.f-date { flex: 0 1 180px; min-width: 150px; }
+.f-time { flex: 0 1 140px; min-width: 120px; }
+.search-btn { margin-left: auto; }
+.results { display: grid; gap: 12px; scroll-margin-top: 80px; }
+.justify-self-start { justify-self: start; }
+.empty { display: grid; justify-items: start; gap: 8px; padding: 20px; border-radius: 16px; border: 1px dashed rgb(var(--v-theme-outline-variant)); }
+.footnote { max-width: 70ch; padding: 0 4px; }
+@media (max-width: 839px) {
+  .search { padding: 20px 16px; border-radius: 24px; }
+  .f-date, .f-time { flex: 1 1 calc(50% - 6px); }
+  .search-btn { width: 100%; margin: 0; }
+}
+</style>

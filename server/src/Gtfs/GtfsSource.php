@@ -34,7 +34,10 @@ final class GtfsSource
         }
         $dir = sys_get_temp_dir() . '/kw-gtfs-' . bin2hex(random_bytes(4));
         mkdir($dir, 0775, true);
-        exec('tar -xf ' . escapeshellarg($path) . ' -C ' . escapeshellarg($dir) . ' 2>&1', $out, $code);
+        // Na Windowsie systemowy bsdtar; GNU tar z Git Bash traktuje „C:” jak zdalny host.
+        $systemTar = (getenv('SystemRoot') ?: 'C:\\Windows') . '\\System32\\tar.exe';
+        $tar = PHP_OS_FAMILY === 'Windows' && is_file($systemTar) ? escapeshellarg($systemTar) : 'tar';
+        exec($tar . ' -xf ' . escapeshellarg($path) . ' -C ' . escapeshellarg($dir) . ' 2>&1', $out, $code);
         if ($code !== 0) {
             throw new RuntimeException('Brak rozszerzenia zip i nie udało się rozpakować archiwum: ' . implode(' ', $out));
         }
