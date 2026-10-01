@@ -8,7 +8,31 @@
 - CRON (DirectAdmin → Zadania Cron).
 - Node.js **nie** jest potrzebny na serwerze — frontend przychodzi zbudowany w paczce.
 
-## 1. Przygotowanie paczki (na komputerze)
+## Wdrożenie automatyczne (zalecane)
+
+```bash
+bash deploy.sh
+```
+
+Wymaga pliku `deploy.env` (wzór: `deploy.env.example`) i klucza `~/.ssh/infoportal_kw_deploy` dodanego w DirectAdmin → Klucze SSH. Skrypt uruchamia testy, buduje paczkę, wysyła ją przez SSH, podmienia kod (zachowując `server/storage` i hasło), przy pierwszej instalacji importuje rozkład i na końcu wykonuje preflight oraz sprawdza `/api/status`.
+
+Hasło administratora ustawia się lokalnie poleceniem `php server/bin/set-admin-password.php` (zapisuje tylko hash; `deploy.sh` wysyła go na serwer).
+
+Stan na serwerze `h89.seohost.pl` (DirectAdmin):
+
+```text
+~/domains/infoportal.abuczek.pl/public_html/   ← public/
+~/domains/infoportal.abuczek.pl/server/        ← backend (poza WWW)
+~/kw-deploy/                                   ← ostatnie paczki
+```
+
+CRON ustawiony w crontab użytkownika (DirectAdmin `direct_crons`), PHP CLI: `/usr/local/bin/php` (8.3).
+
+Hosting ogranicza serie szybkich żądań z narzędzi typu `curl` (HTTP 429) — przy testach z konsoli rób przerwy i podawaj nagłówek `User-Agent` przeglądarki.
+
+## Wdrożenie ręczne
+
+### 1. Przygotowanie paczki (na komputerze)
 
 ```powershell
 pwsh ./release.ps1
@@ -16,7 +40,7 @@ pwsh ./release.ps1
 
 Skrypt uruchamia testy, buduje frontend i tworzy `release/infoportal-kw-RRRRMMDD.zip` z katalogami `public/` i `server/`.
 
-## 2. Układ katalogów na serwerze
+### 2. Układ katalogów na serwerze
 
 **Wariant zalecany** — katalog dokumentów subdomeny ustawiony na `public`:
 
@@ -30,7 +54,7 @@ Skrypt uruchamia testy, buduje frontend i tworzy `release/infoportal-kw-RRRRMMDD
 
 Wyślij również ukryte pliki `.htaccess` i `.user.ini`. Katalog `server/storage` musi być zapisywalny przez PHP.
 
-## 3. Hasło administratora
+### 3. Hasło administratora
 
 Wygeneruj hash:
 
@@ -40,7 +64,7 @@ php -r "echo password_hash('TWOJE-SILNE-HASLO', PASSWORD_DEFAULT), PHP_EOL;"
 
 Ustaw go w zmiennej środowiskowej `KW_ADMIN_PASSWORD_HASH` albo skopiuj `server/config/admin-password.php.example` do `server/config/admin-password.php` i wstaw hash. Bez tego logowanie na publicznej domenie jest zablokowane (hasło `kw-demo` działa wyłącznie lokalnie na `php -S`).
 
-## 4. Pierwsze uruchomienie (terminal SSH)
+### 4. Pierwsze uruchomienie (terminal SSH)
 
 ```text
 cd /home/UŻYTKOWNIK/infoportal-kw
@@ -52,7 +76,7 @@ php server/bin/preflight.php          # kontrola instalacji
 
 Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Importuj teraz”; dane na żywo pojawią się po pierwszym przebiegu CRON-a.
 
-## 5. CRON (DirectAdmin)
+### 5. CRON (DirectAdmin)
 
 | Częstotliwość | Polecenie |
 |---|---|
@@ -61,7 +85,7 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 
 `refresh-live.php` pobiera pozycje GPS co minutę, a opóźnienia GTFS-RT najwyżej co ok. 2 min (z warunkowym pobieraniem, gdy plik się nie zmienił). `import-gtfs.php` pobiera rozkład tylko wtedy, gdy mkuran.pl opublikował nową wersję, i podmienia bazę dopiero po pozytywnej walidacji.
 
-## 6. Kontrola po wdrożeniu
+## Kontrola po wdrożeniu
 
 - `https://infoportal.abuczek.pl/api/status` → `"level": "ok"` (lub `degraded` z opisem w `messages`).
 - Strona główna, `/mapa`, `/odjazdy`, `/pociag/77642`, `/admin`.

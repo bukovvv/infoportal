@@ -29,9 +29,17 @@ foreach (['curl', 'pdo_sqlite', 'mbstring', 'json', 'openssl'] as $ext) {
 $line('Rozszerzenie zip (import rozkładu)', extension_loaded('zip'), 'Brak rozszerzenia zip — import użyje systemowego tar, jeśli jest dostępny.', true);
 
 $root = dirname(__DIR__, 2);
-$public = is_dir($root . '/public') ? $root . '/public' : dirname(__DIR__, 2);
+// lokalnie public/, na hostingu DirectAdmin public_html/ obok server/
+$public = $root . '/public';
+foreach ([$root . '/public', $root . '/public_html', $root] as $candidate) {
+    if (is_file($candidate . '/api/index.php')) {
+        $public = $candidate;
+        break;
+    }
+}
+$publicName = basename($public);
 foreach (['index.html', 'api/index.php', '.htaccess'] as $file) {
-    $line('Plik public/' . $file, is_file($public . '/' . $file), 'Brak public/' . $file . ' — zbuduj frontend (npm run build) i wyślij cały katalog public.');
+    $line("Plik {$publicName}/{$file}", is_file($public . '/' . $file), "Brak {$publicName}/{$file} — zbuduj frontend (npm run build) i wyślij cały katalog public.");
 }
 $line('Certyfikaty CA (server/config/cacert.pem)', is_file(Config::path('cacert')), 'Brak server/config/cacert.pem.', true);
 
