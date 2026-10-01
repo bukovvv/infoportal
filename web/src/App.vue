@@ -29,6 +29,7 @@ const nav = computed(() => [
   { to: '/', name: 'start', label: 'Start', icon: 'home' },
   { to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' },
   { to: '/odjazdy', name: 'board', label: 'Odjazdy', icon: 'departure_board' },
+  { to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' },
   { to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length },
 ])
 const current = computed(() => String(route.name ?? ''))
@@ -119,12 +120,12 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
     </v-main>
 
     <nav v-if="!mdAndUp && !isAdmin" class="navbar" aria-label="Nawigacja główna">
-      <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-current="current === item.name ? 'page' : undefined">
+      <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-label="item.label" :aria-current="current === item.name ? 'page' : undefined">
         <span class="nav-ind">
           <v-icon :icon="current === item.name ? `${item.icon}-fill` : item.icon" />
           <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
         </span>
-        <span>{{ item.label }}</span>
+        <span aria-hidden="true">{{ item.short ?? item.label }}</span>
       </router-link>
     </nav>
 
@@ -145,8 +146,8 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 .rail-fab { margin: 8px 0 20px; }
 .rail-items { display: grid; gap: 12px; }
 .navbar {
-  position: fixed; z-index: 1004; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr);
-  padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px)); background: rgb(var(--v-theme-surface-container));
+  position: fixed; z-index: 1004; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr);
+  align-items: start; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: rgb(var(--v-theme-surface-container));
 }
 .navbar .nav-item { width: auto; }
 .navbar .nav-ind { width: 64px; }

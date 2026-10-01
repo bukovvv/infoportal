@@ -215,16 +215,16 @@ final class LiveBuilder
     private function fetchGps(): array
     {
         $errors = [];
-        foreach ([new BilkomMapClient(), new KierownikPlusClient()] as $client) {
+        foreach ([new BilkomMapClient(), new BackupGpsClient()] as $client) {
             try {
                 $trains = $client->trains(self::BOUNDS);
-                $provider = $client instanceof BilkomMapClient ? 'Mapa BILKOM' : 'Kierownik Plus';
-                if ($trains !== [] || $client instanceof KierownikPlusClient) {
+                $provider = $client instanceof BilkomMapClient ? 'Mapa BILKOM' : BackupGpsClient::PROVIDER;
+                if ($trains !== [] || $client instanceof BackupGpsClient) {
                     return [$trains, ['ok' => true, 'provider' => $provider, 'count' => count($trains), 'fetchedAt' => Clock::now()->format(DATE_ATOM), 'error' => $errors ? implode('; ', $errors) : null]];
                 }
                 $errors[] = $provider . ': pusta lista';
             } catch (Throwable $e) {
-                $errors[] = ($client instanceof BilkomMapClient ? 'BILKOM' : 'Kierownik Plus') . ': ' . $e->getMessage();
+                $errors[] = ($client instanceof BilkomMapClient ? 'BILKOM' : BackupGpsClient::PROVIDER) . ': ' . $e->getMessage();
             }
         }
 

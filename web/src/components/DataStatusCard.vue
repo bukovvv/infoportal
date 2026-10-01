@@ -53,7 +53,7 @@ const rows = computed(() => {
         </template>
       </v-list-item>
     </v-list>
-    <p v-if="s?.timetable.attribution?.length" class="text-body-small muted px-4 pb-4">Źródła: {{ s.timetable.attribution.join(' · ') }}, Mapa BILKOM, Kierownik Plus.</p>
+    <p v-if="s?.timetable.attribution?.length" class="text-body-small muted px-4 pb-4">Źródła: {{ s.timetable.attribution.join(' · ') }}, Mapa BILKOM.</p>
   </v-card>
 </template>
 

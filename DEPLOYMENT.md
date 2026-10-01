@@ -4,7 +4,7 @@
 
 - PHP 8.1 lub nowszy z rozszerzeniami `curl`, `pdo_sqlite`, `mbstring`, `json`, `openssl` i `zip`.
 - Apache z `mod_rewrite` (zalecane także `mod_headers` i `mod_deflate`).
-- Wychodzące połączenia HTTPS do `mkuran.pl`, `mapa.bilkom.pl` i `kierownik-plus-v2.jak-ste139.workers.dev`.
+- Wychodzące połączenia HTTPS do `mkuran.pl`, `mapa.bilkom.pl` i zapasowego źródła GPS (`*.workers.dev`).
 - CRON (DirectAdmin → Zadania Cron).
 - Node.js **nie** jest potrzebny na serwerze — frontend przychodzi zbudowany w paczce.
 

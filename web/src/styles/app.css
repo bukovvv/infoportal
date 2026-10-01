@@ -1,11 +1,28 @@
 /* Uzupełnienia MD3 poza komponentami Vuetify. Kolory zawsze z tokenów motywu (--v-theme-*). */
+/* Kolejność warstw Vuetify 4 — deklarowana tutaj, żeby „overrides” zawsze była ostatnia (najsilniejsza). */
+@layer base, vuetify-core, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final, overrides;
+
 @layer overrides {
   :root {
-    --kw-font: 'Roboto Flex Variable', Roboto, 'Segoe UI', system-ui, sans-serif;
+    /* Google Sans Flex (OFL) — krój Material 3 Expressive; oś ROND zaokrągla nagłówki */
+    --kw-font: 'Google Sans Flex Variable', 'Google Sans', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
   }
 
-  html, body { font-family: var(--kw-font); }
+  html, body { font-family: var(--kw-font); font-optical-sizing: auto; }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
+  .text-display-large, .text-display-medium, .text-display-small,
+  .text-headline-large, .text-headline-medium, .text-headline-small,
+  .text-title-large, .v-app-bar-title, .v-card-title, .v-empty-state__headline, .brand-mark {
+    font-variation-settings: 'ROND' 100;
+  }
+  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 500; letter-spacing: -.01em; }
+
+  /* chipy MD3: obramowanie outline-variant, tekst on-surface-variant */
+  .v-chip.v-chip--variant-outlined { border-color: rgb(var(--v-theme-outline-variant)); color: rgb(var(--v-theme-on-surface-variant)); }
+
+  /* pola outlined: obramowanie w kolorze „outline” MD3, w pełni kryjące */
+  .v-field--variant-outlined { --v-field-border-opacity: 1; }
+  .v-field--variant-outlined:not(.v-field--focused):not(.v-field--error) .v-field__outline { color: rgb(var(--v-theme-outline)); }
   h1, h2, h3, h4, p { margin: 0; text-wrap: balance; }
   .tnum { font-variant-numeric: tabular-nums; }
   .muted { color: rgb(var(--v-theme-on-surface-variant)); }
@@ -45,9 +62,11 @@
   /* nawigacja MD3: rail (≥840 px) i navigation bar */
   .nav-item {
     display: grid; justify-items: center; gap: 4px; width: 80px; padding: 0; border: 0; background: none; cursor: pointer;
-    color: rgb(var(--v-theme-on-surface-variant)); text-decoration: none; font-size: 12px; font-weight: 500; letter-spacing: .5px;
+    color: rgb(var(--v-theme-on-surface-variant)); text-decoration: none; font-size: 12px; font-weight: 500; letter-spacing: .3px;
+    line-height: 14px; text-align: center; overflow-wrap: anywhere;
   }
   .nav-ind { position: relative; display: grid; place-items: center; width: 56px; height: 32px; border-radius: 16px; transition: background .2s; }
+  .nav-ind .v-icon { font-size: 24px; }
   .nav-item:hover .nav-ind { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 8%, transparent); }
   .nav-item:focus-visible { outline: none; }
   .nav-item:focus-visible .nav-ind { outline: 3px solid rgb(var(--v-theme-secondary)); }

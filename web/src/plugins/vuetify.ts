@@ -49,7 +49,6 @@ const light: ThemeDefinition = {
     'info-container': '#D6E3FF',
     'on-info-container': '#001B3E',
   },
-  variables: { 'border-color': '#857372', 'border-opacity': 1 },
 }
 
 const dark: ThemeDefinition = {
@@ -95,7 +94,6 @@ const dark: ThemeDefinition = {
     'info-container': '#264777',
     'on-info-container': '#D6E3FF',
   },
-  variables: { 'border-color': '#A08C8B', 'border-opacity': 1 },
 }
 
 const aliases: Record<string, string> = {

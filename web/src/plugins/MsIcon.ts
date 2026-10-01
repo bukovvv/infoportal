@@ -14,7 +14,8 @@ export default defineComponent({
       const name = String(props.icon)
       const d = paths[name]
       if (!d && import.meta.env.DEV) console.warn(`[ikony] brak „${name}” w src/plugins/icons.json`)
-      return h(props.tag, { ...attrs, style: null }, [
+      // attrs zawierają klasę i styl z VIcon (m.in. font-size dla rozmiaru liczbowego) — przekazujemy je bez zmian
+      return h(props.tag, attrs, [
         h('svg', { class: 'v-icon__svg', xmlns: 'http://www.w3.org/2000/svg', viewBox: '0 -960 960 960', role: 'img', 'aria-hidden': 'true' }, [
           h('path', { d: d ?? '' }),
         ]),

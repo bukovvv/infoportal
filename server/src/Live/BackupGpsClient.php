@@ -6,13 +6,14 @@ namespace KwInfo\Live;
 
 use DateTimeImmutable;
 use KwInfo\Clock;
+use KwInfo\Config;
 use KwInfo\Net\HttpClient;
 use RuntimeException;
 
-/** Pozycje GPS z workera Kierownik Plus (źródło zapasowe). Przeniesione z wersji 0.2. */
-final class KierownikPlusClient
+/** Pozycje GPS z zapasowego źródła (worker Cloudflare). Przeniesione z wersji 0.2. */
+final class BackupGpsClient
 {
-    private const ENDPOINT = 'https://kierownik-plus-v2.jak-ste139.workers.dev/';
+    public const PROVIDER = 'GPS zapasowy';
     private const MAX_POSITION_AGE = 2700;
 
     /**
@@ -22,13 +23,13 @@ final class KierownikPlusClient
     public function trains(array $bounds): array
     {
         $query = http_build_query(['bounds' => implode(',', [$bounds['west'], $bounds['south'], $bounds['east'], $bounds['north']])]);
-        $response = HttpClient::get(self::ENDPOINT . '?' . $query, ['Accept: application/json'], 10);
+        $response = HttpClient::get(rtrim((string) Config::get('backup_gps_url'), '/') . '/?' . $query, ['Accept: application/json'], 10);
         if ($response['status'] < 200 || $response['status'] >= 300) {
-            throw new RuntimeException('Kierownik Plus odpowiedział kodem ' . $response['status'] . '.');
+            throw new RuntimeException('Zapasowe źródło GPS odpowiedziało kodem ' . $response['status'] . '.');
         }
         $decoded = json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Kierownik Plus zwrócił nieprawidłową odpowiedź.');
+            throw new RuntimeException('Zapasowe źródło GPS zwróciło nieprawidłową odpowiedź.');
         }
 
         $now = time();
@@ -58,7 +59,7 @@ final class KierownikPlusClient
                 isset($location['heading']) ? (int) round((float) $location['heading']) : null,
                 max(0, (int) ($row['delayInMinutes'] ?? 0)),
                 $observedAt,
-                'Kierownik Plus'
+                self::PROVIDER
             );
         }
 

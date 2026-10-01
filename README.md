@@ -1,6 +1,6 @@
 # Infoportal KW 1.0
 
-Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże i komunikaty. Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite.
+Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże, komunikaty oraz zakładka Bus-Tramwaj-Kolej (w przygotowaniu). Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite. Krój: Google Sans Flex (OFL) z zaokrąglonymi nagłówkami (oś ROND).
 
 ## Źródła danych
 
@@ -8,7 +8,7 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 |---|---|---|
 | Rozkład jazdy | GTFS `polish_trains.zip` z [mkuran.pl](https://mkuran.pl/gtfs/) (PKP PLK), filtr agencji KW | codziennie (CRON) |
 | Opóźnienia, odwołania | GTFS-Realtime mkuran.pl | co ok. 2 min |
-| Pozycje GPS | Mapa BILKOM, zapasowo Kierownik Plus | co minutę |
+| Pozycje GPS | Mapa BILKOM, zapasowo własny worker GPS | co minutę |
 | Pozycje bez GPS | wyliczane z rozkładu wzdłuż kształtu trasy | co minutę |
 | Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
 
