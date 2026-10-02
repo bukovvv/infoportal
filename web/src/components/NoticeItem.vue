@@ -29,7 +29,7 @@ const label = { danger: 'Poważne utrudnienie', warning: 'Utrudnienie', info: 'I
 .notice { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; padding: 16px; }
 .notice + .notice { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
 .notice-body { display: grid; gap: 6px; }
-.notice-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; }
+.notice-ic { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--kw-r-m); }
 .notice-ic.danger { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
 .notice-ic.warning { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
 .notice-ic.info { background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }

@@ -88,7 +88,7 @@ function watchJourney() {
 </template>
 
 <style scoped>
-.conn { border-radius: 16px; background: rgb(var(--v-theme-surface)); border: 1px solid rgb(var(--v-theme-outline-variant)); overflow: hidden; }
+.conn { border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface)); border: 1px solid rgb(var(--v-theme-outline-variant)); overflow: hidden; }
 .conn-main { display: grid; gap: 12px; padding: 16px 16px 12px 20px; }
 .conn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .conn-times { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }

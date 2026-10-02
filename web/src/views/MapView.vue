@@ -240,16 +240,16 @@ const filters = [
 <template>
   <div class="map-screen">
     <div ref="container" class="map" role="region" aria-label="Mapa pociągów Kolei Wielkopolskich" />
-    <v-alert v-if="mapError" color="error-container" icon="error" class="map-error" rounded="lg">{{ mapError }}</v-alert>
+    <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
 
     <div class="legend" aria-hidden="true">
       <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span>
     </div>
     <div class="controls">
-      <v-btn icon="add" color="surface-container-high" rounded="lg" size="40" elevation="2" aria-label="Przybliż" @click="zoom(1)" />
-      <v-btn icon="remove" color="surface-container-high" rounded="lg" size="40" elevation="2" aria-label="Oddal" @click="zoom(-1)" />
-      <v-btn icon="fit_screen" color="surface-container-high" rounded="lg" size="40" elevation="2" aria-label="Pokaż całą sieć" @click="fitNetwork" />
-      <v-btn icon="my_location" color="surface-container-high" rounded="lg" size="40" elevation="2" aria-label="Moja lokalizacja" @click="locate" />
+      <v-btn icon="add" color="surface-container-high" size="40" elevation="2" aria-label="Przybliż" @click="zoom(1)" />
+      <v-btn icon="remove" color="surface-container-high" size="40" elevation="2" aria-label="Oddal" @click="zoom(-1)" />
+      <v-btn icon="fit_screen" color="surface-container-high" size="40" elevation="2" aria-label="Pokaż całą sieć" @click="fitNetwork" />
+      <v-btn icon="my_location" color="surface-container-high" size="40" elevation="2" aria-label="Moja lokalizacja" @click="locate" />
     </div>
 
     <aside class="panel" :class="{ expanded }" aria-label="Pociągi w ruchu">
@@ -300,18 +300,18 @@ const filters = [
 .map-error { position: absolute; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); }
 .panel {
   position: absolute; z-index: 2; left: 16px; top: 16px; bottom: 16px; width: 360px; display: flex; flex-direction: column;
-  border-radius: 16px; background: rgb(var(--v-theme-surface-container-low)); box-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
+  border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); box-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
 }
 .panel-head { display: grid; gap: 12px; padding: 12px 16px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stats div { display: grid; padding: 8px 12px; border-radius: 12px; background: rgb(var(--v-theme-surface-container-lowest)); }
+.stats div { display: grid; padding: 8px 12px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-lowest)); }
 .stats strong { font-size: 22px; line-height: 28px; font-weight: 400; }
 .list { flex: 1; min-height: 0; overflow: auto; }
 .lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 12px; border-radius: 50%; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
 .lead.delay { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
 .lead.est { background: rgb(var(--v-theme-info-container)); color: rgb(var(--v-theme-on-info-container)); }
 .controls { position: absolute; z-index: 2; right: 16px; bottom: 32px; display: grid; gap: 12px; }
-.legend { position: absolute; z-index: 2; right: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 12px; border-radius: 8px; background: rgb(var(--v-theme-surface-container-high)); font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
+.legend { position: absolute; z-index: 2; right: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 14px; border-radius: 999px; background: rgb(var(--v-theme-surface-container-high)); font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .lg { width: 10px; height: 10px; border-radius: 50%; background: rgb(var(--v-theme-primary)); }
 .lg.d { background: rgb(var(--v-theme-warning)); }
@@ -322,7 +322,7 @@ const filters = [
 .handle::before { content: ''; width: 32px; height: 4px; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-surface-variant)) 40%, transparent); }
 @media (max-width: 839px) {
   .map-screen { height: calc(100dvh - 64px - 80px - env(safe-area-inset-bottom, 0px)); }
-  .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 132px; border-radius: 28px 28px 0 0; transition: height .3s cubic-bezier(.2, 0, 0, 1); }
+  .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 132px; border-radius: var(--kw-r-xl) var(--kw-r-xl) 0 0; transition: height .3s cubic-bezier(.2, 0, 0, 1); }
   .panel.expanded { height: 72%; }
   .panel-head { padding-top: 0; }
   .controls { bottom: 148px; }

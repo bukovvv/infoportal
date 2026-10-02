@@ -29,7 +29,7 @@ const data = computed(() => {
       :key="n.id"
       color="error-container"
       icon="cancel-fill"
-      rounded="xl"
+     
       role="alert"
       :title="n.title"
       class="banner"
@@ -44,7 +44,7 @@ const data = computed(() => {
       v-if="data"
       :color="data.level === 'down' ? 'error-container' : 'surface-container-high'"
       :icon="data.level === 'down' ? 'error-fill' : 'info'"
-      rounded="xl"
+     
       class="banner"
       :title="data.level === 'down' ? 'Ograniczony dostęp do danych' : 'Część danych na żywo jest niedostępna'"
     >

@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource-variable/google-sans-flex": "5.3.1",
+    "@fontsource/varela-round": "5.3.0",
     "maplibre-gl": "6.11.2",
     "pinia": "4.0.3",
     "vue": "3.5.43",

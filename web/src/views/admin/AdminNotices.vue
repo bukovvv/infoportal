@@ -98,14 +98,14 @@ function generate() {
 
 <template>
   <div class="admin-grid">
-    <v-card color="surface-container-low" rounded="xl" class="editor">
+    <v-card color="surface-container-low" class="editor">
       <v-card-item :prepend-icon="editingId ? 'edit' : 'add'">
         <v-card-title>{{ editingId ? 'Edytuj komunikat' : 'Nowy komunikat' }}</v-card-title>
         <v-card-subtitle>{{ editingId ? 'Zmień treść lub okres publikacji' : 'Informacja widoczna dla pasażerów' }}</v-card-subtitle>
       </v-card-item>
       <v-card-text class="d-grid">
         <v-expansion-panels variant="accordion" class="mb-2">
-          <v-expansion-panel bg-color="tertiary-container" rounded="lg">
+          <v-expansion-panel bg-color="tertiary-container">
             <v-expansion-panel-title>
               <v-icon icon="wand_stars" class="mr-3" />
               <div><div class="text-title-small">Szybki generator</div><div class="text-body-small">Opóźnienie, odwołanie, ZKA, peron, skrócona relacja</div></div>
@@ -152,7 +152,7 @@ function generate() {
             <v-text-field v-model="form.endsAt" type="datetime-local" label="Publikuj do" hide-details />
           </div>
           <v-switch v-model="form.active" color="primary" inset hide-details label="Komunikat widoczny dla pasażerów" />
-          <v-alert v-if="error" color="error-container" icon="error" density="compact" rounded="lg">{{ error }}</v-alert>
+          <v-alert v-if="error" color="error-container" icon="error" density="compact">{{ error }}</v-alert>
           <div class="d-flex flex-wrap ga-2">
             <v-btn type="submit" prepend-icon="check" :loading="saving">{{ editingId ? 'Zapisz zmiany' : 'Opublikuj' }}</v-btn>
             <v-btn v-if="editingId" variant="outlined" @click="reset">Anuluj</v-btn>
@@ -192,7 +192,7 @@ function generate() {
     </section>
 
     <v-dialog :model-value="!!toDelete" max-width="420" @update:model-value="toDelete = null">
-      <v-card rounded="xl" color="surface-container-high">
+      <v-card color="surface-container-high">
         <v-card-item prepend-icon="delete">
           <v-card-title>Usunąć komunikat?</v-card-title>
         </v-card-item>

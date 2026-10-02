@@ -109,7 +109,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             </v-chip>
             <v-btn type="submit" size="large" prepend-icon="search" :loading="searching" class="search-btn">Szukaj połączeń</v-btn>
           </div>
-          <v-alert v-if="error" color="error-container" icon="error" density="compact" rounded="lg">{{ error }}</v-alert>
+          <v-alert v-if="error" color="error-container" icon="error" density="compact">{{ error }}</v-alert>
         </form>
 
         <section ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
@@ -136,9 +136,11 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           <div class="gap-grid">
             <JourneyCard v-for="j in journeys.sorted" :key="j.id" :journey="j" :now="now" />
             <div v-if="!journeys.list.length" class="empty">
-              <v-icon icon="bookmark" />
-              <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
-              <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy.</span>
+              <span class="empty-ic"><v-icon icon="bookmark" /></span>
+              <div class="d-grid ga-1">
+                <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
+                <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy.</span>
+              </div>
             </div>
           </div>
         </section>
@@ -148,9 +150,15 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             <h2 id="notices-title" class="text-title-large">Komunikaty</h2>
             <v-btn variant="text" append-icon="chevron_right" to="/komunikaty">Wszystkie</v-btn>
           </div>
-          <v-card color="surface-container-low">
+          <div v-if="notices.loaded && !notices.list.length" class="empty">
+            <span class="empty-ic"><v-icon icon="check_circle" /></span>
+            <div class="d-grid ga-1">
+              <strong class="text-title-small">Brak aktywnych komunikatów</strong>
+              <span class="text-body-medium muted">Ruch odbywa się zgodnie z rozkładem, o ile pojedynczy pociąg nie ma opóźnienia.</span>
+            </div>
+          </div>
+          <v-card v-else color="surface-container-low">
             <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact />
-            <p v-if="notices.loaded && !notices.list.length" class="pa-4 text-body-medium muted">Brak aktywnych komunikatów. Ruch odbywa się zgodnie z rozkładem, o ile pojedynczy pociąg nie ma opóźnienia.</p>
             <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line" color="transparent" />
           </v-card>
         </section>
@@ -175,7 +183,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
   .start { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
   .full { grid-column: 1 / -1; }
 }
-.search { display: grid; gap: 20px; padding: 24px; border-radius: 28px; background: rgb(var(--v-theme-surface-container-low)); }
+.search { display: grid; gap: 20px; padding: 24px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .route-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .stack { display: grid; gap: 12px; min-width: 0; }
 .search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -184,10 +192,15 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .search-btn { margin-left: auto; }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; }
 .justify-self-start { justify-self: start; }
-.empty { display: grid; justify-items: start; gap: 8px; padding: 20px; border-radius: 16px; border: 1px dashed rgb(var(--v-theme-outline-variant)); }
+.empty { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
+.empty-ic {
+  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);
+  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
+}
+.d-grid { display: grid; }
 .footnote { max-width: 70ch; padding: 0 4px; }
 @media (max-width: 839px) {
-  .search { padding: 20px 16px; border-radius: 24px; }
+  .search { padding: 20px 16px; border-radius: var(--kw-r-l); }
   .f-date, .f-time { flex: 1 1 calc(50% - 6px); }
   .search-btn { width: 100%; margin: 0; }
 }

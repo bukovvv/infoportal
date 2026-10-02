@@ -42,20 +42,20 @@ const kb = (n: number) => (n > 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : 
 </script>
 
 <template>
-  <v-alert v-if="error" color="error-container" icon="error" rounded="lg">{{ error }}</v-alert>
+  <v-alert v-if="error" color="error-container" icon="error">{{ error }}</v-alert>
   <v-skeleton-loader v-else-if="!health" type="card, card" color="transparent" />
   <div v-else class="health">
     <v-alert
       :color="health.level === 'ok' ? 'success-container' : health.level === 'down' ? 'error-container' : 'warning-container'"
       :icon="health.level === 'ok' ? 'check_circle' : 'warning'"
-      rounded="xl"
+     
       :title="health.level === 'ok' ? 'Wszystkie źródła działają' : health.level === 'down' ? 'Portal działa w trybie awaryjnym' : 'Część źródeł wymaga uwagi'"
     >
       <p v-for="m in health.messages" :key="m.text" class="text-body-medium">{{ m.text }}</p>
     </v-alert>
 
     <div class="cards">
-      <v-card color="surface-container-low" rounded="xl" prepend-icon="event" title="Rozkład jazdy (GTFS)">
+      <v-card color="surface-container-low" prepend-icon="event" title="Rozkład jazdy (GTFS)">
         <v-card-text class="text-body-medium">
           <p>Ważny: {{ health.timetable.validFrom }} – {{ health.timetable.validUntil }} ({{ health.timetable.daysLeft }} dni)</p>
           <p>Import: {{ dateTime(health.timetable.importedAt) }}</p>
@@ -66,7 +66,7 @@ const kb = (n: number) => (n > 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : 
         </v-card-actions>
         <v-card-text v-if="importLog.length" class="pt-0"><pre class="log">{{ importLog.join('\n') }}</pre></v-card-text>
       </v-card>
-      <v-card color="surface-container-low" rounded="xl" prepend-icon="satellite_alt" title="Dane na żywo">
+      <v-card color="surface-container-low" prepend-icon="satellite_alt" title="Dane na żywo">
         <v-card-text class="text-body-medium">
           <p>Wygenerowane: {{ dateTime(health.live.generatedAt) }} ({{ health.live.ageSeconds ?? '–' }} s temu)</p>
           <p>GPS: {{ health.live.gps?.enabled === false ? 'wyłączony (gps_enabled w konfiguracji) — pozycje z rozkładu' : health.live.gps?.ok ? `${health.live.gps.provider}, ${health.live.gps.count} pozycji` : `błąd — ${health.live.gps?.error ?? 'brak danych'}` }}</p>
@@ -74,7 +74,7 @@ const kb = (n: number) => (n > 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : 
           <p>Pociągi na mapie: {{ health.live.trains }} (z opóźnieniem PLK: {{ health.live.rtTrains ?? 0 }})</p>
         </v-card-text>
       </v-card>
-      <v-card color="surface-container-low" rounded="xl" prepend-icon="dns" title="Serwer">
+      <v-card color="surface-container-low" prepend-icon="dns" title="Serwer">
         <v-card-text class="text-body-medium">
           <p>PHP {{ health.server.php }} · zapis do storage: {{ health.server.storageWritable ? 'tak' : 'NIE' }} · hasło: {{ health.server.passwordConfigured ? 'ustawione' : 'BRAK' }}</p>
           <p>Rozszerzenia: <span v-for="(ok, ext) in health.server.extensions" :key="ext" class="tag mr-1" :class="ok ? 'tag-ontime' : 'tag-error'">{{ ext }}</span></p>
@@ -89,6 +89,6 @@ const kb = (n: number) => (n > 1_048_576 ? `${(n / 1_048_576).toFixed(1)} MB` : 
 <style scoped>
 .health { display: grid; gap: 16px; }
 .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-.log { white-space: pre-wrap; font-size: 12px; line-height: 18px; padding: 12px; border-radius: 8px; background: rgb(var(--v-theme-surface-container-highest)); }
+.log { white-space: pre-wrap; font-size: 12px; line-height: 18px; padding: 12px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-highest)); }
 .justify-self-start { justify-self: start; }
 </style>

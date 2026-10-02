@@ -118,13 +118,18 @@ export default createVuetify({
     sets: { ms: { component: ((props: Record<string, unknown>) => h(MsIcon, props)) as unknown as IconSet['component'] } },
   },
   defaults: {
-    VCard: { rounded: 'lg', flat: true },
-    VChip: { rounded: 'sm' },
+    // jedna skala zaokrągleń: przyciski, chipy i przełączniki — pigułki; karty, alerty i panele — 24 px
+    VBtn: { rounded: 'pill' },
+    VBtnToggle: { rounded: 'pill' },
+    VChip: { rounded: 'pill' },
+    VCard: { rounded: 'xl', flat: true },
+    VAlert: { rounded: 'xl' },
+    VExpansionPanels: { rounded: 'xl' },
     VTextField: { variant: 'outlined' },
     VAutocomplete: { variant: 'outlined' },
     VSelect: { variant: 'outlined' },
     VTextarea: { variant: 'outlined' },
-    VSnackbar: { color: 'inverse-surface', location: 'bottom center' },
+    VSnackbar: { color: 'inverse-surface', location: 'bottom center', rounded: 'pill' },
     VProgressLinear: { color: 'primary' },
   },
 })

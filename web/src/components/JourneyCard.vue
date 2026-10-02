@@ -58,7 +58,7 @@ function remove() {
       </span>
       <StatusTag :delay="leg.delay" :cancelled="leg.cancelled" />
     </div>
-    <v-alert v-for="n in related" :key="n.id" color="error-container" density="compact" rounded="lg" icon="warning" class="text-body-medium">
+    <v-alert v-for="n in related" :key="n.id" color="error-container" density="compact" icon="warning" class="text-body-medium">
       {{ n.title }}
       <template #append><v-btn variant="text" size="small" to="/komunikaty">Szczegóły</v-btn></template>
     </v-alert>
@@ -66,7 +66,7 @@ function remove() {
 </template>
 
 <style scoped>
-.journey { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
+.journey { display: grid; gap: 12px; padding: 16px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
 .journey.done { background: rgb(var(--v-theme-surface-container-high)); color: rgb(var(--v-theme-on-surface)); }
 .journey.cancelled { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
 .journey :deep(.v-progress-linear__background) { background: currentColor; opacity: .16; }

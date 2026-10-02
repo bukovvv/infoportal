@@ -4,18 +4,25 @@
 
 @layer overrides {
   :root {
-    /* Google Sans Flex (OFL) — krój Material 3 Expressive; oś ROND zaokrągla nagłówki */
-    --kw-font: 'Google Sans Flex Variable', 'Google Sans', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    /* Varela Round (OFL) — zaokrąglony krój całego serwisu; ma tylko odmianę 400, pogrubienia syntetyzuje przeglądarka */
+    --kw-font: 'Varela Round', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    /* skala zaokrągleń: małe elementy, kafelki, karty, duże powierzchnie; przyciski, chipy i pola — pigułki */
+    --kw-r-s: 12px;
+    --kw-r-m: 16px;
+    --kw-r-l: 24px;
+    --kw-r-xl: 28px;
   }
 
-  html, body { font-family: var(--kw-font); font-optical-sizing: auto; }
+  html, body { font-family: var(--kw-font); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
+  /* nagłówki w odmianie regularnej — Varela Round jest wystarczająco wyrazista bez pogrubienia */
   .text-display-large, .text-display-medium, .text-display-small,
   .text-headline-large, .text-headline-medium, .text-headline-small,
-  .text-title-large, .v-app-bar-title, .v-card-title, .v-empty-state__headline, .brand-mark {
-    font-variation-settings: 'ROND' 100;
-  }
-  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 500; letter-spacing: -.01em; }
+  .text-title-large, .v-app-bar-title, .v-card-title { font-weight: 400; letter-spacing: 0; }
+  .v-btn { letter-spacing: .01em; }
+
+  /* pola formularzy zaokrąglone jak przyciski */
+  .v-field--variant-outlined, .v-field--variant-filled, .v-field--variant-solo { border-radius: var(--kw-r-m); }
 
   /* chipy MD3: obramowanie outline-variant, tekst on-surface-variant */
   .v-chip.v-chip--variant-outlined { border-color: rgb(var(--v-theme-outline-variant)); color: rgb(var(--v-theme-on-surface-variant)); }
@@ -47,7 +54,7 @@
 
   /* tagi stanu (MD3 nie ma „statusów” — małe chipy z kontenerami kolorów rozszerzonych) */
   .tag {
-    display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 8px;
+    display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 12px;
     font-size: 12px; font-weight: 500; letter-spacing: .5px; line-height: 1; white-space: nowrap;
   }
   .tag .v-icon { font-size: 16px; margin-left: -2px; }
@@ -78,7 +85,7 @@
   }
 
   .brand-mark {
-    display: grid; place-items: center; width: 44px; height: 36px; border-radius: 10px; flex: none;
+    display: grid; place-items: center; width: 44px; height: 36px; border-radius: 18px; flex: none;
     background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary));
     font-weight: 800; font-size: 15px; letter-spacing: -.5px; font-stretch: 110%; text-decoration: none;
   }
@@ -93,7 +100,7 @@
   }
 
   .route-badge {
-    display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: 6px;
+    display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px;
     font-size: 11px; font-weight: 700; letter-spacing: .3px; line-height: 1; white-space: nowrap;
   }
 

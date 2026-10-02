@@ -103,7 +103,7 @@ defineExpose({ trip })
           <span class="tag tag-neutral"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
         </div>
         <v-progress-linear v-if="progress !== null" :model-value="progress" rounded height="4" bg-color="surface-container-highest" aria-label="Postęp kursu" />
-        <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact" rounded="lg">
+        <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact">
           Ten kurs dziś nie jedzie. Wyszukaj inne połączenie.
         </v-alert>
         <div v-if="trip.otherLegs.length" class="text-body-small muted">

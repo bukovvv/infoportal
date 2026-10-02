@@ -163,7 +163,7 @@ button.tl-stn:hover .tl-name, button.tl-stn:focus-visible .tl-name { color: rgb(
 .tl.passed .tl-name, .tl.passed .tl-time { color: rgb(var(--v-theme-on-surface-variant)); }
 .tl.passed .tl-time .text-body-medium { font-weight: 400; }
 .tl.skipped .tl-name, .tl.skipped .tl-time { color: rgb(var(--v-theme-on-surface-variant)); opacity: .7; }
-.tl-flag { padding: 0 6px; border-radius: 6px; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
+.tl-flag { padding: 0 8px; border-radius: 10px; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
 
 .tl.now { min-height: 44px; }
 .tl.now .tl-rail::before { background: linear-gradient(rgb(var(--v-theme-primary)) 50%, rgb(var(--v-theme-outline-variant)) 50%); }

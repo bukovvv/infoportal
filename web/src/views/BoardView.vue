@@ -90,7 +90,7 @@ const when = (iso: string) => {
         <v-chip variant="outlined" prepend-icon="my_location" :disabled="locating" @click="nearest">{{ locating ? 'Szukam…' : 'Najbliższa stacja' }}</v-chip>
       </div>
       <div class="d-flex align-center justify-space-between flex-wrap ga-3">
-        <v-btn-toggle v-model="mode" mandatory variant="outlined" divided rounded="xl" density="comfortable" aria-label="Rodzaj tablicy">
+        <v-btn-toggle v-model="mode" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj tablicy">
           <v-btn value="dep" :prepend-icon="mode === 'dep' ? 'check' : undefined">Odjazdy</v-btn>
           <v-btn value="arr" :prepend-icon="mode === 'arr' ? 'check' : undefined">Przyjazdy</v-btn>
         </v-btn-toggle>
@@ -150,7 +150,7 @@ const when = (iso: string) => {
 .dep-time .t { font-size: 22px; line-height: 28px; }
 .dep-main { display: grid; gap: 4px; min-width: 0; }
 .dest { font-size: 16px; line-height: 24px; font-weight: 500; }
-.platform { display: grid; justify-items: center; min-width: 52px; padding: 4px 8px; border-radius: 8px; background: rgb(var(--v-theme-surface-container-highest)); }
+.platform { display: grid; justify-items: center; min-width: 52px; padding: 4px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-highest)); }
 .platform strong { font-size: 18px; line-height: 22px; font-weight: 500; }
 .platform small { font-size: 11px; line-height: 14px; color: rgb(var(--v-theme-on-surface-variant)); white-space: nowrap; }
 .cancelled .t, .cancelled .dest { text-decoration: line-through; color: rgb(var(--v-theme-on-surface-variant)); }

@@ -65,5 +65,5 @@ const rows = computed(() => {
 </template>
 
 <style scoped>
-.lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 16px; border-radius: 12px; background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
+.lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 16px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
 </style>

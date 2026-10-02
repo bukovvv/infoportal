@@ -86,7 +86,7 @@ const sources = [
 
     <!-- Kalkulator -->
     <section aria-labelledby="calc-title">
-      <v-card color="surface-container-low" rounded="xl">
+      <v-card color="surface-container-low">
         <v-card-text class="calc">
           <div class="d-grid inputs">
             <h2 id="calc-title" class="text-title-large">Ile zapłacę?</h2>
@@ -142,7 +142,7 @@ const sources = [
 
               <div class="w-100">
                 <p class="text-label-large mb-1">Rodzaj biletu</p>
-                <v-btn-toggle v-model="discount" mandatory variant="outlined" divided rounded="xl" density="comfortable" aria-label="Rodzaj biletu" class="seg">
+                <v-btn-toggle v-model="discount" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj biletu" class="seg">
                   <v-btn v-for="d in DISCOUNTS" :key="d.value" :value="d.value" :prepend-icon="discount === d.value ? 'check' : undefined">{{ d.label }}</v-btn>
                 </v-btn-toggle>
                 <p class="text-body-small muted mt-1">{{ discountInfo.who }}</p>
@@ -176,7 +176,7 @@ const sources = [
 
     <!-- Poznań bez BTK -->
     <section class="mt-6" aria-labelledby="peka-title">
-      <v-card color="secondary-container" variant="flat" rounded="xl">
+      <v-card color="secondary-container" variant="flat">
         <v-card-text class="peka">
           <v-icon icon="contactless" size="28" />
           <div class="d-grid">
@@ -195,12 +195,12 @@ const sources = [
     <section class="mt-8" aria-labelledby="prices-title">
       <div class="section-head flex-wrap">
         <h2 id="prices-title" class="text-title-large">Cennik</h2>
-        <v-btn-toggle v-model="discount" mandatory variant="outlined" divided rounded="xl" density="compact" aria-label="Rodzaj biletu w cenniku">
+        <v-btn-toggle v-model="discount" mandatory variant="outlined" divided density="compact" aria-label="Rodzaj biletu w cenniku">
           <v-btn v-for="d in DISCOUNTS" :key="d.value" :value="d.value">{{ d.label }}</v-btn>
         </v-btn-toggle>
       </div>
       <p class="text-body-medium muted mb-3">Ceny biletu miesięcznego w złotych. Wiersz to strefa kolejowa, kolumna — strefa ZTM. Dotknij ceny, żeby ją wybrać.</p>
-      <v-card color="surface-container-low" rounded="xl">
+      <v-card color="surface-container-low">
         <v-table class="prices" density="comfortable">
           <thead>
             <tr>
@@ -236,7 +236,7 @@ const sources = [
       <div class="zones">
         <div>
           <h3 class="text-title-small mb-2">Kolej (KW i POLREGIO)</h3>
-          <v-expansion-panels variant="accordion" rounded="xl" bg-color="surface-container-low">
+          <v-expansion-panels variant="accordion" bg-color="surface-container-low">
             <v-expansion-panel v-for="z in RAIL_ZONES" :key="z">
               <v-expansion-panel-title>
                 <span class="zone-badge">{{ z }}</span>
@@ -250,7 +250,7 @@ const sources = [
         </div>
         <div>
           <h3 class="text-title-small mb-2">Autobusy i tramwaje ZTM Poznań</h3>
-          <v-expansion-panels variant="accordion" rounded="xl" bg-color="surface-container-low">
+          <v-expansion-panels variant="accordion" bg-color="surface-container-low">
             <v-expansion-panel v-for="(places, z) in ZTM_PLACES" :key="z">
               <v-expansion-panel-title>
                 <span class="zone-badge">{{ z }}</span>
@@ -286,8 +286,8 @@ const sources = [
         w BILKOM oraz w mPOLREGIO, KOLEO i e-podróżniku.
       </p>
       <div class="d-flex flex-wrap ga-2">
-        <v-btn variant="flat" color="secondary-container" rounded="xl" append-icon="open_in_new" href="https://bilet.wielkopolskiebilety.pl/" target="_blank" rel="noopener">Bilety KW</v-btn>
-        <v-btn variant="flat" color="secondary-container" rounded="xl" append-icon="open_in_new" href="https://bilety.polregio.pl/" target="_blank" rel="noopener">Bilety POLREGIO</v-btn>
+        <v-btn variant="flat" color="secondary-container" append-icon="open_in_new" href="https://bilet.wielkopolskiebilety.pl/" target="_blank" rel="noopener">Bilety KW</v-btn>
+        <v-btn variant="flat" color="secondary-container" append-icon="open_in_new" href="https://bilety.polregio.pl/" target="_blank" rel="noopener">Bilety POLREGIO</v-btn>
       </div>
     </section>
 
@@ -304,7 +304,7 @@ const sources = [
 
 <style scoped>
 .intro { display: flex; align-items: center; gap: 16px; padding: 8px 0 24px; }
-.intro-ic { display: grid; place-items: center; width: 64px; height: 64px; flex: none; border-radius: 20px; background: rgb(var(--v-theme-tertiary-container)); color: rgb(var(--v-theme-on-tertiary-container)); }
+.intro-ic { display: grid; place-items: center; width: 64px; height: 64px; flex: none; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-tertiary-container)); color: rgb(var(--v-theme-on-tertiary-container)); }
 .d-grid { display: grid; gap: 8px; justify-items: start; }
 
 .calc { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
@@ -314,11 +314,11 @@ const sources = [
 .seg { max-width: 100%; }
 
 .result {
-  display: grid; gap: 8px; align-content: start; justify-items: start; min-height: 180px; padding: 20px; border-radius: 24px;
+  display: grid; gap: 8px; align-content: start; justify-items: start; min-height: 180px; padding: 20px; border-radius: var(--kw-r-l);
   background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container));
 }
 .result.empty { background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
-.price { font-size: 44px; line-height: 52px; font-weight: 500; letter-spacing: -.02em; font-variation-settings: 'ROND' 100; }
+.price { font-size: 44px; line-height: 52px; letter-spacing: -.01em; }
 .covers { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
 .covers li { display: flex; align-items: center; gap: 8px; }
 .covers .v-icon { font-size: 20px; }
@@ -339,14 +339,14 @@ const sources = [
 
 .zones { display: grid; gap: 24px; grid-template-columns: 1fr 1fr; align-items: start; }
 .zone-badge {
-  display: inline-grid; place-items: center; width: 32px; height: 32px; margin-right: 12px; border-radius: 10px; font-weight: 600;
+  display: inline-grid; place-items: center; width: 32px; height: 32px; margin-right: 12px; border-radius: 50%; font-weight: 600;
   background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface));
 }
 
 .rules { display: grid; gap: 16px 24px; grid-template-columns: 1fr 1fr; }
 .rule { display: flex; gap: 16px; align-items: flex-start; }
 .rule-ic {
-  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px;
+  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);
   background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
 }
 .rule .d-grid { gap: 4px; }

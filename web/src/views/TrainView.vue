@@ -18,7 +18,7 @@ function loaded(t: Trip) {
 <template>
   <div class="page-narrow">
     <v-btn variant="text" prepend-icon="arrow_back" class="mb-2 ml-n2" @click="router.back()">Wróć</v-btn>
-    <v-card color="surface-container-low" rounded="xl">
+    <v-card color="surface-container-low">
       <TrainDetail :trip-key="key" :number="key ? undefined : number" @loaded="loaded" />
     </v-card>
   </div>

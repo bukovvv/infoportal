@@ -38,7 +38,7 @@ const docked = computed(() => !!ui.sheet?.docked && mdAndUp.value)
 </template>
 
 <style scoped>
-.train-sheet { background: rgb(var(--v-theme-surface-container-low)) !important; border-radius: 16px 0 0 16px; }
+.train-sheet { background: rgb(var(--v-theme-surface-container-low)) !important; border-radius: var(--kw-r-xl) 0 0 var(--kw-r-xl); }
 .train-sheet.docked { border-left: 1px solid rgb(var(--v-theme-outline-variant)); }
 .sheet-card { display: flex; flex-direction: column; max-height: 90dvh; }
 .sheet-scroll { overflow-y: auto; }
