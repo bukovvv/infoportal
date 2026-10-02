@@ -30,6 +30,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 ## Pułapki
 - Feed GTFS-RT mkuran potrafi stać godzinami → status „degraded”, portal pokazuje rozkład (to poprawne zachowanie).
 - Lokalny PHP nie ma rozszerzenia zip → importer używa `System32\tar.exe`.
+- Data i godzina: komponenty `DateField`/`TimeField` (VDatePicker/VTimePicker MD3 w oknie, 24 h, tydzień od poniedziałku) — nie natywne `type="date"`/`"time"`. Komponent z `v-dialog` jako korzeniem: `inheritAttrs: false` i `$attrs` na pole, inaczej klasy rodzica trafiają na okno.
 - Vuetify 4: `variant="tonal"` z kolorem kontenera daje nieczytelny tekst — tonal MD3 = `variant="flat" color="secondary-container"`. Kolejność warstw CSS zadeklarowana na początku `web/src/styles/app.css`.
 - `server/config/admin-password.php` zawiera tylko hash (ustawia go użytkownik: `php server/bin/set-admin-password.php`); nigdy nie prosić o hasło.
 

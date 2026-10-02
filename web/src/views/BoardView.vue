@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { Board } from '@/api/types'
 import BtkHint from '@/components/BtkHint.vue'
+import DateField from '@/components/DateField.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StationField from '@/components/StationField.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import TimeField from '@/components/TimeField.vue'
 import { useStations, useStatus } from '@/stores/data'
 import { read, useUi, write } from '@/stores/ui'
 import { clock, dayLabel, minutesUntil, relative, warsawNow, weekdayShort } from '@/utils/format'
@@ -118,8 +120,8 @@ const when = (iso: string) => {
           <v-btn value="arr" :prepend-icon="mode === 'arr' ? 'check' : undefined">Przyjazdy</v-btn>
         </v-btn-toggle>
         <div class="when-fields">
-          <v-text-field v-model="dateField" type="date" label="Data" :min="range.min" :max="range.max" density="compact" hide-details class="f-date" />
-          <v-text-field v-model="timeField" type="time" :label="mode === 'dep' ? 'Odjazdy od' : 'Przyjazdy od'" density="compact" hide-details class="f-time" />
+          <DateField v-model="dateField" label="Data" :min="range.min" :max="range.max" density="compact" class="f-date" />
+          <TimeField v-model="timeField" :label="mode === 'dep' ? 'Odjazdy od' : 'Przyjazdy od'" density="compact" class="f-time" />
           <v-btn v-if="pinned" variant="text" prepend-icon="update" @click="resetToNow">Teraz</v-btn>
         </div>
       </div>
@@ -175,7 +177,7 @@ const when = (iso: string) => {
 .board-head { display: grid; gap: 16px; padding: 8px 0 16px; }
 .row1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .when-fields { display: flex; flex: 1 1 320px; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
-.f-date { flex: 0 1 170px; min-width: 150px; }
+.f-date { flex: 0 1 230px; min-width: 190px; }
 .f-time { flex: 0 1 140px; min-width: 120px; }
 .board { overflow: hidden; position: relative; }
 .dep { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; width: 100%; padding: 14px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }

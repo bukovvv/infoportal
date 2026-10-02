@@ -5,11 +5,13 @@ import { api } from '@/api/client'
 import type { ConnectionsResult } from '@/api/types'
 import ConnectionCard from '@/components/ConnectionCard.vue'
 import DataStatusCard from '@/components/DataStatusCard.vue'
+import DateField from '@/components/DateField.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
+import TimeField from '@/components/TimeField.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
 import { read, write } from '@/stores/ui'
@@ -103,8 +105,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             <v-btn icon="swap_vert" variant="outlined" aria-label="Zamień stacje" @click="swap" />
           </div>
           <div class="search-row">
-            <v-text-field v-model="date" type="date" label="Data" :min="range.min" :max="range.max" hide-details class="f-date" />
-            <v-text-field v-model="time" type="time" label="Odjazd od" hide-details class="f-time" />
+            <DateField v-model="date" label="Data" :min="range.min" :max="range.max" class="f-date" />
+            <TimeField v-model="time" label="Odjazd od" class="f-time" />
             <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
               Tylko bezpośrednie
             </v-chip>
@@ -193,7 +195,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .route-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .stack { display: grid; gap: 12px; min-width: 0; }
 .search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.f-date { flex: 0 1 180px; min-width: 150px; }
+.f-date { flex: 0 1 230px; min-width: 190px; }
 .f-time { flex: 0 1 140px; min-width: 120px; }
 .search-btn { margin-left: auto; }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; }
