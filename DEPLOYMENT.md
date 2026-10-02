@@ -89,7 +89,7 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 
 **Kopia bazy.** `backup-db.php` zapisuje spójną kopię `app.sqlite` (komunikaty, ustawienia) do `server/storage/backups/` i trzyma 14 ostatnich; `deploy.sh` pobiera najnowszą do lokalnego katalogu `backups/` (30 ostatnich, poza gitem). Rozkładu nie kopiujemy — odtwarza go import. Odtworzenie: podmienić `server/storage/app.sqlite` wybraną kopią.
 
-**Alerty e-mail.** `check-health.php` ocenia stan jak `/api/status`; gdy problem trwa ponad 15 min, wysyła jeden e-mail (przypomnienie co 12 h, ponownie przy pogorszeniu) i drugi, gdy dane wrócą do normy. Adres: `KW_ALERT_EMAIL` w `deploy.env` (trafia do `server/config/local.php` na serwerze). Próba: `php server/bin/check-health.php --test`, podgląd bez wysyłki: `--dry-run`.
+**Alerty e-mail.** `check-health.php` ocenia stan jak `/api/status`; gdy problem trwa ponad 15 min, wysyła jeden e-mail (przypomnienie co 12 h, ponownie przy pogorszeniu) i drugi, gdy dane wrócą do normy. Odbiorca: `KW_ALERT_EMAIL` w `deploy.env` (trafia do `server/config/local.php` na serwerze); nadawca: `no-reply@abuczek.pl` (`alert_from` w `Config.php`). Próba: `php server/bin/check-health.php --test`, podgląd bez wysyłki: `--dry-run`.
 
 `refresh-live.php` pobiera pozycje GPS co minutę, a opóźnienia GTFS-RT najwyżej co ok. 2 min (z warunkowym pobieraniem, gdy plik się nie zmienił). `import-gtfs.php` pobiera rozkład tylko wtedy, gdy mkuran.pl opublikował nową wersję, i podmienia bazę dopiero po pozytywnej walidacji.
 

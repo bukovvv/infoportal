@@ -32,12 +32,14 @@ $send = static function (string $subject, string $body) use ($to, $dryRun): void
         echo "--- e-mail do: " . ($to ?: '(brak adresu)') . "\nTemat: $subject\n\n$body\n";
         return;
     }
+    $from = Config::path('alert_from');
     $headers = implode("\r\n", [
-        'From: Infoportal KW <noreply@' . parse_url((string) Config::get('site_url'), PHP_URL_HOST) . '>',
+        "From: Infoportal KW <$from>",
         'Content-Type: text/plain; charset=UTF-8',
         'Content-Transfer-Encoding: 8bit',
     ]);
-    if (!mail($to, mb_encode_mimeheader($subject, 'UTF-8'), $body, $headers)) {
+    // -f: adres koperty zgodny z nadawcą (SPF), inaczej serwer wstawia własny
+    if (!mail($to, mb_encode_mimeheader($subject, 'UTF-8'), $body, $headers, '-f' . $from)) {
         throw new RuntimeException('mail() nie wysłał wiadomości');
     }
 };

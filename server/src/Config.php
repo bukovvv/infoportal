@@ -51,6 +51,7 @@ final class Config
             'site_url' => 'https://infoportal.abuczek.pl',
             // e-mail na alerty o stanie danych (bin/check-health.php) — ustawiany w local.php na serwerze
             'alert_email' => null,
+            'alert_from' => 'no-reply@abuczek.pl',
             'user_agent' => 'KW-Infoportal/1.0 (+https://infoportal.abuczek.pl)',
         ];
         $local = $root . '/config/local.php';
