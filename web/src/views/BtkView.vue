@@ -1,26 +1,21 @@
 <script setup lang="ts">
-// Zakładka Bus-Tramwaj-Kolej — taryfa wspólnego biletu miesięcznego KW + POLREGIO + ZTM Poznań w prostej formie.
+// Zakładka Bus-Tramwaj-Kolej — dla pasażera: wpisz stację, zobacz cenę i gdzie kupić; szczegóły taryfy zwinięte niżej.
 import { computed, ref, watch } from 'vue'
 import { normalize } from '@/utils/format'
 import {
-  ALL_STATIONS, DISCOUNTS, EXTRAS, FARES, RAIL_STATIONS, RAIL_ZONES, TARIFF_DATE, ZTM_PLACES, ZTM_ZONES,
+  ALL_STATIONS, DISCOUNTS, FARES, RAIL_STATIONS, RAIL_ZONES, TARIFF_DATE, ZTM_PLACES, ZTM_ZONES,
   farePrice, formatPrice, railCoverage, railZoneOf, ztmOptions,
-  type Discount, type Extra, type FareRow, type RailZone, type ZtmZone,
+  type Discount, type Extra, type FareRow, type ZtmZone,
 } from '@/utils/btkTariff'
 
 const station = ref<string | null>(null)
-const rail = ref<RailZone | null>(null)
 const ztm = ref<ZtmZone>('A')
 const discount = ref<Discount>('normal')
 const extraChoice = ref<Extra | null>(null)
 
-watch(station, (name) => {
-  const zone = name ? railZoneOf(name) : null
-  if (zone) rail.value = zone
-})
+const rail = computed(() => (station.value ? railZoneOf(station.value) : null))
 watch(rail, (zone) => {
   if (zone && !ztmOptions(zone).includes(ztm.value)) ztm.value = 'A'
-  if (station.value && railZoneOf(station.value) !== zone) station.value = null
 })
 
 // dodatek (MPK Gniezno / Czempiń) obowiązuje tylko w swojej strefie kolejowej
@@ -31,336 +26,263 @@ const withExtra = computed({
   set: (on: boolean) => { extraChoice.value = on ? extraKey.value : null },
 })
 const price = computed(() => (rail.value ? farePrice(rail.value, ztm.value, discount.value, extra.value) : null))
-const discountInfo = computed(() => DISCOUNTS.find((d) => d.value === discount.value)!)
 
+const discountLabels: Record<Discount, string> = { normal: 'Normalny', u49: 'Uczeń −49%', u51: 'Student −51%' }
+const ztmLabels: Record<ZtmZone, string> = { A: 'Tylko Poznań', 'A+B': 'Poznań i okolice', 'A+C': 'Poznań i dalsze gminy', 'A+B+C': 'Wszystkie strefy' }
 const ztmHints: Record<ZtmZone, string> = {
-  A: 'Poznań',
-  'A+B': 'Poznań i najbliższe okolice, m.in. Luboń, Swarzędz, Suchy Las, Plewiska',
-  'A+C': 'Poznań i dalsze gminy, m.in. Kórnik, Mosina, Tarnowo Podgórne, Dopiewo',
-  'A+B+C': 'Wszystkie linie ZTM',
+  A: 'Autobusy i tramwaje w granicach Poznania.',
+  'A+B': 'Też np. Luboń, Swarzędz, Suchy Las, Plewiska, Koziegłowy.',
+  'A+C': 'Też np. Kórnik, Mosina, Tarnowo Podgórne, Dopiewo.',
+  'A+B+C': 'Wszystkie linie ZTM Poznań.',
 }
+const ztmCover: Record<ZtmZone, string> = { A: 'Poznań', 'A+B': 'Poznań i okolice', 'A+C': 'Poznań i dalsze gminy', 'A+B+C': 'wszystkie strefy' }
+const extraLabels: Record<Extra, string> = { gniezno: 'Dodaj autobusy MPK w Gnieźnie', czempin: 'Dodaj autobusy gminy Czempiń' }
 
 const filterStation = (value: string, query: string) => normalize(value).includes(normalize(query))
 
-const rowNote = (row: FareRow) => (row.extra === 'gniezno' ? '+ MPK Gniezno' : row.extra === 'czempin' ? '+ gm. Czempiń' : `pociągi ${railCoverage(row.rail)}`)
-const isSelected = (row: FareRow, z: ZtmZone) => row.rail === rail.value && (row.extra ?? null) === extra.value && z === ztm.value
+const tableDiscount = ref<Discount>('normal')
+const rowNote = (row: FareRow) => (row.extra === 'gniezno' ? '+ MPK Gniezno' : row.extra === 'czempin' ? '+ gm. Czempiń' : '')
 const cell = (row: FareRow, z: ZtmZone) => {
   const tuple = row.prices[z]
-  return tuple ? formatPrice(tuple[DISCOUNTS.findIndex((d) => d.value === discount.value)]).replace(/\s?zł$/, '') : '—'
-}
-function pick(row: FareRow, z: ZtmZone) {
-  if (!row.prices[z]) return
-  rail.value = row.rail
-  ztm.value = z
-  extraChoice.value = row.extra ?? null
+  return tuple ? formatPrice(tuple[DISCOUNTS.findIndex((d) => d.value === tableDiscount.value)]).replace(/\s?zł$/, '') : '—'
 }
 
-const rules = [
-  { icon: 'badge', title: 'Bilet imienny', text: 'Przed pierwszym przejazdem wpisz na bilecie imię i nazwisko. Przy kontroli pokaż dokument ze zdjęciem, a przy uldze także legitymację.' },
-  { icon: 'calendar_month', title: 'Ważny przez miesiąc', text: 'Od wybranego dnia, np. od 5 stycznia do 4 lutego. Możesz go kupić do 30 dni wcześniej.' },
-  { icon: 'layers', title: 'Strefy się sumują', text: 'Bilet na strefę D obejmuje też strefy A, B i C. Jedziesz dalej? Dokup bilet od ostatniej stacji w strefie i powiedz o tym obsłudze pociągu przed tą stacją.' },
-  { icon: 'train', title: 'Tylko pociągi KW i REGIO', text: 'Bilet obowiązuje w pociągach osobowych KW i REGIO POLREGIO — nie w pociągach innych przewoźników, np. PKP Intercity.' },
-  { icon: 'currency_exchange', title: 'Zwroty', text: 'Całkowicie niewykorzystany bilet oddasz w kasie przed pierwszym dniem ważności, z potrąceniem 20%. Biletu nie można wymienić ani przedłużyć, a za utracony nie ma zwrotu ani duplikatu. Przerwy w kursowaniu nie dają prawa do częściowego zwrotu.' },
-  { icon: 'luggage', title: 'Rower, pies, bagaż', text: 'Dokupujesz osobno, według taryfy przewoźnika, którego pociągiem jedziesz.' },
+const basics = [
+  { icon: 'badge', text: 'Imienny — wpisz imię i nazwisko, miej dokument ze zdjęciem' },
+  { icon: 'calendar_month', text: 'Ważny miesiąc od wybranego dnia' },
+  { icon: 'layers', text: 'Obejmuje też wszystkie stacje bliżej Poznania' },
+  { icon: 'train', text: 'Tylko pociągi KW i POLREGIO — nie Intercity' },
+]
+
+const moreRules = [
+  'Kupisz go najwcześniej 30 dni przed pierwszym dniem ważności.',
+  'Jedziesz dalej niż strefa biletu? Dokup bilet od ostatniej stacji w strefie i zgłoś to obsłudze przed tą stacją.',
+  'Niewykorzystany bilet oddasz w kasie przed pierwszym dniem ważności — z potrąceniem 20%.',
+  'Biletu nie można wymienić ani przedłużyć. Za zgubiony nie ma zwrotu ani duplikatu.',
+  'Za odwołane pociągi i zmiany w komunikacji nie ma częściowego zwrotu.',
+  'Rower, psa i bagaż dokupujesz osobno.',
+  'Przy uldze miej przy sobie legitymację.',
 ]
 
 const sources = [
-  { title: 'Koleje Wielkopolskie: oferta BTK', href: 'https://koleje-wielkopolskie.com.pl/dla-pasazera/oferty-specjalne/bus-tramwaj-kolej/' },
-  { title: 'POLREGIO: oferta BTK', href: 'https://polregio.pl/pl/oferty-i-promocje/oferty-regionalne/bus-tramwaj-kolej/' },
-  { title: 'Warunki taryfowe BTK (PDF)', href: 'https://polregio.pl/media/27315/warunki-taryfowe-oferty-bus-tramwaj-kolej-wa%C5%BCne-od-01092025.pdf' },
-  { title: 'Mapa stref BTK', href: 'https://koleje-wielkopolskie.com.pl/wp-content/uploads/2026/09/mapa-polaczen-BTK-12-2024-v2.webp' },
-  { title: 'Cennik ZTM Poznań', href: 'https://www.ztm.poznan.pl/pl/cennik/' },
+  { title: 'Koleje Wielkopolskie', href: 'https://koleje-wielkopolskie.com.pl/dla-pasazera/oferty-specjalne/bus-tramwaj-kolej/' },
+  { title: 'POLREGIO', href: 'https://polregio.pl/pl/oferty-i-promocje/oferty-regionalne/bus-tramwaj-kolej/' },
+  { title: 'Warunki taryfowe (PDF)', href: 'https://polregio.pl/media/27315/warunki-taryfowe-oferty-bus-tramwaj-kolej-wa%C5%BCne-od-01092025.pdf' },
+  { title: 'Mapa stref', href: 'https://koleje-wielkopolskie.com.pl/wp-content/uploads/2026/09/mapa-polaczen-BTK-12-2024-v2.webp' },
+  { title: 'Cennik ZTM', href: 'https://www.ztm.poznan.pl/pl/cennik/' },
 ]
 </script>
 
 <template>
   <div class="page-narrow">
     <header class="intro">
-      <span class="intro-ic"><v-icon icon="commute" size="32" /></span>
-      <div class="d-grid">
-        <h1 class="text-headline-small">Bus-Tramwaj-Kolej</h1>
-        <p class="text-body-large muted">Jeden bilet miesięczny na pociągi KW i POLREGIO oraz autobusy i tramwaje ZTM w Poznaniu.</p>
-        <span class="tag tag-neutral"><v-icon icon="event" />Ceny od {{ TARIFF_DATE }}</span>
-      </div>
+      <h1 class="text-headline-small">Bus-Tramwaj-Kolej</h1>
+      <p class="text-body-large muted">Jeden bilet miesięczny na pociąg do Poznania i komunikację miejską ZTM.</p>
     </header>
 
     <!-- Kalkulator -->
-    <section aria-labelledby="calc-title">
-      <v-card color="surface-container-low">
-        <v-card-text class="calc">
-          <div class="d-grid inputs">
-            <h2 id="calc-title" class="text-title-large">Ile zapłacę?</h2>
+    <v-card color="surface-container-low" class="calc-card">
+      <v-card-text class="calc">
+          <v-autocomplete
+            v-model="station"
+            :items="ALL_STATIONS"
+            item-title="name"
+            item-value="name"
+            :custom-filter="filterStation"
+            label="Skąd dojeżdżasz?"
+            prepend-inner-icon="signpost"
+            placeholder="Wpisz stację, np. Swarzędz"
+            clearable
+            auto-select-first
+            hide-details
+            no-data-text="Tej stacji nie ma w ofercie BTK."
+            class="field"
+          />
 
-            <v-autocomplete
-              v-model="station"
-              :items="ALL_STATIONS"
-              item-title="name"
-              item-value="name"
-              :custom-filter="filterStation"
-              label="Skąd dojeżdżasz do Poznania?"
-              prepend-inner-icon="signpost"
-              placeholder="np. Swarzędz, Gniezno"
-              clearable
-              auto-select-first
-              hide-details
-              no-data-text="Tej stacji nie ma w ofercie BTK."
-              class="w-100"
-            >
-              <template #item="{ props: itemProps, item }">
-                <v-list-item v-bind="itemProps">
-                  <template #append><span class="tag tag-neutral">Strefa {{ item.zone }}</span></template>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
+        <div v-if="rail && rail !== 'A'" class="inputs">
+            <div>
+              <p class="text-label-large mb-1">Autobusy i tramwaje ZTM</p>
+              <v-chip-group v-model="ztm" mandatory selected-class="chip-on" column aria-label="Strefa ZTM">
+                <v-chip v-for="z in ztmOptions(rail)" :key="z" :value="z" variant="outlined" filter>{{ ztmLabels[z] }}</v-chip>
+              </v-chip-group>
+              <p class="text-body-small muted">{{ ztmHints[ztm] }}</p>
+            </div>
 
-            <div class="w-100">
-              <p class="text-label-large mb-1">Strefa kolejowa</p>
-              <v-chip-group v-model="rail" selected-class="chip-on" column aria-label="Strefa kolejowa">
-                <v-chip v-for="z in RAIL_ZONES" :key="z" :value="z" variant="outlined" filter class="zone-chip">{{ z }}</v-chip>
+            <div>
+              <p class="text-label-large mb-1">Bilet</p>
+              <v-chip-group v-model="discount" mandatory selected-class="chip-on" column aria-label="Rodzaj biletu">
+                <v-chip v-for="d in DISCOUNTS" :key="d.value" :value="d.value" variant="outlined" filter>{{ discountLabels[d.value] }}</v-chip>
               </v-chip-group>
             </div>
 
-            <template v-if="rail && rail !== 'A'">
-              <div class="w-100">
-                <p class="text-label-large mb-1">Autobusy i tramwaje ZTM</p>
-                <v-chip-group v-model="ztm" mandatory selected-class="chip-on" column aria-label="Strefa ZTM">
-                  <v-chip v-for="z in ztmOptions(rail)" :key="z" :value="z" variant="outlined" filter>{{ z }}</v-chip>
-                </v-chip-group>
-                <p class="text-body-small muted">{{ ztmHints[ztm] }}</p>
-              </div>
-
-              <v-switch
-                v-if="extraKey"
-                v-model="withExtra"
-                :label="EXTRAS[extraKey].label"
-                :messages="EXTRAS[extraKey].hint"
-                color="primary"
-                inset
-                density="compact"
-                class="w-100"
-              />
-
-              <div class="w-100">
-                <p class="text-label-large mb-1">Rodzaj biletu</p>
-                <v-btn-toggle v-model="discount" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj biletu" class="seg">
-                  <v-btn v-for="d in DISCOUNTS" :key="d.value" :value="d.value" :prepend-icon="discount === d.value ? 'check' : undefined">{{ d.label }}</v-btn>
-                </v-btn-toggle>
-                <p class="text-body-small muted mt-1">{{ discountInfo.who }}</p>
-              </div>
-            </template>
-          </div>
-
-          <div class="result" :class="{ empty: price === null }" aria-live="polite">
-            <template v-if="price !== null && rail">
-              <span class="text-label-large">Bilet miesięczny</span>
-              <span class="price tnum">{{ formatPrice(price) }}</span>
-              <ul class="covers text-body-medium">
-                <li><v-icon icon="train" />Pociągi w strefach {{ railCoverage(rail) }}</li>
-                <li><v-icon icon="tram" />ZTM Poznań: strefa {{ ztm }}</li>
-                <li v-if="extra"><v-icon icon="directions_bus" />{{ extra === 'gniezno' ? 'MPK Gniezno' : 'Przewozy gminne w Czempiniu' }}</li>
-              </ul>
-            </template>
-            <template v-else-if="rail === 'A'">
-              <v-icon icon="contactless" size="32" />
-              <p class="text-title-medium">W strefie A nie ma biletu BTK</p>
-              <p class="text-body-medium">Na przejazdy po Poznaniu i do Kiekrza wystarczy bilet okresowy ZTM ze strefą A. Szczegóły niżej.</p>
-            </template>
-            <template v-else>
-              <v-icon icon="confirmation_number" size="32" />
-              <p class="text-body-medium">Wybierz stację albo strefę, a pokażemy cenę biletu.</p>
-            </template>
-          </div>
-        </v-card-text>
-      </v-card>
-    </section>
-
-    <!-- Poznań bez BTK -->
-    <section class="mt-6" aria-labelledby="peka-title">
-      <v-card color="secondary-container" variant="flat">
-        <v-card-text class="peka">
-          <v-icon icon="contactless" size="28" />
-          <div class="d-grid">
-            <h2 id="peka-title" class="text-title-medium">Jeździsz tylko po Poznaniu?</h2>
-            <p class="text-body-medium">
-              Bilet okresowy ZTM ze strefą A — na karcie PEKA, w aplikacji PEKA albo na legitymacji ELS, ELD lub ELNA — działa też
-              w pociągach KW i POLREGIO między stacjami w Poznaniu oraz Kiekrzem. Dziecko od 4 lat do 30 września roku, w którym kończy 7 lat,
-              jedzie wtedy z tobą za darmo (weź dokument potwierdzający wiek).
-            </p>
-          </div>
-        </v-card-text>
-      </v-card>
-    </section>
-
-    <!-- Cennik -->
-    <section class="mt-8" aria-labelledby="prices-title">
-      <div class="section-head flex-wrap">
-        <h2 id="prices-title" class="text-title-large">Cennik</h2>
-        <v-btn-toggle v-model="discount" mandatory variant="outlined" divided density="compact" aria-label="Rodzaj biletu w cenniku">
-          <v-btn v-for="d in DISCOUNTS" :key="d.value" :value="d.value">{{ d.label }}</v-btn>
-        </v-btn-toggle>
-      </div>
-      <p class="text-body-medium muted mb-3">Ceny biletu miesięcznego w złotych. Wiersz to strefa kolejowa, kolumna — strefa ZTM. Dotknij ceny, żeby ją wybrać.</p>
-      <v-card color="surface-container-low">
-        <v-table class="prices" density="comfortable">
-          <thead>
-            <tr>
-              <th scope="col">Kolej <span class="muted">/ ZTM</span></th>
-              <th v-for="z in ZTM_ZONES" :key="z" scope="col" class="num">{{ z }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in FARES" :key="row.rail + (row.extra ?? '')">
-              <th scope="row">
-                <span class="zone-name">{{ row.rail }}</span>
-                <span class="text-body-small muted d-block">{{ rowNote(row) }}</span>
-              </th>
-              <td
-                v-for="z in ZTM_ZONES"
-                :key="z"
-                class="num tnum"
-                :class="{ sel: isSelected(row, z), na: !row.prices[z] }"
-                :tabindex="row.prices[z] ? 0 : undefined"
-                @click="pick(row, z)"
-                @keydown.enter="pick(row, z)"
-              >{{ cell(row, z) }}</td>
-            </tr>
-          </tbody>
-        </v-table>
-      </v-card>
-    </section>
-
-    <!-- Strefy -->
-    <section class="mt-8" aria-labelledby="zones-title">
-      <div class="section-head"><h2 id="zones-title" class="text-title-large">Strefy</h2></div>
-      <p class="text-body-medium muted mb-3">Każda strefa obejmuje wszystkie niższe — bilet na strefę D ważny jest też w A, B i C.</p>
-      <div class="zones">
-        <div>
-          <h3 class="text-title-small mb-2">Kolej (KW i POLREGIO)</h3>
-          <v-expansion-panels variant="accordion" bg-color="surface-container-low">
-            <v-expansion-panel v-for="z in RAIL_ZONES" :key="z">
-              <v-expansion-panel-title>
-                <span class="zone-badge">{{ z }}</span>
-                <span class="muted text-body-medium">{{ z === 'A' ? 'Poznań i Kiekrz' : `${RAIL_STATIONS[z].length} stacji` }}</span>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text class="text-body-medium">
-                {{ z === 'A' ? 'Wszystkie stacje w Poznaniu oraz Kiekrz: ' : '' }}{{ RAIL_STATIONS[z].join(', ') }}.
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
+            <v-switch v-if="extraKey" v-model="withExtra" :label="extraLabels[extraKey]" color="primary" inset density="compact" hide-details />
         </div>
-        <div>
-          <h3 class="text-title-small mb-2">Autobusy i tramwaje ZTM Poznań</h3>
-          <v-expansion-panels variant="accordion" bg-color="surface-container-low">
-            <v-expansion-panel v-for="(places, z) in ZTM_PLACES" :key="z">
-              <v-expansion-panel-title>
-                <span class="zone-badge">{{ z }}</span>
-                <span class="muted text-body-medium">{{ z === 'A' ? 'Poznań' : z === 'B' ? 'najbliższe okolice' : 'dalsze gminy' }}</span>
-              </v-expansion-panel-title>
-              <v-expansion-panel-text class="text-body-medium">{{ places }}</v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
-          <p class="text-body-small muted mt-2">Strefy ZTM dotyczą tylko linii organizowanych przez ZTM Poznań.</p>
-        </div>
-      </div>
-    </section>
 
-    <!-- Zasady -->
-    <section class="mt-8" aria-labelledby="rules-title">
-      <div class="section-head"><h2 id="rules-title" class="text-title-large">Warto wiedzieć</h2></div>
-      <div class="rules">
-        <div v-for="r in rules" :key="r.title" class="rule">
-          <span class="rule-ic"><v-icon :icon="r.icon" /></span>
-          <div class="d-grid">
-            <h3 class="text-title-small">{{ r.title }}</h3>
-            <p class="text-body-medium muted">{{ r.text }}</p>
-          </div>
+        <div class="result" :class="{ empty: price === null }" aria-live="polite">
+          <template v-if="price !== null && rail">
+            <span class="text-label-large">Bilet miesięczny · strefa {{ rail }}</span>
+            <span class="price tnum">{{ formatPrice(price) }}</span>
+            <ul class="covers text-body-medium">
+              <li><v-icon icon="train" />Pociągi: {{ station }} – Poznań</li>
+              <li><v-icon icon="tram" />ZTM: {{ ztmCover[ztm] }}</li>
+              <li v-if="extra"><v-icon icon="directions_bus" />{{ extra === 'gniezno' ? 'MPK Gniezno' : 'Autobusy gminy Czempiń' }}</li>
+            </ul>
+            <div class="buy">
+              <v-btn variant="flat" color="primary" size="small" append-icon="open_in_new" href="https://bilet.wielkopolskiebilety.pl/" target="_blank" rel="noopener">Kup w KW</v-btn>
+              <v-btn variant="outlined" size="small" append-icon="open_in_new" href="https://bilety.polregio.pl/" target="_blank" rel="noopener">POLREGIO</v-btn>
+            </div>
+            <p v-if="extra === 'czempin'" class="text-body-small">Ten wariant kupisz na razie tylko w kasach KW.</p>
+          </template>
+          <template v-else-if="rail === 'A'">
+            <v-icon icon="contactless" size="32" />
+            <p class="text-title-medium">Wystarczy bilet ZTM</p>
+            <p class="text-body-medium">Po Poznaniu i do Kiekrza pojedziesz pociągiem na bilecie okresowym ZTM ze strefą A (PEKA, ELS).</p>
+          </template>
+          <template v-else>
+            <v-icon icon="confirmation_number" size="32" />
+            <p class="text-body-medium">Wpisz swoją stację — pokażemy cenę biletu.</p>
+          </template>
         </div>
-      </div>
-    </section>
+      </v-card-text>
+    </v-card>
 
-    <!-- Gdzie kupić -->
-    <section class="mt-8" aria-labelledby="buy-title">
-      <div class="section-head"><h2 id="buy-title" class="text-title-large">Gdzie kupić</h2></div>
-      <p class="text-body-medium mb-3">
-        W kasach biletowych, u obsługi pociągu, w automatach POLREGIO i stacjonarnych automatach KW, w aplikacji KW apka,
-        w BILKOM oraz w mPOLREGIO, KOLEO i e-podróżniku.
-      </p>
-      <div class="d-flex flex-wrap ga-2">
-        <v-btn variant="flat" color="secondary-container" append-icon="open_in_new" href="https://bilet.wielkopolskiebilety.pl/" target="_blank" rel="noopener">Bilety KW</v-btn>
-        <v-btn variant="flat" color="secondary-container" append-icon="open_in_new" href="https://bilety.polregio.pl/" target="_blank" rel="noopener">Bilety POLREGIO</v-btn>
-      </div>
-    </section>
+    <!-- Najważniejsze zasady -->
+    <ul class="basics" aria-label="Najważniejsze zasady">
+      <li v-for="b in basics" :key="b.icon"><span class="basic-ic"><v-icon :icon="b.icon" /></span><span class="text-body-medium">{{ b.text }}</span></li>
+    </ul>
+
+    <v-card color="secondary-container" variant="flat" class="peka">
+      <v-card-text class="d-flex ga-3 align-center">
+        <v-icon icon="contactless" />
+        <span class="text-body-medium"><strong>Jeździsz tylko po Poznaniu?</strong> Bilet ZTM ze strefą A na PEKA działa też w pociągach KW i POLREGIO w Poznaniu.</span>
+      </v-card-text>
+    </v-card>
+
+    <!-- Szczegóły — zwinięte -->
+    <h2 class="text-title-medium details-title">Szczegóły</h2>
+    <v-expansion-panels variant="accordion" bg-color="surface-container-low">
+      <v-expansion-panel>
+        <v-expansion-panel-title><v-icon icon="payments" class="mr-3" />Pełny cennik</v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <v-chip-group v-model="tableDiscount" mandatory selected-class="chip-on" aria-label="Rodzaj biletu w cenniku" class="mb-2">
+            <v-chip v-for="d in DISCOUNTS" :key="d.value" :value="d.value" variant="outlined" size="small" filter>{{ discountLabels[d.value] }}</v-chip>
+          </v-chip-group>
+          <v-table class="prices" density="compact">
+            <thead>
+              <tr>
+                <th scope="col">Strefa <span class="muted">/ ZTM</span></th>
+                <th v-for="z in ZTM_ZONES" :key="z" scope="col" class="num">{{ z }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in FARES" :key="row.rail + (row.extra ?? '')">
+                <th scope="row">{{ row.rail }}<span v-if="row.extra" class="text-body-small muted d-block">{{ rowNote(row) }}</span></th>
+                <td v-for="z in ZTM_ZONES" :key="z" class="num tnum" :class="{ na: !row.prices[z] }">{{ cell(row, z) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+          <p class="text-body-small muted mt-2">Ceny w zł za miesiąc, od {{ TARIFF_DATE }}. ZTM: A — Poznań, B — najbliższe gminy, C — dalsze gminy.</p>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title><v-icon icon="train" class="mr-3" />Stacje w strefach</v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <dl class="zones">
+            <template v-for="z in RAIL_ZONES" :key="z">
+              <dt><span class="zone-badge">{{ z }}</span></dt>
+              <dd class="text-body-medium">{{ z === 'A' ? 'Wszystkie stacje w Poznaniu oraz Kiekrz' : RAIL_STATIONS[z].join(', ') }}<span class="muted"> · pociągi {{ railCoverage(z) }}</span></dd>
+            </template>
+          </dl>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title><v-icon icon="tram" class="mr-3" />Miejscowości w strefach ZTM</v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <dl class="zones">
+            <template v-for="(places, z) in ZTM_PLACES" :key="z">
+              <dt><span class="zone-badge">{{ z }}</span></dt>
+              <dd class="text-body-medium">{{ places }}</dd>
+            </template>
+          </dl>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+
+      <v-expansion-panel>
+        <v-expansion-panel-title><v-icon icon="info" class="mr-3" />Zwroty i pozostałe zasady</v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <ul class="rules text-body-medium">
+            <li v-for="r in moreRules" :key="r">{{ r }}</li>
+            <li>Autobusy MPK w Gnieźnie dołączysz tylko do biletu na strefę F, a autobusy gminy Czempiń — tylko do strefy D.</li>
+          </ul>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
     <footer class="sources text-body-small muted">
-      <p>
-        Serwis nieoficjalny — wiążące są warunki taryfowe przewoźników. Ceny i strefy według stanu na {{ TARIFF_DATE }}.
-      </p>
-      <p class="links">
-        <a v-for="s in sources" :key="s.href" :href="s.href" target="_blank" rel="noopener">{{ s.title }}</a>
-      </p>
+      <span>Serwis nieoficjalny — wiążące są warunki przewoźników. Źródła:</span>
+      <a v-for="s in sources" :key="s.href" :href="s.href" target="_blank" rel="noopener">{{ s.title }}</a>
     </footer>
   </div>
 </template>
 
 <style scoped>
-.intro { display: flex; align-items: center; gap: 16px; padding: 8px 0 24px; }
-.intro-ic { display: grid; place-items: center; width: 64px; height: 64px; flex: none; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-tertiary-container)); color: rgb(var(--v-theme-on-tertiary-container)); }
-.d-grid { display: grid; gap: 8px; justify-items: start; }
+.intro { display: grid; gap: 4px; padding: 8px 0 20px; }
 
-.calc { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) 280px; align-items: start; }
-.inputs { gap: 16px; grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
-.zone-chip { min-width: 40px; justify-content: center; }
+.calc { display: grid; gap: 20px 24px; grid-template-columns: minmax(0, 1fr) 280px; grid-template-areas: 'field result' 'opts result'; align-items: start; }
+.calc .field { grid-area: field; }
+.calc .inputs { grid-area: opts; }
+.calc .result { grid-area: result; }
+.inputs { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); align-content: start; }
 :deep(.chip-on) { background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); border-color: transparent; }
-.seg { max-width: 100%; }
 
 .result {
   display: grid; gap: 8px; align-content: start; justify-items: start; min-height: 180px; padding: 20px; border-radius: var(--kw-r-l);
   background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container));
 }
-.result.empty { background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
+.result.empty { min-height: 0; background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
+.details-title { margin: 32px 0 12px; }
 .price { font-size: 44px; line-height: 52px; font-weight: 800; letter-spacing: -.01em; }
-.covers { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.covers { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .covers li { display: flex; align-items: center; gap: 8px; }
 .covers .v-icon { font-size: 20px; }
+.buy { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
-.peka { display: flex; gap: 16px; align-items: flex-start; color: rgb(var(--v-theme-on-secondary-container)); }
-.peka > .v-icon { flex: none; margin-top: 2px; }
+.basics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; margin: 24px 0 16px; padding: 0; list-style: none; }
+.basics li { display: flex; align-items: center; gap: 12px; }
+.basic-ic {
+  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);
+  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
+}
+
+.peka { color: rgb(var(--v-theme-on-secondary-container)); }
 
 .prices { background: transparent; }
 .prices th, .prices td { white-space: nowrap; }
 .prices .num { text-align: right; }
-.prices tbody th { font-weight: 400; text-align: left; }
-.zone-name { font-weight: 500; }
-.prices td:not(.na) { cursor: pointer; }
-.prices td:not(.na):hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 8%, transparent); }
-.prices td:focus-visible { outline: 3px solid rgb(var(--v-theme-secondary)); outline-offset: -3px; }
+.prices tbody th { font-weight: 600; text-align: left; }
 .prices td.na { color: rgb(var(--v-theme-on-surface-variant)); opacity: .6; }
-.prices td.sel { background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); font-weight: 600; }
 
-.zones { display: grid; gap: 24px; grid-template-columns: 1fr 1fr; align-items: start; }
+.zones { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px 12px; margin: 0; }
+.zones dd { margin: 0; padding-top: 4px; }
 .zone-badge {
-  display: inline-grid; place-items: center; width: 32px; height: 32px; margin-right: 12px; border-radius: 50%; font-weight: 600;
+  display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; font-weight: 700;
   background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface));
 }
+.rules { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
 
-.rules { display: grid; gap: 16px 24px; grid-template-columns: 1fr 1fr; }
-.rule { display: flex; gap: 16px; align-items: flex-start; }
-.rule-ic {
-  display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);
-  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
-}
-.rule .d-grid { gap: 4px; }
-
-.sources { display: grid; gap: 8px; margin-top: 40px; padding-top: 16px; border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
-.sources .links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.sources { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 32px; padding-top: 16px; border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
 .sources a { color: rgb(var(--v-theme-primary)); }
 
 @media (max-width: 839px) {
-  .calc { grid-template-columns: minmax(0, 1fr); }
-  .zones, .rules { grid-template-columns: minmax(0, 1fr); }
+  .calc { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'field' 'result' 'opts'; }
+  .result { min-height: 0; }
+  .result.empty { display: flex; align-items: center; gap: 12px; padding: 16px; }
+  .basics { grid-template-columns: minmax(0, 1fr); }
   .price { font-size: 36px; line-height: 44px; }
   .prices :is(th, td) { padding: 0 6px !important; font-size: 13px; }
-  .prices :is(th, td):first-child { padding-left: 12px !important; }
-  .prices :is(th, td):last-child { padding-right: 10px !important; }
+  .prices :is(th, td):first-child { padding-left: 4px !important; }
+  :deep(.v-expansion-panel-text__wrapper) { padding: 4px 12px 16px; }
 }
 </style>
