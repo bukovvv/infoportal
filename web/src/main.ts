@@ -1,5 +1,4 @@
-import '@fontsource/varela-round/latin.css'
-import '@fontsource/varela-round/latin-ext.css'
+import '@fontsource-variable/google-sans-flex/rond.css'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import App from './App.vue'
