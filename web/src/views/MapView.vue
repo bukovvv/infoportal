@@ -187,7 +187,7 @@ function fitNetwork() {
   fitCoords(coords.length ? coords : stations.list.map((s) => [s.lon, s.lat]), 9)
 }
 
-async function select(key: string, fromList = false) {
+async function select(key: string) {
   selectedKey.value = key
   if (!mdAndUp.value) expanded.value = false
   const train = live.trains.find((t) => keyOf(t) === key)
@@ -204,8 +204,7 @@ async function select(key: string, fromList = false) {
     const coords = (trip.shape.length ? trip.shape : trip.stops.filter((s) => s.station.lat !== null).map((s) => [s.station.lat!, s.station.lon!])).map(([lat, lon]) => [lon, lat] as [number, number])
     routeTrip.value = trip
     refreshRoute()
-    if (fromList && train && mdAndUp.value) map?.flyTo({ center: [train.lon, train.lat], zoom: Math.max(map.getZoom(), 10), padding: padding() })
-    else fitCoords(coords)
+    fitCoords(coords)
   } catch (e) {
     ui.notify((e as Error).message)
   }
@@ -337,7 +336,7 @@ const filters = [
           :key="keyOf(t)"
           :active="keyOf(t) === selectedKey"
           color="secondary"
-          @click="select(keyOf(t), true)"
+          @click="select(keyOf(t))"
         >
           <template #prepend>
             <span class="lead" :class="stateOf(t)"><v-icon :icon="t.isBus ? 'directions_bus' : 'train'" /></span>

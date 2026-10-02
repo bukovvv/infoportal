@@ -55,14 +55,14 @@ const rows = computed<Row[]>(() => {
 const speed = computed(() => props.trip.position?.speed ?? null)
 const lastIndex = computed(() => props.trip.stops.length - 1)
 
-/** Godzina planowa i — przy opóźnieniu — oczekiwana; pierwsza stacja nie ma przyjazdu, ostatnia odjazdu. */
+/** Godzina planowa i — przy opóźnieniu od 2 min (jak w wyszukiwarce) — oczekiwana; pierwsza stacja nie ma przyjazdu, ostatnia odjazdu. */
 function time(s: TripStop, i: number, kind: 'arr' | 'dep') {
   if ((kind === 'arr' && i === 0) || (kind === 'dep' && i === lastIndex.value)) return null
   const plan = kind === 'arr' ? (s.arrival ?? s.departure) : (s.departure ?? s.arrival)
   if (!plan) return null
   const delay = kind === 'arr' ? s.arrivalDelay : s.departureDelay
   const expected = kind === 'arr' ? s.expectedArrival : s.expectedDeparture
-  return { plan: clock(plan), expected: delay && expected ? clock(expected) : null }
+  return { plan: clock(plan), expected: delay !== null && delay >= 2 && expected ? clock(expected) : null }
 }
 
 /** Postój w minutach według rozkładu (pokazujemy dopiero od 2 minut). */

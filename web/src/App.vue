@@ -3,7 +3,7 @@ import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import TrainSheet from '@/components/TrainSheet.vue'
-import { titles } from '@/router'
+import { shortTitles, titles } from '@/router'
 import { useLive, useNotices, useStatus } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { clock } from '@/utils/format'
@@ -33,7 +33,10 @@ const nav = computed(() => [
   { to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length },
 ])
 const current = computed(() => String(route.name ?? ''))
-const title = computed(() => (isAdmin.value ? titles.admin : titles[current.value] ?? titles.start))
+const title = computed(() => {
+  const name = isAdmin.value ? 'admin' : titles[current.value] ? current.value : 'start'
+  return (!mdAndUp.value && shortTitles[name]) || titles[name]
+})
 
 const themes = [
   { value: 'system', label: 'Systemowy', icon: 'brightness_auto' },

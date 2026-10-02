@@ -12,6 +12,15 @@ const titles: Record<string, string> = {
   missing: 'Nie znaleziono strony',
 }
 
+/** Tytuły na wąskie ekrany (górny pasek obok logo, przycisków stanu i biletu). */
+const shortTitles: Record<string, string> = {
+  map: 'Mapa',
+  board: 'Odjazdy',
+  btk: 'Bilet BTK',
+  admin: 'Panel admina',
+  missing: 'Nie znaleziono',
+}
+
 const router = createRouter({
   history: createWebHistory(),
   scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
@@ -41,5 +50,5 @@ router.afterEach((to) => {
   document.title = name === 'start' ? base : `${base} · Infoportal KW`
 })
 
-export { titles }
+export { shortTitles, titles }
 export default router
