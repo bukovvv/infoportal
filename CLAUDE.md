@@ -11,6 +11,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - W portalu i dokumentacji **nie używać nazwy „Kierownik Plus”** (zapasowy GPS = „GPS zapasowy”).
 - Material Design 3 w całości; krój **Nunito** (`@fontsource-variable/nunito`, nagłówki 700; Varela Round odrzucona przez użytkownika); zaokrąglenia z jednej skali: przyciski, chipy, przełączniki = pigułki (domyślne w `web/src/plugins/vuetify.ts`), karty/alerty 24 px, kafelki 16 px (zmienne `--kw-r-*` w `app.css`) — nie nadpisywać `rounded` w widokach; ikony Material Symbols jako SVG — nowe nazwy dopisywać do `web/src/plugins/icons.json`.
 - Zakładka **Bus-Tramwaj-Kolej** (`/bus-tramwaj-kolej`, `web/src/views/BtkView.vue`) = prosta informacja o taryfie wspólnego biletu BTK (kalkulator ceny, cennik, strefy, zasady). Podpowiedź `BtkHint` na tablicy odjazdów (stacje B–G) i pod wynikami wyszukiwania (wszystkie stacje w BTK) linkuje do `/bus-tramwaj-kolej?stacja=…`. Nazwy z rozkładu dopasowuje `btkStation()` (skróty Wlkp./koło + `ALIASES`). Dane w `web/src/utils/btkTariff.ts` — przy zmianie cen podmienić `FARES` i `TARIFF_DATE` (źródła: strona oferty KW, strona i warunki taryfowe POLREGIO).
+- Strona **O serwisie** (`/o-serwisie`, `AboutView.vue`): źródła danych, prywatność, autor „Jakub” — kliknięcie pokazuje `web/public/autor.webp` (lore, celowo). Bez kontaktu na stronie (decyzja użytkownika). Przy zmianach w zbieranych danych (localStorage `kw_*`, geolokalizacja, zewnętrzne usługi) zaktualizować sekcję Prywatność.
 - Komunikacja z użytkownikiem po polsku.
 
 ## Komendy
@@ -33,4 +34,4 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - `server/config/admin-password.php` zawiera tylko hash (ustawia go użytkownik: `php server/bin/set-admin-password.php`); nigdy nie prosić o hasło.
 
 ## Możliwe następne kroki (zaproponowane, niezaczęte)
-Zewnętrzny monitor (UptimeRobot) na wypadek awarii całego serwera; PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; strona „O serwisie” z polityką prywatności; zapasowe źródło opóźnień PLK.
+Zewnętrzny monitor (UptimeRobot) na wypadek awarii całego serwera; PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; zapasowe źródło opóźnień PLK.

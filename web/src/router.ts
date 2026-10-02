@@ -8,6 +8,7 @@ const titles: Record<string, string> = {
   train: 'Pociąg',
   notices: 'Komunikaty',
   btk: 'Bus-Tramwaj-Kolej',
+  about: 'O serwisie',
   admin: 'Panel administratora',
   missing: 'Nie znaleziono strony',
 }
@@ -32,6 +33,7 @@ const router = createRouter({
     { path: '/pociag/:number', name: 'train', component: () => import('@/views/TrainView.vue') },
     { path: '/komunikaty', name: 'notices', component: () => import('@/views/NoticesView.vue') },
     { path: '/bus-tramwaj-kolej', name: 'btk', component: () => import('@/views/BtkView.vue') },
+    { path: '/o-serwisie', name: 'about', component: () => import('@/views/AboutView.vue') },
     {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),

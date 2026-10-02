@@ -106,11 +106,13 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
         </v-btn>
         <v-menu location="bottom end">
           <template #activator="{ props }">
-            <v-btn v-bind="props" :icon="themeIcon" variant="text" aria-label="Zmień motyw" class="mr-1" />
+            <v-btn v-bind="props" :icon="themeIcon" variant="text" aria-label="Motyw i informacje" class="mr-1" />
           </template>
           <v-list density="compact" nav>
             <v-list-subheader>Motyw</v-list-subheader>
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
+            <v-divider class="my-1" />
+            <v-list-item prepend-icon="info" title="O serwisie" to="/o-serwisie" />
           </v-list>
         </v-menu>
       </template>

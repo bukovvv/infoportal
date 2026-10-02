@@ -176,6 +176,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 
         <p class="text-body-small muted footnote">
           Infoportal KW to nieoficjalny serwis pasażerski, niezwiązany z Kolejami Wielkopolskimi. Bilety kupisz na stronie przewoźnika.
+          <router-link to="/o-serwisie" class="text-primary">O serwisie i prywatności</router-link>
         </p>
       </div>
     </div>
