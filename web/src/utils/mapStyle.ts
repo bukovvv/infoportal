@@ -15,16 +15,23 @@ interface Palette {
   label: string
   labelMuted: string
   halo: string
+  /** nakładki KW: sieć linii (neutralna) i stany pociągów (jak plakietki statusu) */
+  network: string
+  ontime: string
+  late: string
+  est: string
 }
 
 const palettes: Record<'light' | 'dark', Palette> = {
   light: {
     bg: '#FBF1F0', land: '#F5E8E7', wood: '#EEE6DD', water: '#D6E1E8', road: '#FFFFFF', roadCasing: '#E8D5D3',
     rail: '#C9B3B1', boundary: '#B9A3A1', label: '#534342', labelMuted: '#857372', halo: '#FBF1F0',
+    network: '#B29C9A', ontime: '#1F8A4C', late: '#E08600', est: '#5E7CA8',
   },
   dark: {
     bg: '#1E1515', land: '#241A1A', wood: '#231D18', water: '#17232B', road: '#3A2F2E', roadCasing: '#2C2322',
     rail: '#5A4948', boundary: '#6A5857', label: '#D8C2C0', labelMuted: '#A08C8B', halo: '#1E1515',
+    network: '#7A6665', ontime: '#6FCF8E', late: '#F5B83D', est: '#8FAEDB',
   },
 }
 

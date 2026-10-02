@@ -11,7 +11,8 @@ import StatusTag from '@/components/StatusTag.vue'
 import { useLive, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { clock, normalize } from '@/utils/format'
-import { loadMapStyle } from '@/utils/mapStyle'
+import type { Trip } from '@/api/types'
+import { loadMapStyle, mapPalette } from '@/utils/mapStyle'
 
 // Worker MapLibre jest modułem ES — Vite pakuje go osobno i podaje jego adres.
 setWorkerUrl(maplibreWorker)
@@ -31,7 +32,7 @@ const query = ref('')
 const expanded = ref(false)
 const mapError = ref<string | null>(null)
 const network = shallowRef<GeoJSON.FeatureCollection | null>(null)
-const routeLine = shallowRef<GeoJSON.Feature | null>(null)
+const routeTrip = shallowRef<Trip | null>(null)
 let map: MlMap | null = null
 
 const keyOf = (t: LiveTrain) => t.key ?? `gps:${t.number}`
@@ -53,7 +54,49 @@ const stats = computed(() => ({
 
 function colors() {
   const c = theme.current.value.colors as Record<string, string>
-  return { primary: c.primary, delay: c.warning, est: c.info, surface: c['surface-container-lowest'], outline: c.outline, text: c['on-surface'], halo: c.surface }
+  const p = mapPalette(theme.global.name.value === 'dark' ? 'dark' : 'light')
+  return {
+    primary: c.primary, ontime: p.ontime, delay: p.late, est: p.est, network: p.network,
+    surface: c['surface-container-lowest'], outline: c.outline, text: c['on-surface'], halo: c.surface,
+  }
+}
+
+const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
+
+/** Trasa wybranego kursu podzielona w miejscu pociągu: odcinek przejechany i do przejechania. */
+function routeGeoJson(): GeoJSON.FeatureCollection {
+  const trip = routeTrip.value
+  if (!trip) return empty
+  const coords = (trip.shape.length ? trip.shape : trip.stops.filter((s) => s.station.lat !== null).map((s) => [s.station.lat!, s.station.lon!]))
+    .map(([lat, lon]) => [lon, lat] as [number, number])
+  const train = live.trains.find((t) => keyOf(t) === trip.key)
+  const line = (part: string, c: [number, number][]): GeoJSON.Feature => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: c }, properties: { part } })
+  if (!train || coords.length < 2) return { type: 'FeatureCollection', features: [line('ahead', coords)] }
+  const here: [number, number] = [train.lon, train.lat]
+  const dist = ([x, y]: [number, number]) => (x - here[0]) ** 2 + (y - here[1]) ** 2
+  let at = 0
+  coords.forEach((p, i) => { if (dist(p) < dist(coords[at])) at = i })
+  return { type: 'FeatureCollection', features: [line('passed', [...coords.slice(0, at + 1), here]), line('ahead', [here, ...coords.slice(at + 1)])] }
+}
+
+function routeStopsGeoJson(): GeoJSON.FeatureCollection {
+  const trip = routeTrip.value
+  if (!trip) return empty
+  return {
+    type: 'FeatureCollection',
+    features: trip.stops.filter((s) => s.station.lat !== null && !s.skipped).map((s, i, all) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [s.station.lon!, s.station.lat!] },
+      properties: { name: s.station.name, terminal: i === 0 || i === all.length - 1 },
+    })),
+  }
+}
+
+function refreshRoute() {
+  if (!map) return
+  ;(map.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson())
+  ;(map.getSource('kw-route-stops') as GeoJSONSource | undefined)?.setData(routeStopsGeoJson())
+  if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.35 : 0.9)
 }
 
 function trainsGeoJson(): GeoJSON.FeatureCollection {
@@ -63,7 +106,7 @@ function trainsGeoJson(): GeoJSON.FeatureCollection {
     features: live.trains.filter((t) => ids.has(keyOf(t))).map((t) => ({
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [t.lon, t.lat] },
-      properties: { key: keyOf(t), number: t.number.split('/')[0], state: stateOf(t), selected: keyOf(t) === selectedKey.value, bus: t.isBus },
+      properties: { key: keyOf(t), number: t.number.split('/')[0], state: stateOf(t), selected: keyOf(t) === selectedKey.value, dim: !!selectedKey.value && keyOf(t) !== selectedKey.value, bus: t.isBus },
     })),
   }
 }
@@ -78,29 +121,47 @@ function stationsGeoJson(): GeoJSON.FeatureCollection {
 function addOverlays() {
   if (!map || map.getSource('kw-trains')) return
   const c = colors()
-  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] }
   map.addSource('kw-network', { type: 'geojson', data: network.value ?? empty })
-  map.addSource('kw-route', { type: 'geojson', data: routeLine.value ?? empty })
+  map.addSource('kw-route', { type: 'geojson', data: routeGeoJson() })
+  map.addSource('kw-route-stops', { type: 'geojson', data: routeStopsGeoJson() })
   map.addSource('kw-stations', { type: 'geojson', data: stationsGeoJson() })
   map.addSource('kw-trains', { type: 'geojson', data: trainsGeoJson() })
   map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['!', ['get', 'bus']], layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.5, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 11, 3, 14, 5] } })
-  map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.halo, 'line-width': 9 } })
-  map.addLayer({ id: 'kw-route', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': c.primary, 'line-width': 5 } })
+    paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 11, 3, 14, 5] } })
+  map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': c.halo, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 7, 12, 11] } })
+  map.addLayer({ id: 'kw-route', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': c.primary,
+      'line-opacity': ['case', ['==', ['get', 'part'], 'passed'], 0.4, 1],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 6, 4, 12, 7],
+    } })
+  map.addLayer({ id: 'kw-route-stops', type: 'circle', source: 'kw-route-stops',
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, ['case', ['get', 'terminal'], 4.5, 2.5], 12, ['case', ['get', 'terminal'], 7, 5]],
+      'circle-color': c.surface, 'circle-stroke-color': c.primary, 'circle-stroke-width': ['case', ['get', 'terminal'], 3, 2],
+    } })
   map.addLayer({ id: 'kw-stations', type: 'circle', source: 'kw-stations', minzoom: 8,
     paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['case', ['get', 'major'], 3.5, 2], 13, 5], 'circle-color': c.surface, 'circle-stroke-color': c.outline, 'circle-stroke-width': 1.5 } })
   map.addLayer({ id: 'kw-station-labels', type: 'symbol', source: 'kw-stations', minzoom: 8,
     filter: ['any', ['get', 'major'], ['>=', ['zoom'], 10.5]],
     layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': ['case', ['get', 'major'], 12, 11], 'text-offset': [0.8, 0], 'text-anchor': 'left', 'text-optional': true },
     paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 1.5 } })
-  const stateColor = ['match', ['get', 'state'], 'delay', c.delay, 'est', c.est, c.primary] as unknown as string
+  map.addLayer({ id: 'kw-route-labels', type: 'symbol', source: 'kw-route-stops', minzoom: 8,
+    layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0.9, 0], 'text-anchor': 'left', 'text-optional': true },
+    paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2 } })
+  const stateColor = ['match', ['get', 'state'], 'delay', c.delay, 'est', c.est, c.ontime] as unknown as string
+  const dimmed = ['case', ['get', 'dim'], 0.35, 1] as unknown as number
   map.addLayer({ id: 'kw-trains-halo', type: 'circle', source: 'kw-trains', filter: ['get', 'selected'], paint: { 'circle-radius': 18, 'circle-color': c.primary, 'circle-opacity': 0.18 } })
   map.addLayer({ id: 'kw-trains', type: 'circle', source: 'kw-trains',
-    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 5, 12, 8], 'circle-color': stateColor, 'circle-stroke-color': c.surface, 'circle-stroke-width': 2.5 } })
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, ['case', ['get', 'selected'], 7, 5], 12, ['case', ['get', 'selected'], 10, 8]],
+      'circle-color': stateColor, 'circle-stroke-color': c.surface, 'circle-stroke-width': 2.5, 'circle-opacity': dimmed, 'circle-stroke-opacity': dimmed,
+    } })
   map.addLayer({ id: 'kw-train-labels', type: 'symbol', source: 'kw-trains',
     filter: ['any', ['get', 'selected'], ['>=', ['zoom'], 10]],
     layout: { 'text-field': ['get', 'number'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': false },
-    paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2 } })
+    paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2, 'text-opacity': dimmed } })
 }
 
 /** Marginesy na panel listy i arkusz pociągu, zmniejszane proporcjonalnie w małych oknach. */
@@ -141,8 +202,8 @@ async function select(key: string, fromList = false) {
     const trip = await api.trip(key)
     if (selectedKey.value !== key) return
     const coords = (trip.shape.length ? trip.shape : trip.stops.filter((s) => s.station.lat !== null).map((s) => [s.station.lat!, s.station.lon!])).map(([lat, lon]) => [lon, lat] as [number, number])
-    routeLine.value = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} }
-    ;(map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeLine.value)
+    routeTrip.value = trip
+    refreshRoute()
     if (fromList && train && mdAndUp.value) map?.flyTo({ center: [train.lon, train.lat], zoom: Math.max(map.getZoom(), 10), padding: padding() })
     else fitCoords(coords)
   } catch (e) {
@@ -152,8 +213,8 @@ async function select(key: string, fromList = false) {
 
 function clearSelection() {
   selectedKey.value = null
-  routeLine.value = null
-  ;(map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData({ type: 'FeatureCollection', features: [] })
+  routeTrip.value = null
+  refreshRoute()
   if (route.query.kurs) void router.replace({ query: {} })
 }
 
@@ -174,6 +235,8 @@ function locate() {
 watch([() => live.trains, filter, query, selectedKey], () => {
   ;(map?.getSource('kw-trains') as GeoJSONSource | undefined)?.setData(trainsGeoJson())
 })
+// pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
+watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
 watch(() => stations.list, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
 watch(() => ui.sheet, (sheet) => { if (!sheet && selectedKey.value) clearSelection() })
 watch(() => theme.global.name.value, async (name) => {
@@ -230,6 +293,7 @@ const whereText = (t: LiveTrain) => {
   if (t.dwelling || !t.next || t.prev.seq === t.next.seq) return `Na stacji ${t.prev.name}`
   return `${t.prev.name} → ${t.next.name}`
 }
+const legend = computed(() => mapPalette(theme.global.name.value === 'dark' ? 'dark' : 'light'))
 const filters = [
   { value: 'all', label: 'Wszystkie' },
   { value: 'late', label: 'Opóźnione' },
@@ -307,15 +371,15 @@ const filters = [
 .stats div { display: grid; padding: 8px 12px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-lowest)); }
 .stats strong { font-size: 22px; line-height: 28px; font-weight: 400; }
 .list { flex: 1; min-height: 0; overflow: auto; }
-.lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 12px; border-radius: 50%; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
+.lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 12px; border-radius: 50%; background: rgb(var(--v-theme-success-container)); color: rgb(var(--v-theme-on-success-container)); }
 .lead.delay { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
 .lead.est { background: rgb(var(--v-theme-info-container)); color: rgb(var(--v-theme-on-info-container)); }
 .controls { position: absolute; z-index: 2; right: 16px; bottom: 32px; display: grid; gap: 12px; }
 .legend { position: absolute; z-index: 2; right: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 14px; border-radius: 999px; background: rgb(var(--v-theme-surface-container-high)); font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.lg { width: 10px; height: 10px; border-radius: 50%; background: rgb(var(--v-theme-primary)); }
-.lg.d { background: rgb(var(--v-theme-warning)); }
-.lg.e { background: rgb(var(--v-theme-info)); }
+.lg { width: 10px; height: 10px; border-radius: 50%; background: v-bind('legend.ontime'); }
+.lg.d { background: v-bind('legend.late'); }
+.lg.e { background: v-bind('legend.est'); }
 :deep(.chip-on) { background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); border-color: transparent; }
 :deep(.maplibregl-ctrl-attrib) { font-size: 11px; }
 .handle { display: grid; place-items: center; width: 100%; height: 24px; border: 0; background: none; cursor: pointer; }
