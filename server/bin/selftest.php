@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/bootstrap.php';
 
+use KwInfo\Http\ApiException;
+use KwInfo\Api\PublicApi;
 use KwInfo\Clock;
 use KwInfo\Config;
 use KwInfo\Gtfs\ConnectionFinder;
@@ -115,6 +117,24 @@ if (is_file(Config::path('gtfs_db'))) {
         }
     }
     check('baza: wyniki posortowane i bez zdominowanych', $sorted);
+
+    // API: tablica na wybrany dzień i godzinę, wyszukiwarka z datą
+    $api = new PublicApi();
+    $isoDay = Clock::isoDate(max((int) $range[0], Clock::addDays(Clock::today(), 1)));
+    $_GET = ['date' => $isoDay, 'time' => '12:00', 'limit' => '5'];
+    $rows = $api->board(['id' => $byName['Poznań Główny'] ?? ''])->data['rows'];
+    check('API: tablica od wybranej daty i godziny', $rows !== [] && substr($rows[0]['scheduled'], 0, 16) >= $isoDay . 'T12:00' && $rows[0]['expected'] === null);
+    $_GET = ['date' => '2000-01-01'];
+    try {
+        $api->board(['id' => $byName['Poznań Główny'] ?? '']);
+        check('API: data spoza rozkładu odrzucona', false);
+    } catch (ApiException) {
+        check('API: data spoza rozkładu odrzucona', true);
+    }
+    $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => '07:00'];
+    $conn = $api->connections()->data;
+    check('API: wyszukiwarka z datą', $conn['date'] === $isoDay && $conn['connections'] !== []);
+    $_GET = [];
 } else {
     echo "[POMINIĘTO] testy na bazie — uruchom najpierw import-gtfs.php\n";
 }

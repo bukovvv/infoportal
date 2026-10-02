@@ -3,10 +3,12 @@ const TZ = 'Europe/Warsaw'
 const timeFmt = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })
 const dateFmt = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, weekday: 'short', day: 'numeric', month: 'long' })
 const dateTimeFmt = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const weekdayFmt = new Intl.DateTimeFormat('pl-PL', { timeZone: TZ, weekday: 'short' })
 const partsFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 
 export const clock = (iso: string | null | undefined) => (iso ? timeFmt.format(new Date(iso)) : '–')
 export const dayLabel = (iso: string | Date) => dateFmt.format(typeof iso === 'string' ? new Date(iso) : iso)
+export const weekdayShort = (iso: string) => weekdayFmt.format(new Date(iso))
 export const dateTime = (iso: string | null | undefined) => (iso ? dateTimeFmt.format(new Date(iso)) : '–')
 
 /** Data i godzina w Warszawie: { date: 'RRRR-MM-DD', time: 'GG:MM' }. */

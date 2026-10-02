@@ -7,13 +7,14 @@ import BtkHint from '@/components/BtkHint.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StationField from '@/components/StationField.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import { useStations } from '@/stores/data'
+import { useStations, useStatus } from '@/stores/data'
 import { read, useUi, write } from '@/stores/ui'
-import { clock, minutesUntil, relative } from '@/utils/format'
+import { clock, dayLabel, minutesUntil, relative, warsawNow, weekdayShort } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 const stations = useStations()
+const status = useStatus()
 const ui = useUi()
 const DEFAULT_STATION = '30601' // Poznań Główny
 
@@ -27,11 +28,28 @@ const locating = ref(false)
 
 const station = computed(() => (stationId.value ? stations.byId.get(stationId.value) : undefined))
 
+// Wybrany dzień i godzina. Puste = „teraz” (tablica na żywo, pola pokazują bieżący czas).
+// Zmiana jednego pola przypina oba — tablica pokazuje dokładnie to, co widać w polach.
+const date = ref((route.query.data as string) || '')
+const time = ref((route.query.godz as string) || '')
+const pinned = computed(() => !!(date.value || time.value))
+const current = computed(() => warsawNow(new Date(now.value)))
+const dateField = computed({
+  get: () => date.value || current.value.date,
+  set: (v: string) => { time.value ||= current.value.time; date.value = v || current.value.date },
+})
+const timeField = computed({
+  get: () => time.value || current.value.time,
+  set: (v: string) => { date.value ||= current.value.date; time.value = v || '00:00' },
+})
+const range = computed(() => ({ min: status.status?.timetable.validFrom, max: status.status?.timetable.validUntil }))
+const resetToNow = () => { date.value = ''; time.value = '' }
+
 async function load(silent = false) {
   if (!stationId.value) return
   if (!silent) loading.value = true
   try {
-    board.value = await api.board(stationId.value, mode.value, 16)
+    board.value = await api.board(stationId.value, mode.value, 16, pinned.value ? { date: date.value, time: time.value } : undefined)
     error.value = null
   } catch (e) {
     error.value = (e as Error).message
@@ -41,10 +59,11 @@ async function load(silent = false) {
   }
 }
 
-watch([stationId, mode], ([id]) => {
+watch([stationId, mode, date, time], ([id]) => {
   if (!id) return
   write('kw_board_station', id)
-  void router.replace({ name: 'board', params: { stationId: id }, query: mode.value === 'arr' ? { tryb: 'przyjazdy' } : {} })
+  const query = { ...(mode.value === 'arr' ? { tryb: 'przyjazdy' } : {}), ...(pinned.value ? { data: date.value, godz: time.value } : {}) }
+  void router.replace({ name: 'board', params: { stationId: id }, query })
   void load()
 })
 watch(() => route.params.stationId, (id) => { if (id && id !== stationId.value) stationId.value = id as string })
@@ -77,7 +96,10 @@ function nearest() {
   }, { timeout: 10_000, maximumAge: 300_000 })
 }
 
+/** Pod godziną: dzień tygodnia, gdy kurs jest innego dnia niż tablica; na żywo — „za X min”. */
 const when = (iso: string) => {
+  if (iso.slice(0, 10) !== (date.value || current.value.date)) return weekdayShort(iso)
+  if (pinned.value) return ''
   const m = minutesUntil(iso, now.value)
   return m < 60 ? relative(m) : ''
 }
@@ -95,8 +117,17 @@ const when = (iso: string) => {
           <v-btn value="dep" :prepend-icon="mode === 'dep' ? 'check' : undefined">Odjazdy</v-btn>
           <v-btn value="arr" :prepend-icon="mode === 'arr' ? 'check' : undefined">Przyjazdy</v-btn>
         </v-btn-toggle>
-        <span v-if="board" class="text-body-small muted" aria-live="polite">{{ station?.name ?? board.station.name }} · stan na {{ clock(board.generatedAt) }}</span>
+        <div class="when-fields">
+          <v-text-field v-model="dateField" type="date" label="Data" :min="range.min" :max="range.max" density="compact" hide-details class="f-date" />
+          <v-text-field v-model="timeField" type="time" :label="mode === 'dep' ? 'Odjazdy od' : 'Przyjazdy od'" density="compact" hide-details class="f-time" />
+          <v-btn v-if="pinned" variant="text" prepend-icon="update" @click="resetToNow">Teraz</v-btn>
+        </div>
       </div>
+      <span v-if="board" class="text-body-small muted px-1" aria-live="polite">
+        {{ station?.name ?? board.station.name }} ·
+        <template v-if="pinned">rozkład na {{ dayLabel(date + 'T12:00:00') }}, od {{ time }}</template>
+        <template v-else>na żywo, stan na {{ clock(board.generatedAt) }}</template>
+      </span>
     </div>
 
     <v-card color="surface-container-low" class="board">
@@ -132,7 +163,7 @@ const when = (iso: string) => {
             <strong>{{ row.platform || '–' }}</strong><small>peron<template v-if="row.track"> · tor {{ row.track }}</template></small>
           </span>
         </button>
-        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" text="Z tej stacji nie odjeżdża dziś ani jutro rano żaden pociąg KW." />
+        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" :text="pinned ? 'W wybranym czasie i do rana następnego dnia nie ma tu żadnego kursu KW.' : 'Z tej stacji nie odjeżdża dziś ani jutro rano żaden pociąg KW.'" />
       </template>
     </v-card>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>
@@ -143,6 +174,9 @@ const when = (iso: string) => {
 <style scoped>
 .board-head { display: grid; gap: 16px; padding: 8px 0 16px; }
 .row1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.when-fields { display: flex; flex: 1 1 320px; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.f-date { flex: 0 1 170px; min-width: 150px; }
+.f-time { flex: 0 1 140px; min-width: 120px; }
 .board { overflow: hidden; position: relative; }
 .dep { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; width: 100%; padding: 14px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .dep + .dep { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
@@ -159,6 +193,8 @@ const when = (iso: string) => {
 @media (max-width: 839px) {
   .row1 { grid-template-columns: minmax(0, 1fr); }
   .row1 .v-chip { justify-self: start; }
+  .when-fields { justify-content: flex-start; }
+  .f-date, .f-time { flex: 1 1 calc(50% - 4px); min-width: 0; }
   .dep { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; padding: 12px; }
 }
 </style>

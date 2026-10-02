@@ -37,8 +37,9 @@ const q = (params: Record<string, string | number | boolean | undefined>) =>
 
 export const api = {
   stations: () => request<Station[]>('GET', '/stations'),
-  board: (stationId: string, mode: 'dep' | 'arr', limit = 16) =>
-    request<Board>('GET', `/stations/${encodeURIComponent(stationId)}/board?${q({ mode, limit })}`),
+  /** at: dzień (RRRR-MM-DD) i godzina (GG:MM), od których pokazać kursy; bez at — od teraz. */
+  board: (stationId: string, mode: 'dep' | 'arr', limit = 16, at?: { date?: string; time?: string }) =>
+    request<Board>('GET', `/stations/${encodeURIComponent(stationId)}/board?${q({ mode, limit, date: at?.date, time: at?.time })}`),
   connections: (p: { from: string; to: string; date: string; time: string; direct?: boolean }) =>
     request<ConnectionsResult>('GET', `/connections?${q({ ...p, direct: p.direct ? 1 : undefined })}`),
   trip: (key: string) => request<Trip>('GET', `/trips/${encodeURIComponent(key)}`),

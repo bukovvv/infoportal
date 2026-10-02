@@ -60,13 +60,15 @@ final class PublicApi
         $limit = max(1, min(40, (int) ($_GET['limit'] ?? 16)));
         $today = Clock::today();
         $nowSec = Clock::secondsSince($today);
-        $from = $nowSec - 60;
+        // dzień tablicy: domyślnie dziś od teraz; z ?date= od północy (albo od ?time=)
+        $base = isset($_GET['date']) ? $this->dateParam((string) $_GET['date']) : $today;
+        $from = $base === $today ? $nowSec - 60 : 0;
         if (isset($_GET['time']) && preg_match('/^(\d{2}):(\d{2})$/', (string) $_GET['time'], $m) === 1) {
             $from = (int) $m[1] * 3600 + (int) $m[2] * 60;
         }
 
         $rows = [];
-        foreach ([[$today, 0], [Clock::addDays($today, 1), 86400]] as [$date, $shift]) {
+        foreach ([[$base, 0], [Clock::addDays($base, 1), 86400]] as [$date, $shift]) {
             $day = $this->day($date);
             foreach ($day->byStation[$station['id']] ?? [] as [$key, $idx]) {
                 $trip = $day->trips[$key];
@@ -124,6 +126,20 @@ final class PublicApi
         ]);
     }
 
+    /** Data RRRR-MM-DD z zapytania jako RRRRMMDD, w zakresie ważności rozkładu. */
+    private function dateParam(string $value): int
+    {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) !== 1) {
+            throw new ApiException('Podaj prawidłową datę.', 422);
+        }
+        $meta = $this->tt()->meta();
+        if ($value < ($meta['validFrom'] ?? '') || $value > ($meta['validUntil'] ?? '')) {
+            throw new ApiException('Rozkład obejmuje dni od ' . date('d.m', strtotime($meta['validFrom'])) . ' do ' . date('d.m.Y', strtotime($meta['validUntil'])) . '.', 422);
+        }
+
+        return (int) str_replace('-', '', $value);
+    }
+
     public function connections(): Response
     {
         $from = $this->tt()->station((string) ($_GET['from'] ?? '')) ?? throw new ApiException('Wybierz stację początkową z listy.', 422);
@@ -131,15 +147,10 @@ final class PublicApi
         if ($from['id'] === $to['id']) {
             throw new ApiException('Stacja początkowa i docelowa muszą się różnić.', 422);
         }
-        $dateStr = (string) ($_GET['date'] ?? Clock::isoDate(Clock::today()));
+        $date = $this->dateParam((string) ($_GET['date'] ?? Clock::isoDate(Clock::today())));
         $timeStr = (string) ($_GET['time'] ?? Clock::now()->format('H:i'));
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateStr) !== 1 || preg_match('/^(\d{2}):(\d{2})$/', $timeStr, $tm) !== 1) {
-            throw new ApiException('Podaj prawidłową datę i godzinę.', 422);
-        }
-        $date = (int) str_replace('-', '', $dateStr);
-        $meta = $this->tt()->meta();
-        if ($dateStr < ($meta['validFrom'] ?? '') || $dateStr > ($meta['validUntil'] ?? '')) {
-            throw new ApiException('Rozkład obejmuje dni od ' . date('d.m', strtotime($meta['validFrom'])) . ' do ' . date('d.m.Y', strtotime($meta['validUntil'])) . '.', 422);
+        if (preg_match('/^(\d{2}):(\d{2})$/', $timeStr, $tm) !== 1) {
+            throw new ApiException('Podaj prawidłową godzinę.', 422);
         }
         $time = (int) $tm[1] * 3600 + (int) $tm[2] * 60;
         $day = $this->day($date);
@@ -193,7 +204,7 @@ final class PublicApi
         return new Response([
             'from' => ['id' => $from['id'], 'name' => $from['name']],
             'to' => ['id' => $to['id'], 'name' => $to['name']],
-            'date' => $dateStr,
+            'date' => Clock::isoDate($date),
             'time' => $timeStr,
             'connections' => $connections,
         ]);
