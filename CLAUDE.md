@@ -10,7 +10,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - **GPS wyłączony** (`gps_enabled` = false w `server/src/Config.php`): Mapa BILKOM od dawna nie zwraca pozycji, innych map nie używamy. Pozycje pociągów tylko estymowane z rozkładu + opóźnień PLK wzdłuż kształtu trasy. Kod GPS zostaje (`BilkomMapClient`, `BackupGpsClient`).
 - W portalu i dokumentacji **nie używać nazwy „Kierownik Plus”** (zapasowy GPS = „GPS zapasowy”).
 - Material Design 3 w całości; krój Google Sans Flex (oś ROND w nagłówkach); ikony Material Symbols jako SVG — nowe nazwy dopisywać do `web/src/plugins/icons.json`.
-- Zakładka **Bus-Tramwaj-Kolej** (`/bus-tramwaj-kolej`, `web/src/views/BtkView.vue`) to szkielet — do zaprojektowania z użytkownikiem.
+- Zakładka **Bus-Tramwaj-Kolej** (`/bus-tramwaj-kolej`, `web/src/views/BtkView.vue`) = prosta informacja o taryfie wspólnego biletu BTK (kalkulator ceny, cennik, strefy, zasady). Dane w `web/src/utils/btkTariff.ts` — przy zmianie cen podmienić `FARES` i `TARIFF_DATE` (źródła: strona oferty KW, strona i warunki taryfowe POLREGIO).
 - Komunikacja z użytkownikiem po polsku.
 
 ## Komendy
@@ -33,4 +33,4 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - `server/config/admin-password.php` zawiera tylko hash (ustawia go użytkownik: `php server/bin/set-admin-password.php`); nigdy nie prosić o hasło.
 
 ## Możliwe następne kroki (zaproponowane, niezaczęte)
-Zakładka BTK; alerty, gdy dane na żywo stoją (np. UptimeRobot na /api/status lub mail/Discord); codzienna kopia `server/storage/app.sqlite`; zdalne repo (prywatny GitHub); PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; strona „O serwisie” z polityką prywatności; zapasowe źródło opóźnień PLK.
+Alerty, gdy dane na żywo stoją (np. UptimeRobot na /api/status lub mail/Discord); codzienna kopia `server/storage/app.sqlite`; zdalne repo (prywatny GitHub); PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; strona „O serwisie” z polityką prywatności; zapasowe źródło opóźnień PLK.
