@@ -25,7 +25,6 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - `~/domains/infoportal.abuczek.pl/public_html` = frontend (`public/`), `~/domains/infoportal.abuczek.pl/server` = backend poza WWW.
 - PHP CLI `/usr/local/bin/php` (8.3). CRON w crontabie użytkownika — ładować z pliku (`crontab plik`), bo `crontab -` z potoku zapisuje pusty crontab.
 - Hosting zwraca HTTP 429 dla serii szybkich żądań z curl — testować z User-Agent przeglądarki i przerwami.
-- Kopia sprzed wdrożenia: `public_html_backup_20261002-0111` (do usunięcia, gdy wszystko OK).
 
 ## Pułapki
 - Feed GTFS-RT mkuran potrafi stać godzinami → status „degraded”, portal pokazuje rozkład (to poprawne zachowanie).
