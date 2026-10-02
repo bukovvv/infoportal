@@ -318,7 +318,7 @@ const sources = [
   background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container));
 }
 .result.empty { background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant)); }
-.price { font-size: 44px; line-height: 52px; font-weight: 500; letter-spacing: -.02em; font-variation-settings: 'ROND' 100; }
+.price { font-size: 44px; line-height: 52px; font-weight: 800; letter-spacing: -.01em; }
 .covers { display: grid; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
 .covers li { display: flex; align-items: center; gap: 8px; }
 .covers .v-icon { font-size: 20px; }

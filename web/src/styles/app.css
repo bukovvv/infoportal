@@ -4,8 +4,8 @@
 
 @layer overrides {
   :root {
-    /* Google Sans Flex (OFL) — krój Material 3 Expressive; oś ROND zaokrągla nagłówki */
-    --kw-font: 'Google Sans Flex Variable', 'Google Sans', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    /* Nunito (OFL, zmienna grubość 200–1000) — zaokrąglony krój całego serwisu */
+    --kw-font: 'Nunito Variable', 'Nunito', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
     /* skala zaokrągleń: małe elementy, kafelki, karty, duże powierzchnie; przyciski, chipy i pola — pigułki */
     --kw-r-s: 12px;
     --kw-r-m: 16px;
@@ -13,14 +13,10 @@
     --kw-r-xl: 28px;
   }
 
-  html, body { font-family: var(--kw-font); font-optical-sizing: auto; }
+  html, body { font-family: var(--kw-font); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
-  .text-display-large, .text-display-medium, .text-display-small,
-  .text-headline-large, .text-headline-medium, .text-headline-small,
-  .text-title-large, .v-app-bar-title, .v-card-title, .v-empty-state__headline, .brand-mark {
-    font-variation-settings: 'ROND' 100;
-  }
-  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 500; letter-spacing: -.01em; }
+  /* Nunito jest lżejsza od kroju MD3 — nagłówki o stopień grubsze */
+  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 700; letter-spacing: 0; }
 
   /* pola formularzy zaokrąglone jak przyciski */
   .v-field--variant-outlined, .v-field--variant-filled, .v-field--variant-solo { border-radius: var(--kw-r-m); }
