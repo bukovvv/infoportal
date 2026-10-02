@@ -36,7 +36,7 @@ if [ -f server/config/admin-password.php ]; then
 fi
 
 echo "→ Instalacja na serwerze"
-ssh "${SSH_OPTS[@]}" "$TARGET" "KW_DOMAIN='$KW_DOMAIN' ARCHIVE='$ARCHIVE' KW_PHP='${KW_PHP:-}' bash -s" <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$TARGET" "KW_DOMAIN='$KW_DOMAIN' ARCHIVE='$ARCHIVE' KW_PHP='${KW_PHP:-}' KW_ALERT_EMAIL='${KW_ALERT_EMAIL:-}' bash -s" <<'REMOTE'
 set -euo pipefail
 D="$HOME/domains/$KW_DOMAIN"
 cd ~/kw-deploy
@@ -63,6 +63,18 @@ mkdir -p "$D/server/storage" "$D/server/config"
 rm -rf "$D/server/src" "$D/server/bin"
 (cd infoportal-kw/server && tar -cf - --exclude=./storage --exclude=./config/admin-password.php --exclude=./config/local.php .) | (cd "$D/server" && tar -xf -)
 chmod 700 "$D/server/storage"
+# adres alertów (KW_ALERT_EMAIL z deploy.env) → server/config/local.php, tylko gdy pliku jeszcze nie ma
+if [ -n "$KW_ALERT_EMAIL" ]; then
+  if [ ! -f "$D/server/config/local.php" ]; then
+    printf "<?php
+
+return ['alert_email' => '%s'];
+" "$KW_ALERT_EMAIL" > "$D/server/config/local.php" && chmod 600 "$D/server/config/local.php"
+    echo "   Alerty e-mail: $KW_ALERT_EMAIL"
+  elif ! grep -q "alert_email" "$D/server/config/local.php"; then
+    echo "   Alerty e-mail: dopisz 'alert_email' do server/config/local.php na serwerze"
+  fi
+fi
 [ -f "$D/server/config/admin-password.php" ] && chmod 600 "$D/server/config/admin-password.php"
 
 # frontend: public_html czyszczony (bez .well-known i cgi-bin) i zastępowany
@@ -80,12 +92,39 @@ if [ -f public_html_v01/storage/infoportal.sqlite ] && [ ! -f server/storage/.le
 fi
 "$PHP" server/bin/refresh-live.php || true
 echo "$PHP" > server/storage/.php-cli
+
+# CRON: brakujące wpisy (kopia bazy, alerty) dopisywane raz; istniejące zostają nietknięte.
+# crontab ładowany z pliku — `crontab -` z potoku potrafi zapisać pusty crontab.
+crontab -l > ~/kw-deploy/crontab.current 2>/dev/null || true
+if grep -q 'refresh-live.php' ~/kw-deploy/crontab.current; then
+  cp ~/kw-deploy/crontab.current ~/kw-deploy/crontab.new
+  PHP_ABS=$(command -v "$PHP")
+  cron_add() {
+    grep -q "$2" ~/kw-deploy/crontab.new && return 0
+    echo "$1 $PHP_ABS $D/server/bin/$2 >/dev/null 2>>$D/server/storage/cron-errors.log # kw-infoportal" >> ~/kw-deploy/crontab.new
+    echo "   CRON: dodano $2 ($1)"
+  }
+  cron_add '15 3 * * *' backup-db.php
+  cron_add '*/5 * * * *' check-health.php
+  cmp -s ~/kw-deploy/crontab.current ~/kw-deploy/crontab.new || crontab ~/kw-deploy/crontab.new
+else
+  echo "   CRON: brak wpisów Infoportalu — nowych zadań nie dopisano, dodaj ręcznie (DEPLOYMENT.md)"
+fi
+"$PHP" server/bin/backup-db.php || true
 echo
 "$PHP" server/bin/preflight.php || true
 
 # sprzątanie starych paczek (zostają 3 ostatnie)
 ls -1t ~/kw-deploy/kw-*.tar.gz 2>/dev/null | tail -n +4 | xargs -r rm -f
 REMOTE
+
+# kopia bazy także na tym komputerze (na wypadek utraty serwera); zostaje 30 ostatnich
+mkdir -p backups
+LATEST=$(ssh "${SSH_OPTS[@]}" "$TARGET" "ls -1t ~/domains/$KW_DOMAIN/server/storage/backups/app-*.sqlite 2>/dev/null | head -1")
+if [ -n "$LATEST" ]; then
+  scp -i "$KEY" -P "$KW_SSH_PORT" -o BatchMode=yes -q "$TARGET:$LATEST" "backups/$(basename "$LATEST")" && echo "→ Kopia bazy pobrana: backups/$(basename "$LATEST")"
+  ls -1t backups/app-*.sqlite 2>/dev/null | tail -n +31 | xargs -r rm -f
+fi
 
 echo
 echo "→ Kontrola: https://$KW_DOMAIN/api/status"

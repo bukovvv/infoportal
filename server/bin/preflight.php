@@ -83,6 +83,11 @@ if ($age !== null) {
     $line('GTFS-RT (opóźnienia PKP PLK)', (bool) ($live['sources']['rt']['ok'] ?? false), 'GTFS-RT: ' . ($live['sources']['rt']['error'] ?? 'brak danych'), true);
 }
 
+$backups = glob(Config::path('storage') . '/backups/app-*.sqlite') ?: [];
+$newest = $backups === [] ? null : max(array_map('filemtime', $backups));
+$line('Kopia bazy komunikatów' . ($newest ? ' — ' . date('Y-m-d H:i', $newest) . ', kopii: ' . count($backups) : ''), $newest !== null && $newest > time() - 2 * 86400,
+    'Brak świeżej kopii app.sqlite — sprawdź CRON z backup-db.php.', true);
+
 foreach ($warnings as $w) {
     echo '  · ' . $w . PHP_EOL;
 }

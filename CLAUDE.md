@@ -14,6 +14,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - Komunikacja z użytkownikiem po polsku.
 
 ## Komendy
+- Kopia bazy: `php server/bin/backup-db.php` (CRON 03:15, 14 kopii w `server/storage/backups`, `deploy.sh` pobiera najnowszą do `backups/`) · alerty: `php server/bin/check-health.php --dry-run|--test` (CRON co 5 min, adres `KW_ALERT_EMAIL` w `deploy.env`)
 - Backend testy: `php server/bin/selftest.php` · import: `php server/bin/import-gtfs.php` · dane na żywo: `php server/bin/refresh-live.php` · kontrola: `php server/bin/preflight.php`
 - Frontend: `cd web && npm test` · typy: `npx vue-tsc --noEmit` · dev: `node web/node_modules/vite/bin/vite.js web` (port 5173, proxy /api → 8080; `npm` przez preview nie działa przez spację w „Program Files”)
 - API lokalnie: `php -S localhost:8080 -t public server/dev-router.php` · admin lokalnie: `admin` / `kw-demo` (tylko php -S na localhost)
@@ -33,4 +34,4 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - `server/config/admin-password.php` zawiera tylko hash (ustawia go użytkownik: `php server/bin/set-admin-password.php`); nigdy nie prosić o hasło.
 
 ## Możliwe następne kroki (zaproponowane, niezaczęte)
-Alerty, gdy dane na żywo stoją (np. UptimeRobot na /api/status lub mail/Discord); codzienna kopia `server/storage/app.sqlite`; zdalne repo (prywatny GitHub); PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; strona „O serwisie” z polityką prywatności; zapasowe źródło opóźnień PLK.
+Zewnętrzny monitor (UptimeRobot) na wypadek awarii całego serwera; PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka z przesiadkami pieszymi i >1 przesiadką; strona „O serwisie” z polityką prywatności; zapasowe źródło opóźnień PLK.
