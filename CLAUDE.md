@@ -19,7 +19,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - Frontend: `cd web && npm test` · typy: `npx vue-tsc --noEmit` · dev: `node web/node_modules/vite/bin/vite.js web` (port 5173, proxy /api → 8080; `npm` przez preview nie działa przez spację w „Program Files”)
 - API lokalnie: `php -S localhost:8080 -t public server/dev-router.php` · admin lokalnie: `admin` / `kw-demo` (tylko php -S na localhost)
 - **Wdrożenie: `bash deploy.sh`** (testy → build → SSH → podmiana kodu z zachowaniem `server/storage` i hasła → preflight → /api/status). Dane serwera w `deploy.env` (gitignore), klucz `~/.ssh/infoportal_kw_deploy`.
-- Git: `C:\Program Files\Git\cmd` może nie być w PATH. Repo lokalne, bez remote. Commity kończyć linią Co-Authored-By zgodnie z instrukcjami sesji.
+- Git: `C:\Program Files\Git\cmd` może nie być w PATH. Remote: prywatne repo GitHub `bukovvv/infoportal` (`origin`, gałąź `main`) — po commicie `git push`. Commity kończyć linią Co-Authored-By zgodnie z instrukcjami sesji.
 
 ## Serwer (DirectAdmin, Seohost, LiteSpeed)
 - `~/domains/infoportal.abuczek.pl/public_html` = frontend (`public/`), `~/domains/infoportal.abuczek.pl/server` = backend poza WWW.
