@@ -1,14 +1,16 @@
 <script setup lang="ts">
 // Zakładka Bus-Tramwaj-Kolej — dla pasażera: wpisz stację, zobacz cenę i gdzie kupić; szczegóły taryfy zwinięte niżej.
 import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { normalize } from '@/utils/format'
 import {
-  ALL_STATIONS, DISCOUNTS, FARES, RAIL_STATIONS, RAIL_ZONES, TARIFF_DATE, ZTM_PLACES, ZTM_ZONES,
+  ALL_STATIONS, DISCOUNTS, btkStation, FARES, RAIL_STATIONS, RAIL_ZONES, TARIFF_DATE, ZTM_PLACES, ZTM_ZONES,
   farePrice, formatPrice, railCoverage, railZoneOf, ztmOptions,
   type Discount, type Extra, type FareRow, type ZtmZone,
 } from '@/utils/btkTariff'
 
-const station = ref<string | null>(null)
+// ?stacja= z podpowiedzi na tablicy odjazdów i w wynikach wyszukiwania
+const station = ref<string | null>(btkStation(useRoute().query.stacja as string | undefined)?.name ?? null)
 const ztm = ref<ZtmZone>('A')
 const discount = ref<Discount>('normal')
 const extraChoice = ref<Extra | null>(null)

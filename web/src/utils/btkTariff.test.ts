@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALL_STATIONS, FARES, farePrice, formatPrice, railZoneOf, ztmOptions } from './btkTariff'
+import { ALL_STATIONS, FARES, btkStation, commuteTicket, farePrice, formatPrice, railZoneOf, ztmOptions } from './btkTariff'
 
 describe('taryfa Bus-Tramwaj-Kolej', () => {
   it('ceny ulgowe wynikają z ceny normalnej (49% i 51%)', () => {
@@ -35,6 +35,25 @@ describe('taryfa Bus-Tramwaj-Kolej', () => {
     expect(railZoneOf('Poznań Garbary')).toBe('A')
     expect(railZoneOf('Poznań Nowa Stacja')).toBe('A')
     expect(railZoneOf('Leszno')).toBeNull()
+  })
+
+  it('dopasowuje nazwy z rozkładu do taryfy (skróty, „koło”, aliasy)', () => {
+    expect(btkStation('Luboń koło Poznania')).toEqual({ name: 'Luboń k/Poznania', zone: 'B' })
+    expect(railZoneOf('Kostrzyn Wielkopolski')).toBe('C')
+    expect(railZoneOf('Oborniki Wielkopolskie Miasto')).toBe('D')
+    expect(railZoneOf('Środa Wielkopolska')).toBe('D')
+    expect(railZoneOf('Strykowo Poznańskie')).toBe('C')
+    expect(railZoneOf('Ptaszkowo')).toBe('D')
+    expect(railZoneOf('Radlin Wielkopolski')).toBe('G')
+    expect(btkStation('')).toBeNull()
+  })
+
+  it('wybiera bilet dojazdowy według najdalszej stacji', () => {
+    expect(commuteTicket(['Poznań Główny', 'Gniezno'])).toEqual({ zone: 'F', station: 'Gniezno', price: 44100 })
+    expect(commuteTicket(['Swarzędz', 'Kostrzyn Wielkopolski'])).toEqual({ zone: 'C', station: 'Kostrzyn Wlkp.', price: 34800 })
+    expect(commuteTicket(['Poznań Główny', 'Poznań Garbary'])).toBeNull()
+    expect(commuteTicket(['Poznań Główny', 'Leszno'])).toBeNull()
+    expect(commuteTicket([])).toBeNull()
   })
 
   it('każda stacja jest tylko w jednej strefie', () => {

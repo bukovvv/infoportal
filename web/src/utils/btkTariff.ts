@@ -80,13 +80,47 @@ export const ALL_STATIONS: { name: string; zone: RailZone }[] = RAIL_ZONES
   .flatMap((zone) => RAIL_STATIONS[zone].map((name) => ({ name, zone })))
   .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
 
-/** Strefa kolejowa stacji; każda stacja z „Poznań” w nazwie należy do strefy A. */
-export function railZoneOf(station: string): RailZone | null {
-  const key = normalize(station)
+/** Klucz porównania nazw: rozkład pisze „Wielkopolski”, „koło Poznania”, taryfa „Wlkp.”, „k/Poznania”. */
+export function stationKey(name: string): string {
+  return normalize(name)
+    .replace(/\bwielkopolsk(i|a|ie)\b/g, 'wlkp')
+    .replace(/\bwlkp\.?/g, 'wlkp')
+    .replace(/k\/\s*|\bkolo\s+/g, 'k ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+// nazwy z rozkładu (GTFS), które różnią się od taryfy czymś więcej niż skrótem
+const ALIASES: Record<string, string> = {
+  'Strykowo Poznańskie': 'Strykowo',
+  Ptaszkowo: 'Ptaszkowo Wlkp.',
+  'Radlin Wielkopolski': 'Radlin',
+}
+
+const BY_KEY = new Map(ALL_STATIONS.map((s) => [stationKey(s.name), s]))
+for (const [alias, name] of Object.entries(ALIASES)) BY_KEY.set(stationKey(alias), BY_KEY.get(stationKey(name))!)
+
+/** Stacja z taryfy BTK dla nazwy z rozkładu albo z pola wyszukiwania; każda stacja „Poznań …” należy do strefy A. */
+export function btkStation(name: string | null | undefined): { name: string; zone: RailZone } | null {
+  const key = stationKey(name ?? '')
   if (!key) return null
-  const hit = ALL_STATIONS.find((s) => normalize(s.name) === key)
-  if (hit) return hit.zone
-  return key.startsWith('poznan ') ? 'A' : null
+  return BY_KEY.get(key) ?? (key.startsWith('poznan ') ? { name: name!, zone: 'A' } : null)
+}
+
+export function railZoneOf(station: string): RailZone | null {
+  return btkStation(station)?.zone ?? null
+}
+
+/**
+ * Bilet miesięczny BTK na przejazdy między podanymi stacjami: strefa najdalszej z nich i cena „od”
+ * (normalny, ZTM tylko strefa A). Null, gdy któraś stacja jest poza ofertą albo wszystkie są w Poznaniu (strefa A).
+ */
+export function commuteTicket(stations: (string | null | undefined)[]): { zone: RailZone; station: string; price: number } | null {
+  const found = stations.map(btkStation)
+  if (!found.length || found.some((s) => !s)) return null
+  const farthest = found.reduce((a, b) => (RAIL_ZONES.indexOf(b!.zone) > RAIL_ZONES.indexOf(a!.zone) ? b : a))!
+  const price = farePrice(farthest.zone, 'A', 'normal')
+  return price === null ? null : { zone: farthest.zone, station: farthest.name, price }
 }
 
 /** Strefy, w których bilet danej strefy pozwala jechać pociągiem (każda strefa zawiera niższe). */

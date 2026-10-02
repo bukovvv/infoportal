@@ -8,6 +8,7 @@ import DataStatusCard from '@/components/DataStatusCard.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
+import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
@@ -126,6 +127,11 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
               :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
             />
             <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" class="justify-self-start" @click="later">Późniejsze połączenia</v-btn>
+            <BtkHint
+              v-if="result.connections.length"
+              :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
+              context="trip"
+            />
           </template>
         </section>
       </div>

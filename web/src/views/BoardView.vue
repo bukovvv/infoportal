@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { Board } from '@/api/types'
+import BtkHint from '@/components/BtkHint.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StationField from '@/components/StationField.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -135,6 +136,7 @@ const when = (iso: string) => {
       </template>
     </v-card>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>
+    <BtkHint :stations="[station?.name ?? board?.station.name]" context="board" class="mt-4" />
   </div>
 </template>
 
