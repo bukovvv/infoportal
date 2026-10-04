@@ -118,6 +118,22 @@ if (is_file(Config::path('gtfs_db'))) {
     }
     check('baza: wyniki posortowane i bez zdominowanych', $sorted);
 
+    // dwie przesiadki: Włoszakowice → Rogoźno Wlkp. nie ma połączenia z jedną przesiadką
+    $found = (new ConnectionFinder($day))->find($byName['Włoszakowice'] ?? '', $byName['Rogoźno Wielkopolskie'] ?? '', 4 * 3600, 5);
+    $chained = $found !== [];
+    foreach ($found as $c) {
+        $prev = null;
+        foreach ($c['legs'] as $i => $l) {
+            $stop = $day->trips[$l['key']]['stops'][$l['from']];
+            if ($prev !== null && ($prev[DayTimetable::STATION] !== $stop[DayTimetable::STATION] || $c['waits'][$i - 1] < 180)) {
+                $chained = false;
+            }
+            $prev = $day->trips[$l['key']]['stops'][$l['to']];
+        }
+        $chained = $chained && count($c['legs']) === 3 && $prev[DayTimetable::STATION] === $byName['Rogoźno Wielkopolskie'];
+    }
+    check('baza: połączenia z dwiema przesiadkami', $chained, count($found) . ' wyników');
+
     // API: tablica na wybrany dzień i godzinę, wyszukiwarka z datą
     $api = new PublicApi();
     $isoDay = Clock::isoDate(max((int) $range[0], Clock::addDays(Clock::today(), 1)));

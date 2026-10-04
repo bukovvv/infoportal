@@ -38,12 +38,12 @@ function watchJourney() {
         </div>
         <div class="text-right">
           <div class="text-title-medium tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
-          <div class="text-body-small muted">{{ c.transfers ? `przesiadka: ${c.via.map((v) => v.name).join(', ')}` : 'bezpośrednio' }}</div>
+          <div class="text-body-small muted">{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}</div>
         </div>
       </div>
       <div class="d-flex flex-wrap align-center ga-2">
         <template v-for="(leg, i) in c.legs" :key="leg.key">
-          <span v-if="i" class="wait text-body-small muted"><v-icon icon="transfer_within_a_station" size="18" />{{ c.waits[i - 1] }} min</span>
+          <span v-if="i" class="wait text-body-small muted"><v-icon icon="transfer_within_a_station" size="18" />{{ c.via[i - 1].name }} · {{ c.waits[i - 1] }} min</span>
           <TrainChip :number="leg.number" :trip-key="leg.key" :bus="leg.isBus" />
         </template>
         <span v-if="depDelay >= 2" class="tag tag-delay"><v-icon icon="schedule" />+{{ depDelay }} min</span>
