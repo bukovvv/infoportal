@@ -38,7 +38,7 @@ php -S localhost:8080 -t public server/dev-router.php            # API (+ zbudow
 node web/node_modules/vite/bin/vite.js web                       # frontend z HMR na :5173 (proxy /api)
 ```
 
-Panel administratora: `/admin`, lokalnie użytkownik `admin`, hasło `kw-demo`.
+Panel administratora: `/admin`, użytkownik `admin`, hasło ustawione przez `php server/bin/set-admin-password.php` (po zmianie: wdrożenie wysyła hash na serwer). Hasło `kw-demo` działa tylko lokalnie na `php -S` i tylko bez pliku `server/config/admin-password.php`.
 
 ## Testy i build
 

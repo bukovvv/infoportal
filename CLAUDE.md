@@ -18,7 +18,7 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - Kopia bazy: `php server/bin/backup-db.php` (CRON 03:15, 14 kopii w `server/storage/backups`, `deploy.sh` pobiera najnowszą do `backups/`) · alerty: `php server/bin/check-health.php --dry-run|--test` (CRON co 5 min, adres `KW_ALERT_EMAIL` w `deploy.env`)
 - Backend testy: `php server/bin/selftest.php` · import: `php server/bin/import-gtfs.php` · dane na żywo: `php server/bin/refresh-live.php` · kontrola: `php server/bin/preflight.php`
 - Frontend: `cd web && npm test` · typy: `npx vue-tsc --noEmit` · dev: `node web/node_modules/vite/bin/vite.js web` (port 5173, proxy /api → 8080; `npm` przez preview nie działa przez spację w „Program Files”)
-- API lokalnie: `php -S localhost:8080 -t public server/dev-router.php` · admin lokalnie: `admin` / `kw-demo` (tylko php -S na localhost)
+- API lokalnie: `php -S localhost:8080 -t public server/dev-router.php` · admin: `admin` + hasło użytkownika (hash w `server/config/admin-password.php` obowiązuje też lokalnie; `kw-demo` tylko na php -S bez tego pliku)
 - **Wdrożenie: `bash deploy.sh`** (testy → build → SSH → podmiana kodu z zachowaniem `server/storage` i hasła → preflight → /api/status). Dane serwera w `deploy.env` (gitignore), klucz `~/.ssh/infoportal_kw_deploy`.
 - Git: `C:\Program Files\Git\cmd` może nie być w PATH. Remote: prywatne repo GitHub `bukovvv/infoportal` (`origin`, gałąź `main`) — po commicie `git push`. Commity kończyć linią Co-Authored-By zgodnie z instrukcjami sesji.
 
