@@ -46,20 +46,20 @@ const tableDiscount = ref<Discount>('normal')
 const rowNote = (row: FareRow) => (row.extra === 'gniezno' ? '+ MPK Gniezno' : row.extra === 'czempin' ? '+ gm. Czempiń' : '')
 const cell = (row: FareRow, z: ZtmZone) => {
   const tuple = row.prices[z]
-  return tuple ? formatPrice(tuple[DISCOUNTS.findIndex((d) => d.value === tableDiscount.value)]).replace(/\s?zł$/, '') : '—'
+  return tuple ? formatPrice(tuple[DISCOUNTS.findIndex((d) => d.value === tableDiscount.value)]).replace(/\s?zł$/, '') : '–'
 }
 
 const basics = [
-  { icon: 'badge', text: 'Imienny — wpisz imię i nazwisko, miej dokument ze zdjęciem' },
+  { icon: 'badge', text: 'Imienny: wpisz imię i nazwisko, miej dokument ze zdjęciem' },
   { icon: 'calendar_month', text: 'Ważny miesiąc od wybranego dnia' },
   { icon: 'layers', text: 'Obejmuje też wszystkie stacje bliżej Poznania' },
-  { icon: 'train', text: 'Tylko pociągi KW i POLREGIO — nie Intercity' },
+  { icon: 'train', text: 'Tylko pociągi KW i POLREGIO, bez Intercity' },
 ]
 
 const moreRules = [
   'Kupisz go najwcześniej 30 dni przed pierwszym dniem ważności.',
   'Jedziesz dalej niż strefa biletu? Dokup bilet od ostatniej stacji w strefie i zgłoś to obsłudze przed tą stacją.',
-  'Niewykorzystany bilet oddasz w kasie przed pierwszym dniem ważności — z potrąceniem 20%.',
+  'Niewykorzystany bilet oddasz w kasie przed pierwszym dniem ważności, z potrąceniem 20%.',
   'Biletu nie można wymienić ani przedłużyć. Za zgubiony nie ma zwrotu ani duplikatu.',
   'Za odwołane pociągi i zmiany w komunikacji nie ma częściowego zwrotu.',
   'Rower, psa i bagaż dokupujesz osobno.',
@@ -142,7 +142,7 @@ const sources = [
           </template>
           <template v-else>
             <v-icon icon="confirmation_number" size="32" />
-            <p class="text-body-medium">Wpisz swoją stację — pokażemy cenę biletu.</p>
+            <p class="text-body-medium">Wpisz swoją stację, a pokażemy cenę biletu.</p>
           </template>
         </div>
       </v-card-text>
@@ -183,7 +183,7 @@ const sources = [
               </tr>
             </tbody>
           </v-table>
-          <p class="text-body-small muted mt-2">Ceny w zł za miesiąc, od {{ TARIFF_DATE }}. ZTM: A — Poznań, B — najbliższe gminy, C — dalsze gminy.</p>
+          <p class="text-body-small muted mt-2">Ceny w zł za miesiąc, od {{ TARIFF_DATE }}. Strefy ZTM: A (Poznań), B (najbliższe gminy), C (dalsze gminy).</p>
         </v-expansion-panel-text>
       </v-expansion-panel>
 
@@ -216,14 +216,14 @@ const sources = [
         <v-expansion-panel-text>
           <ul class="rules text-body-medium">
             <li v-for="r in moreRules" :key="r">{{ r }}</li>
-            <li>Autobusy MPK w Gnieźnie dołączysz tylko do biletu na strefę F, a autobusy gminy Czempiń — tylko do strefy D.</li>
+            <li>Autobusy MPK w Gnieźnie dołączysz tylko do biletu na strefę F, a autobusy gminy Czempiń tylko do strefy D.</li>
           </ul>
         </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 
     <footer class="sources text-body-small muted">
-      <span>Serwis nieoficjalny — wiążące są warunki przewoźników. Źródła:</span>
+      <span>Serwis nieoficjalny, wiążące są warunki przewoźników. Źródła:</span>
       <a v-for="s in sources" :key="s.href" :href="s.href" target="_blank" rel="noopener">{{ s.title }}</a>
     </footer>
   </div>

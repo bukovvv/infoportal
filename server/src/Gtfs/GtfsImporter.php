@@ -301,10 +301,10 @@ final class GtfsImporter
     {
         $today = Clock::isoDate(Clock::today());
         if ($stats['trips'] < 100 || $stats['stations'] < 50 || $stats['stopTimes'] < 2000) {
-            throw new RuntimeException('Nowy rozkład wygląda na niekompletny — pozostawiono poprzedni.');
+            throw new RuntimeException('Nowy rozkład wygląda na niekompletny, pozostawiono poprzedni.');
         }
         if ($stats['validUntil'] < $today) {
-            throw new RuntimeException('Nowy rozkład jest już nieaktualny (do ' . $stats['validUntil'] . ') — pozostawiono poprzedni.');
+            throw new RuntimeException('Nowy rozkład jest już nieaktualny (do ' . $stats['validUntil'] . '), pozostawiono poprzedni.');
         }
     }
 

@@ -22,13 +22,13 @@ const rows = computed(() => {
       : {
           icon: 'satellite_alt',
           title: 'Pozycje GPS',
-          text: gps?.ok ? `${st.live.gpsTrains} ${plural(st.live.gpsTrains, 'pociąg', 'pociągi', 'pociągów')} · ${gps.provider ?? ''}` : 'Chwilowo niedostępne — pokazujemy pozycje z rozkładu',
+          text: gps?.ok ? `${st.live.gpsTrains} ${plural(st.live.gpsTrains, 'pociąg', 'pociągi', 'pociągów')} · ${gps.provider ?? ''}` : 'Chwilowo niedostępne, pokazujemy pozycje z rozkładu',
           ok: !!gps?.ok && st.live.ok,
         },
     {
       icon: 'schedule',
       title: 'Opóźnienia (PKP PLK)',
-      text: rt?.ok ? `${rt.count} ${plural(rt.count, 'kurs', 'kursy', 'kursów')} z danymi na żywo` : 'Chwilowo niedostępne — pokazujemy godziny z rozkładu',
+      text: rt?.ok ? `${rt.count} ${plural(rt.count, 'kurs', 'kursy', 'kursów')} z danymi na żywo` : 'Chwilowo niedostępne, pokazujemy godziny z rozkładu',
       ok: !!rt?.ok && st.live.ok,
     },
     {

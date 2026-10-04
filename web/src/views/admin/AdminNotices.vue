@@ -89,7 +89,7 @@ function generate() {
   try {
     const out = buildNotice(tpl)
     Object.assign(form, out)
-    tplMessage.value = { ok: true, text: 'Gotowe — sprawdź treść poniżej i opublikuj komunikat.' }
+    tplMessage.value = { ok: true, text: 'Gotowe. Sprawdź treść poniżej i opublikuj komunikat.' }
   } catch (e) {
     tplMessage.value = { ok: false, text: (e as Error).message }
   }
