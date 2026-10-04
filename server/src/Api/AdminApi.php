@@ -85,7 +85,50 @@ final class AdminApi
                 'passwordConfigured' => AdminAuth::isConfigured(),
                 'files' => $files,
             ],
+            'ops' => self::ops($storage),
         ]);
+    }
+
+    /** Utrzymanie: pobranie rozkładu, sprawdzanie feedu opóźnień, kopie bazy, alerty e-mail i błędy CRON-a. */
+    private static function ops(string $storage): array
+    {
+        $json = static fn (string $file): array => is_file($file) ? (json_decode((string) file_get_contents($file), true) ?: []) : [];
+        $iso = static fn (int|string|null $t): ?string => $t === null || $t === '' ? null : date(DATE_ATOM, is_int($t) ? $t : (int) strtotime($t));
+
+        $download = $json($storage . '/gtfs-download.json');
+        $rtMeta = $json(Config::path('rt_meta_file'));
+        $alert = $json($storage . '/alert-state.json');
+        $backups = glob($storage . '/backups/*') ?: [];
+        usort($backups, static fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));
+        $cronLog = $storage . '/cron-errors.log';
+        $cronLines = [];
+        if (is_file($cronLog) && filesize($cronLog) > 0) {
+            $handle = fopen($cronLog, 'rb');
+            fseek($handle, max(0, filesize($cronLog) - 4096));
+            $cronLines = array_slice(array_values(array_filter(array_map('trim', explode("\n", (string) stream_get_contents($handle))))), -5);
+            fclose($handle);
+        }
+
+        return [
+            'gtfsSourceModifiedAt' => $iso($download['lastModified'] ?? null),
+            'gtfsDownloadedAt' => $iso($download['downloadedAt'] ?? null),
+            'rtCheckedAt' => $iso($rtMeta['checkedAt'] ?? null),
+            'rtSourceModifiedAt' => $iso($rtMeta['lastModified'] ?? null),
+            'backups' => [
+                'count' => count($backups),
+                'latestAt' => $backups ? $iso(filemtime($backups[0])) : null,
+                'latestSize' => $backups ? filesize($backups[0]) : null,
+            ],
+            'alerts' => [
+                'configured' => trim((string) Config::get('alert_email')) !== '',
+                'problemSince' => $iso($alert['since'] ?? null),
+                'alertedAt' => $iso($alert['alertedAt'] ?? null),
+            ],
+            'cronErrors' => [
+                'modifiedAt' => is_file($cronLog) ? $iso(filemtime($cronLog)) : null,
+                'lines' => $cronLines,
+            ],
+        ];
     }
 
     public function import(): Response

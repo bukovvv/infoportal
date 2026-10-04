@@ -166,7 +166,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             </div>
           </div>
           <v-card v-else color="surface-container-low">
-            <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact />
+            <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact link />
             <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line" color="transparent" />
           </v-card>
         </section>

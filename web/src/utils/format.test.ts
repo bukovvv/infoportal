@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { delayLabel, duration, normalize, plural, relative, splitNumbers, warsawNow } from './format'
+import { ago, delayLabel, duration, normalize, plural, relative, splitNumbers, warsawNow } from './format'
 
 describe('format', () => {
   it('rozbija numery pociągów jak serwer', () => {
@@ -23,6 +23,18 @@ describe('format', () => {
     expect(duration(122)).toBe('2 godz. 2 min')
     expect(relative(0)).toBe('teraz')
     expect(relative(7.4)).toBe('za 7 min')
+  })
+
+  it('podaje czas, który upłynął', () => {
+    const now = new Date('2026-10-04T12:00:00Z').getTime()
+    expect(ago('2026-10-04T11:59:40Z', now)).toBe('przed chwilą')
+    expect(ago('2026-10-04T11:55:00Z', now)).toBe('5 min temu')
+    expect(ago('2026-10-04T09:00:00Z', now)).toBe('3 godz. temu')
+    expect(ago('2026-10-03T10:00:00Z', now)).toBe('wczoraj')
+    expect(ago('2026-10-02T11:00:00Z', now)).toBe('2 dni temu')
+    expect(ago('2026-10-02T13:47:00Z', now)).toBe('2 dni temu')
+    expect(ago('2026-09-30T12:00:00Z', now)).toBe('4 dni temu')
+    expect(ago(null, now)).toBe('–')
   })
 
   it('podaje datę i godzinę w strefie Europe/Warsaw', () => {

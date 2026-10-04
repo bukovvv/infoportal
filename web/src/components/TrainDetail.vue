@@ -119,7 +119,7 @@ defineExpose({ trip })
         </div>
       </header>
       <div v-if="related.length" class="notices divider">
-        <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact />
+        <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
       </div>
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />

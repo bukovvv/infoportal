@@ -38,7 +38,21 @@ export function relative(minutes: number) {
   return `za ${duration(m)}`
 }
 
-export const minutesUntil = (iso: string, now = Date.now()) => (new Date(iso).getTime() - now) / 60000
+/** „przed chwilą”, „5 min temu”, „3 godz. temu”, „wczoraj”, „4 dni temu”. */
+export function ago(iso: string | null | undefined, now = Date.now()) {
+  if (!iso) return '–'
+  const m = Math.floor((now - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'przed chwilą'
+  if (m < 60) return `${m} min temu`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} godz. temu`
+  // dalej liczą się dni kalendarzowe w Warszawie: „wczoraj” to zawsze poprzednia data
+  const dayNumber = (t: Date) => Date.parse(warsawNow(t).date) / 86_400_000
+  const d = Math.round(dayNumber(new Date(now)) - dayNumber(new Date(iso)))
+  return d <= 1 ? 'wczoraj' : `${d} dni temu`
+}
+
+export const minutesUntil =(iso: string, now = Date.now()) => (new Date(iso).getTime() - now) / 60000
 
 export function normalize(value: string) {
   return value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').toLowerCase().trim()

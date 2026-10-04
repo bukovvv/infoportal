@@ -20,7 +20,7 @@ const filters = [
     </v-chip-group>
     <v-card color="surface-container-low">
       <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line@3" color="transparent" />
-      <NoticeItem v-for="n in list" :key="n.id" :notice="n" />
+      <NoticeItem v-for="n in list" :key="n.id" :notice="n" compact link />
       <v-empty-state v-if="notices.loaded && !list.length" icon="campaign" title="Brak komunikatów w tej kategorii" text="Gdy przewoźnik zgłosi utrudnienie, pojawi się tutaj i na ekranie startowym." />
     </v-card>
   </div>
