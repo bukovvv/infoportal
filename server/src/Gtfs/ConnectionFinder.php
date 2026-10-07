@@ -31,12 +31,18 @@ final class ConnectionFinder
     }
 
     /**
+     * Połączenia z odjazdem od $time albo, z $arriveBy, z przyjazdem najpóźniej o $time (wtedy te, które odjeżdżają najpóźniej).
+     *
      * @return array<int, array{dep: int, arr: int, legs: array<int, array{key: string, from: int, to: int}>, waits: array<int, int>, via: array<int, string>}>
      */
-    public function find(string $from, string $to, int $time, int $limit = 8, bool $directOnly = false): array
+    public function find(string $from, string $to, int $time, int $limit = 8, bool $directOnly = false, bool $arriveBy = false): array
     {
         if ($from === $to) {
             return [];
+        }
+        $arrival = $arriveBy ? $time : PHP_INT_MAX;
+        if ($arriveBy) {
+            $time -= $this->window;
         }
         $trips = $this->day->trips;
         $lastLegs = $directOnly ? [] : $this->lastLegs($from, $to);
@@ -108,6 +114,7 @@ final class ConnectionFinder
             array_push($results, ...array_values($best));
         }
 
+        $results = array_filter($results, static fn (array $c): bool => $c['arr'] <= $arrival);
         usort($results, static fn (array $a, array $b): int => [$a['arr'], count($a['legs']), -$a['dep']] <=> [$b['arr'], count($b['legs']), -$b['dep']]);
         $useful = [];
         foreach ($results as $candidate) {
@@ -137,7 +144,7 @@ final class ConnectionFinder
         }));
         usort($useful, static fn (array $a, array $b): int => [$a['dep'], $a['arr']] <=> [$b['dep'], $b['arr']]);
 
-        return array_slice($useful, 0, max(1, $limit));
+        return $arriveBy ? array_slice($useful, -max(1, $limit)) : array_slice($useful, 0, max(1, $limit));
     }
 
     /**

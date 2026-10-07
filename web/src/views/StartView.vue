@@ -30,6 +30,8 @@ const to = ref<string | null>((route.query.do as string) || last.to || null)
 const date = ref((route.query.data as string) || initial.date)
 const time = ref((route.query.godz as string) || initial.time)
 const direct = ref(route.query.bezp === '1')
+const timeMode = ref<'dep' | 'arr'>(route.query.przyj === '1' ? 'arr' : 'dep')
+const arriveBy = computed(() => timeMode.value === 'arr')
 const result = ref<ConnectionsResult | null>(null)
 const searching = ref(false)
 const error = ref<string | null>(null)
@@ -44,9 +46,9 @@ async function search(scroll = true) {
   if (from.value === to.value) { error.value = 'Stacja początkowa i docelowa muszą się różnić.'; return }
   searching.value = true
   try {
-    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, direct: direct.value })
+    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, direct: direct.value, arriveBy: arriveBy.value })
     write('kw_last_search', { from: from.value, to: to.value })
-    void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...(direct.value ? { bezp: '1' } : {}) }, hash: route.hash })
+    void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...(direct.value ? { bezp: '1' } : {}), ...(arriveBy.value ? { przyj: '1' } : {}) }, hash: route.hash })
     if (scroll) requestAnimationFrame(() => resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   } catch (e) {
     error.value = (e as Error).message
@@ -70,10 +72,15 @@ function toggleDirect() {
   direct.value = !direct.value
   if (result.value) void search(false)
 }
-function later() {
-  const lastConn = result.value?.connections.at(-1)
-  if (!lastConn) return
-  const next = new Date(new Date(lastConn.departure).getTime() + 60_000)
+watch(arriveBy, () => { if (result.value) void search(false) })
+
+/** Następna strona wyników: późniejsze odjazdy albo, przy „przyjeździe do”, wcześniejsze przyjazdy. */
+function more() {
+  const list = result.value?.connections
+  if (!list?.length) return
+  const next = result.value!.arriveBy
+    ? new Date(new Date(list[0].arrival).getTime() - 60_000)
+    : new Date(new Date(list[list.length - 1].departure).getTime() + 60_000)
   const w = warsawNow(next)
   date.value = w.date
   time.value = w.time
@@ -112,7 +119,13 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           </div>
           <div class="search-row">
             <DateField v-model="date" label="Data" :min="range.min" :max="range.max" class="f-date" />
-            <TimeField v-model="time" label="Odjazd od" class="f-time" />
+            <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" class="f-time" />
+          </div>
+          <div class="search-row">
+            <v-btn-toggle v-model="timeMode" mandatory variant="outlined" divided density="comfortable" aria-label="Godzina oznacza">
+              <v-btn value="dep" :prepend-icon="arriveBy ? undefined : 'check'">Odjazd</v-btn>
+              <v-btn value="arr" :prepend-icon="arriveBy ? 'check' : undefined">Przyjazd</v-btn>
+            </v-btn-toggle>
             <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
               Tylko bezpośrednie
             </v-chip>
@@ -125,7 +138,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           <template v-if="result">
             <div class="d-flex align-baseline justify-space-between flex-wrap ga-2 px-1">
               <h2 id="results-title" class="text-title-medium">{{ result.from.name }} → {{ result.to.name }}</h2>
-              <span class="text-body-small muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} od {{ result.time }}</span>
+              <span class="text-body-small muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} {{ result.arriveBy ? 'z przyjazdem do' : 'od' }} {{ result.time }}</span>
             </div>
             <template v-for="(c, i) in result.connections" :key="c.legs.map((l) => l.key).join('+')">
               <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
@@ -137,7 +150,9 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
               title="Brak połączeń KW w ciągu 12 godzin"
               :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
             />
-            <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" class="justify-self-start" @click="later">Późniejsze połączenia</v-btn>
+            <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="justify-self-start" @click="more">
+              {{ result.arriveBy ? 'Wcześniejsze połączenia' : 'Późniejsze połączenia' }}
+            </v-btn>
             <BtkHint
               v-if="result.connections.length"
               :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
@@ -204,8 +219,9 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .route-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .stack { display: grid; gap: 12px; min-width: 0; }
 .search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.f-date { flex: 0 1 230px; min-width: 190px; }
-.f-time { flex: 0 1 140px; min-width: 120px; }
+/* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
+.search-row :deep(.f-date) { flex: 3 1 230px; min-width: 190px; }
+.search-row :deep(.f-time) { flex: 2 1 140px; min-width: 120px; }
 .search-btn { margin-left: auto; }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; }
 .justify-self-start { justify-self: start; }
@@ -220,7 +236,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .footnote { max-width: 70ch; padding: 0 4px; }
 @media (max-width: 839px) {
   .search { padding: 20px 16px; border-radius: var(--kw-r-l); }
-  .f-date, .f-time { flex: 1 1 calc(50% - 6px); }
+  .search-row :deep(.f-date), .search-row :deep(.f-time) { flex: 1 1 calc(50% - 6px); min-width: 0; }
   .search-btn { width: 100%; margin: 0; }
 }
 </style>

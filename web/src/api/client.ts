@@ -40,8 +40,8 @@ export const api = {
   /** at: dzień (RRRR-MM-DD) i godzina (GG:MM), od których pokazać kursy; bez at — od teraz. */
   board: (stationId: string, mode: 'dep' | 'arr', limit = 16, at?: { date?: string; time?: string }) =>
     request<Board>('GET', `/stations/${encodeURIComponent(stationId)}/board?${q({ mode, limit, date: at?.date, time: at?.time })}`),
-  connections: (p: { from: string; to: string; date: string; time: string; direct?: boolean }) =>
-    request<ConnectionsResult>('GET', `/connections?${q({ ...p, direct: p.direct ? 1 : undefined })}`),
+  connections: (p: { from: string; to: string; date: string; time: string; direct?: boolean; arriveBy?: boolean }) =>
+    request<ConnectionsResult>('GET', `/connections?${q({ from: p.from, to: p.to, date: p.date, time: p.time, direct: p.direct ? 1 : undefined, arrive: p.arriveBy ? 1 : undefined })}`),
   trip: (key: string) => request<Trip>('GET', `/trips/${encodeURIComponent(key)}`),
   train: (number: string) => request<Trip>('GET', `/trains/${encodeURIComponent(number)}`),
   network: () => request<GeoJSON.FeatureCollection>('GET', '/network'),

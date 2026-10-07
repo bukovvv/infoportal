@@ -168,10 +168,19 @@ if (is_file(Config::path('gtfs_db'))) {
     $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => '23:30'];
     $late = $api->connections()->data['connections'];
     check('API: wieczorem połączenia z następnego dnia', $late !== [] && substr($late[0]['departure'], 0, 10) > $isoDay, (string) ($late[0]['departure'] ?? 'brak'));
+    // przyjazd do 12:00: wszystkie przyjeżdżają na czas, a po ostatnim nie ma późniejszego odjazdu, który zdąży
+    $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => '12:00', 'arrive' => '1'];
+    $arr = $api->connections()->data;
+    $limit = $isoDay . 'T12:00';
+    $onTime = $arr['arriveBy'] && $arr['connections'] !== [] && max(array_map(static fn (array $c): string => substr($c['arrival'], 0, 16), $arr['connections'])) <= $limit;
+    $lastDep = substr((string) end($arr['connections'])['departure'], 11, 5);
+    $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => date('H:i', strtotime($lastDep) + 60)];
+    $after = $api->connections()->data['connections'];
+    check('API: przyjazd do wybranej godziny', $onTime && ($after === [] || substr($after[0]['arrival'], 0, 16) > $limit), "ostatni odjazd $lastDep");
     // dzień z następnym: jutrzejsze kursy po 24:00, nocne kursy z dziś tylko raz
     $today = DayTimetable::load($tt, (int) str_replace('-', '', $isoDay));
     $next = DayTimetable::load($tt, Clock::addDays($today->date, 1));
-    $span = $today->withNextDay($next);
+    $span = $today->withDay($next);
     $own = count(array_filter($next->trips, static fn (array $t): bool => $t['serviceDate'] === $next->date));
     $shifted = array_filter($span->trips, static fn (array $t): bool => $t['serviceDate'] === $next->date);
     check('dzień z następnym: kursy jutra przesunięte o 24 h', count($span->trips) === count($today->trips) + $own

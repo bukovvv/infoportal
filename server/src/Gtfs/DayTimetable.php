@@ -9,7 +9,7 @@ use KwInfo\Config;
 
 /**
  * Wszystkie kursy widoczne w danym dniu kalendarzowym: kursy z tej daty oraz nocne kursy z dnia poprzedniego
- * (czasy ≥ 24:00), opcjonalnie też kursy dnia następnego (withNextDay). Czasy są przeliczone na sekundy od północy $date.
+ * (czasy ≥ 24:00), opcjonalnie też kursy dnia sąsiedniego (withDay). Czasy są przeliczone na sekundy od północy $date.
  *
  * Postój: [0 seq, 1 stationId, 2 arr, 3 dep, 4 dist, 5 platform, 6 track, 7 pickup, 8 dropoff]
  */
@@ -62,15 +62,16 @@ final class DayTimetable
     }
 
     /**
-     * Ten dzień z dołączonymi kursami dnia następnego (czasy +24 h), np. do wieczornego wyszukiwania połączeń.
-     * Nocne kursy z tego dnia są już w nim, więc z $next bierzemy tylko kursy z jego własnej daty.
+     * Ten dzień z dołączonymi kursami dnia sąsiedniego (czasy ±24 h), np. do wyszukiwania połączeń wokół północy.
+     * Z $other bierzemy tylko kursy z jego własnej daty, których jeszcze nie ma (nocne kursy są w obu dniach).
      */
-    public function withNextDay(self $next): self
+    public function withDay(self $other): self
     {
+        $shift = $other->date > $this->date ? 86400 : -86400;
         $span = clone $this;
-        foreach ($next->trips as $trip) {
-            if ($trip['serviceDate'] === $next->date) {
-                $span->add($trip, $next->date, 86400);
+        foreach ($other->trips as $key => $trip) {
+            if ($trip['serviceDate'] === $other->date && !isset($span->trips[$key])) {
+                $span->add($trip, $other->date, $shift);
             }
         }
 

@@ -177,8 +177,9 @@ const when = (iso: string) => {
 .board-head { display: grid; gap: 16px; padding: 8px 0 16px; }
 .row1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .when-fields { display: flex; flex: 1 1 320px; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
-.f-date { flex: 0 1 230px; min-width: 190px; }
-.f-time { flex: 0 1 140px; min-width: 120px; }
+/* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
+.when-fields :deep(.f-date) { flex: 0 1 230px; min-width: 190px; }
+.when-fields :deep(.f-time) { flex: 0 1 140px; min-width: 120px; }
 .board { overflow: hidden; position: relative; }
 .dep { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; width: 100%; padding: 14px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .dep + .dep { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
@@ -196,7 +197,7 @@ const when = (iso: string) => {
   .row1 { grid-template-columns: minmax(0, 1fr); }
   .row1 .v-chip { justify-self: start; }
   .when-fields { justify-content: flex-start; }
-  .f-date, .f-time { flex: 1 1 calc(50% - 4px); min-width: 0; }
+  .when-fields :deep(.f-date), .when-fields :deep(.f-time) { flex: 1 1 calc(50% - 4px); min-width: 0; }
   .dep { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; padding: 12px; }
 }
 </style>

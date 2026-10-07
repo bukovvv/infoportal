@@ -86,6 +86,8 @@ export interface ConnectionsResult {
   to: StationRef
   date: string
   time: string
+  /** godzina oznacza przyjazd (wyniki: najpóźniejsze odjazdy z przyjazdem do tej godziny) */
+  arriveBy: boolean
   connections: Connection[]
 }
 

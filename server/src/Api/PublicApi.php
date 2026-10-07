@@ -156,13 +156,14 @@ final class PublicApi
             throw new ApiException('Podaj prawidłową godzinę.', 422);
         }
         $time = (int) $tm[1] * 3600 + (int) $tm[2] * 60;
-        // okno wyszukiwania (12 h) wieczorem sięga następnego dnia
-        $day = $this->day($date)->withNextDay($this->day(Clock::addDays($date, 1)));
+        // okno wyszukiwania (12 h) sięga wieczorem następnego dnia, a przy „przyjeździe do” rano poprzedniego
+        $arriveBy = ($_GET['arrive'] ?? '0') === '1';
+        $day = $this->day($date)->withDay($this->day(Clock::addDays($date, $arriveBy ? -1 : 1)));
         $isToday = $date === Clock::today();
         $nowSec = Clock::secondsSince($date);
         $rt = $this->rt();
         $finder = new ConnectionFinder($day, isCancelled: static fn (string $key): bool => $rt->cancelled($key));
-        $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), ($_GET['direct'] ?? '0') === '1');
+        $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), ($_GET['direct'] ?? '0') === '1', $arriveBy);
 
         $connections = [];
         foreach ($found as $c) {
@@ -210,6 +211,7 @@ final class PublicApi
             'to' => ['id' => $to['id'], 'name' => $to['name']],
             'date' => Clock::isoDate($date),
             'time' => $timeStr,
+            'arriveBy' => $arriveBy,
             'connections' => $connections,
         ]);
     }
