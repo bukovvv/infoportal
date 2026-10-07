@@ -6,6 +6,7 @@ import type { ConnectionsResult } from '@/api/types'
 import ConnectionCard from '@/components/ConnectionCard.vue'
 import DataStatusCard from '@/components/DataStatusCard.vue'
 import DateField from '@/components/DateField.vue'
+import FavoriteStations from '@/components/FavoriteStations.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
@@ -13,6 +14,7 @@ import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
 import TimeField from '@/components/TimeField.vue'
 import { useNotices, useStatus } from '@/stores/data'
+import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
 import { read, write } from '@/stores/ui'
 import { dayLabel, plural, warsawNow } from '@/utils/format'
@@ -22,6 +24,7 @@ const router = useRouter()
 const notices = useNotices()
 const status = useStatus()
 const journeys = useJourneys()
+const favorites = useFavorites()
 
 const initial = warsawNow()
 const last = read<{ from?: string; to?: string }>('kw_last_search', {})
@@ -173,6 +176,21 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
                 <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
                 <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy.</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="favorites-title">
+          <div class="section-head">
+            <h2 id="favorites-title" class="text-title-large">Ulubione stacje</h2>
+            <v-btn v-if="favorites.ids.length" variant="text" append-icon="chevron_right" to="/odjazdy">Tablica</v-btn>
+          </div>
+          <FavoriteStations v-if="favorites.ids.length" :now="now" />
+          <div v-else class="empty">
+            <span class="empty-ic"><v-icon icon="star" /></span>
+            <div class="d-grid ga-1">
+              <strong class="text-title-small">Nie masz ulubionych stacji</strong>
+              <span class="text-body-medium muted">Na <router-link to="/odjazdy">tablicy odjazdów</router-link> wybierz gwiazdkę przy stacji. Pokażemy tu najbliższe odjazdy, a stacja będzie pierwsza na liście w wyszukiwarce.</span>
             </div>
           </div>
         </section>

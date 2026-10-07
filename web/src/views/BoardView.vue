@@ -10,6 +10,7 @@ import StationField from '@/components/StationField.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeField from '@/components/TimeField.vue'
 import { useStations, useStatus } from '@/stores/data'
+import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
 import { clock, dayLabel, minutesUntil, relative, warsawNow, weekdayShort } from '@/utils/format'
 
@@ -18,6 +19,7 @@ const router = useRouter()
 const stations = useStations()
 const status = useStatus()
 const ui = useUi()
+const favorites = useFavorites()
 const DEFAULT_STATION = '30601' // Poznań Główny
 
 const stationId = ref<string | null>((route.params.stationId as string) || read<string | null>('kw_board_station', null) || DEFAULT_STATION)
@@ -68,6 +70,20 @@ watch([stationId, mode, date, time], ([id]) => {
   void router.replace({ name: 'board', params: { stationId: id }, query })
   void load()
 })
+const favoriteStations = computed(() => favorites.ids.flatMap((id) => stations.byId.get(id) ?? []))
+const isFavorite = computed(() => favorites.has(stationId.value))
+
+function toggleFavorite() {
+  const id = stationId.value
+  if (!id) return
+  const name = station.value?.name ?? 'Stacja'
+  const index = favorites.ids.indexOf(id)
+  const added = favorites.toggle(id)
+  if (added === null) ui.notify(`Możesz mieć najwyżej ${MAX_FAVORITES} ulubionych stacji. Usuń którąś, żeby dodać nową.`)
+  else if (added) ui.notify(`${name} w ulubionych. Znajdziesz ją też na stronie głównej.`)
+  else ui.notify(`Usunięto ${name} z ulubionych`, { label: 'Cofnij', run: () => favorites.restore(id, index) })
+}
+
 watch(() => route.params.stationId, (id) => { if (id && id !== stationId.value) stationId.value = id as string })
 
 let timer: number | undefined
@@ -111,8 +127,31 @@ const when = (iso: string) => {
   <div class="page-narrow">
     <div class="board-head">
       <div class="row1">
-        <StationField v-model="stationId" label="Stacja" icon="signpost" hide-details />
+        <div class="station-pick">
+          <StationField v-model="stationId" label="Stacja" icon="signpost" hide-details />
+          <v-btn
+            :icon="isFavorite ? 'star-fill' : 'star'"
+            :color="isFavorite ? 'primary' : undefined"
+            variant="text"
+            :aria-label="isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'"
+            :aria-pressed="isFavorite"
+            :disabled="!stationId"
+            @click="toggleFavorite"
+          />
+        </div>
         <v-chip variant="outlined" prepend-icon="my_location" :disabled="locating" @click="nearest">{{ locating ? 'Szukam…' : 'Najbliższa stacja' }}</v-chip>
+      </div>
+      <div v-if="favoriteStations.length" class="fav-row" role="group" aria-label="Ulubione stacje">
+        <v-chip
+          v-for="s in favoriteStations"
+          :key="s.id"
+          :variant="s.id === stationId ? 'flat' : 'outlined'"
+          :color="s.id === stationId ? 'secondary-container' : undefined"
+          :prepend-icon="s.id === stationId ? 'check' : 'star'"
+          @click="stationId = s.id"
+        >
+          {{ s.name }}
+        </v-chip>
       </div>
       <div class="d-flex align-center justify-space-between flex-wrap ga-3">
         <v-btn-toggle v-model="mode" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj tablicy">
@@ -176,6 +215,9 @@ const when = (iso: string) => {
 <style scoped>
 .board-head { display: grid; gap: 16px; padding: 8px 0 16px; }
 .row1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.station-pick { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.station-pick > :first-child { flex: 1 1 auto; min-width: 0; }
+.fav-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .when-fields { display: flex; flex: 1 1 320px; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 /* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
 .when-fields :deep(.f-date) { flex: 0 1 230px; min-width: 190px; }

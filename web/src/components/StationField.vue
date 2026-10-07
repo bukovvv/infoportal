@@ -2,11 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import type { Station } from '@/api/types'
 import { useStations } from '@/stores/data'
+import { useFavorites } from '@/stores/favorites'
 import { plural } from '@/utils/format'
 
 const model = defineModel<string | null>({ default: null })
 defineProps<{ label: string; icon?: string; hideDetails?: boolean; density?: 'default' | 'comfortable' | 'compact' }>()
 const stations = useStations()
+const favorites = useFavorites()
 const query = ref('')
 
 onMounted(() => { void stations.load() })
@@ -14,7 +16,9 @@ onMounted(() => { void stations.load() })
 const items = computed<Station[]>(() => {
   const selected = model.value ? stations.byId.get(model.value) : undefined
   const q = selected && query.value === selected.name ? '' : query.value
-  const list = stations.search(q ?? '', 8)
+  // bez wpisanego tekstu ulubione stacje na górze
+  const fav = q ? [] : favorites.ids.flatMap((id) => stations.byId.get(id) ?? [])
+  const list = [...fav, ...stations.search(q ?? '', 8).filter((s) => !fav.includes(s))]
   return selected && !list.includes(selected) ? [selected, ...list] : list
 })
 </script>
@@ -37,7 +41,7 @@ const items = computed<Station[]>(() => {
     :menu-props="{ maxHeight: 360 }"
   >
     <template #item="{ props: itemProps, item }">
-      <v-list-item v-bind="itemProps" prepend-icon="signpost">
+      <v-list-item v-bind="itemProps" :prepend-icon="favorites.has(item.id) ? 'star-fill' : 'signpost'">
         <template #subtitle>
           {{ item.daily }} {{ plural(item.daily, 'kurs', 'kursy', 'kursów') }} dziennie · {{ item.lines.filter((l: string) => l.startsWith('PKM')).join(', ') || 'KW' }}
         </template>
