@@ -117,6 +117,21 @@ if (is_file(Config::path('gtfs_db'))) {
         }
     }
     check('baza: wyniki posortowane i bez zdominowanych', $sorted);
+    // przesiadka bez sensu: Poznań Gł. → Leszno 07:43 z przesiadką (przyjazd 10:14), gdy o 07:39 jedzie bezpośredni (08:44)
+    $pointless = [];
+    foreach ([['Poznań Główny', 'Leszno'], ['Poznań Główny', 'Gniezno'], ['Leszno', 'Wolsztyn'], ['Września', 'Gniezno']] as [$a, $b]) {
+        foreach ([6, 14] as $hour) {
+            $res = (new ConnectionFinder($day))->find($byName[$a] ?? '', $byName[$b] ?? '', $hour * 3600, 8);
+            foreach ($res as $c) {
+                foreach ($res as $o) {
+                    if (count($c['legs']) > 1 && count($o['legs']) <= count($c['legs']) && $o['dep'] < $c['dep'] && $c['dep'] - $o['dep'] <= 900 && $c['arr'] - $o['arr'] >= 1800) {
+                        $pointless[] = "$a → $b " . gmdate('H:i', $c['dep']);
+                    }
+                }
+            }
+        }
+    }
+    check('baza: bez przesiadek, gdy chwilę wcześniej jedzie dużo szybsze', $pointless === [], implode(', ', $pointless));
 
     // dwie przesiadki: Włoszakowice → Rogoźno Wlkp. nie ma połączenia z jedną przesiadką
     $found = (new ConnectionFinder($day))->find($byName['Włoszakowice'] ?? '', $byName['Rogoźno Wielkopolskie'] ?? '', 4 * 3600, 5);

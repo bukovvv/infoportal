@@ -10,11 +10,15 @@ use KwInfo\Gtfs\DayTimetable as D;
  * Połączenia bezpośrednie i z maks. dwiema przesiadkami na tej samej stacji. Wynik jest filtrowany (Pareto):
  * zostają połączenia, których nie da się poprawić wcześniejszym przyjazdem, późniejszym odjazdem
  * i mniejszą liczbą przesiadek jednocześnie. Połączenie z dwiema przesiadkami musi dodatkowo przyjechać
- * wyraźnie wcześniej (TWO_TRANSFER_GAIN) niż każde prostsze, które nie odjeżdża wcześniej.
+ * wyraźnie wcześniej (TWO_TRANSFER_GAIN) niż każde prostsze, które nie odjeżdża wcześniej. Odpada też połączenie
+ * z przesiadką, gdy najwyżej EARLIER_SLACK wcześniej odjeżdża inne (bez większej liczby przesiadek), które przyjeżdża
+ * co najmniej EARLIER_GAIN wcześniej. Wolniejsze pociągi bezpośrednie zostają.
  */
 final class ConnectionFinder
 {
     private const TWO_TRANSFER_GAIN = 900;
+    private const EARLIER_SLACK = 900;
+    private const EARLIER_GAIN = 1800;
 
     /** @param null|callable(string): bool $isCancelled */
     public function __construct(
@@ -115,11 +119,16 @@ final class ConnectionFinder
             $useful[] = $candidate;
         }
         $useful = array_values(array_filter($useful, static function (array $c) use ($useful): bool {
-            if (count($c['legs']) < 3) {
+            $legs = count($c['legs']);
+            if ($legs < 2) {
                 return true;
             }
             foreach ($useful as $o) {
-                if (count($o['legs']) < 3 && $o['dep'] >= $c['dep'] && $o['arr'] < $c['arr'] + self::TWO_TRANSFER_GAIN) {
+                if ($legs === 3 && count($o['legs']) < 3 && $o['dep'] >= $c['dep'] && $o['arr'] < $c['arr'] + self::TWO_TRANSFER_GAIN) {
+                    return false;
+                }
+                // z przesiadką, choć chwilę wcześniej jedzie połączenie dużo szybsze i nie bardziej skomplikowane
+                if (count($o['legs']) <= $legs && $o['dep'] < $c['dep'] && $c['dep'] - $o['dep'] <= self::EARLIER_SLACK && $c['arr'] - $o['arr'] >= self::EARLIER_GAIN) {
                     return false;
                 }
             }
