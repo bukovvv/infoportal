@@ -72,6 +72,9 @@ final class PublicApi
             $day = $this->day($date);
             foreach ($day->byStation[$station['id']] ?? [] as [$key, $idx]) {
                 $trip = $day->trips[$key];
+                if ($shift !== 0 && $trip['serviceDate'] !== $date) {
+                    continue; // nocny kurs z dnia $base, już ujęty wyżej
+                }
                 $stop = $trip['stops'][$idx];
                 $last = count($trip['stops']) - 1;
                 if ($mode === 'dep' ? ($idx === $last || $stop[D::PICKUP] === 1) : ($idx === 0 || $stop[D::DROPOFF] === 1)) {
@@ -153,7 +156,8 @@ final class PublicApi
             throw new ApiException('Podaj prawidłową godzinę.', 422);
         }
         $time = (int) $tm[1] * 3600 + (int) $tm[2] * 60;
-        $day = $this->day($date);
+        // okno wyszukiwania (12 h) wieczorem sięga następnego dnia
+        $day = $this->day($date)->withNextDay($this->day(Clock::addDays($date, 1)));
         $isToday = $date === Clock::today();
         $nowSec = Clock::secondsSince($date);
         $rt = $this->rt();

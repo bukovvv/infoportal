@@ -35,4 +35,4 @@ Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 - `server/config/admin-password.php` zawiera tylko hash (ustawia go użytkownik: `php server/bin/set-admin-password.php`); nigdy nie prosić o hasło.
 
 ## Możliwe następne kroki (zaproponowane, niezaczęte)
-Zewnętrzny monitor (UptimeRobot) na wypadek awarii całego serwera; PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka: połączenia po północy (wieczorne zapytania kończą się o 24:00) i „przyjazd do” (2 przesiadki już są; przesiadki piesze odrzucone: jedyna sensowna para to Poznań Dębiec ↔ Dębina, 800 m); zapasowe źródło opóźnień PLK.
+Zewnętrzny monitor (UptimeRobot) na wypadek awarii całego serwera; PWA (service worker, offline) i powiadomienia o opóźnieniu obserwowanej podróży; wyszukiwarka: „przyjazd do” (2 przesiadki już są; przesiadki piesze odrzucone: jedyna sensowna para to Poznań Dębiec ↔ Dębina, 800 m); zapasowe źródło opóźnień PLK.

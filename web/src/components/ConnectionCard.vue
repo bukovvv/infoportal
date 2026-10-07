@@ -17,6 +17,8 @@ const last = computed(() => c.value.legs[c.value.legs.length - 1])
 const depDelay = computed(() => first.value.departureDelay ?? 0)
 const arrDelay = computed(() => last.value.arrivalDelay ?? 0)
 const saved = computed(() => journeys.has(c.value))
+/** Godzina z innego dnia niż odjazd (kurs przez północ) dostaje dopisek „+1”. */
+const nextDay = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) !== c.value.departure.slice(0, 10)
 
 function watchJourney() {
   if (journeys.add(c.value)) {
@@ -29,12 +31,12 @@ function watchJourney() {
   <article class="conn">
     <div class="conn-main">
       <div class="conn-top">
-        <div class="conn-times tnum" :aria-label="`Odjazd ${clock(c.departure)}, przyjazd ${clock(c.arrival)}`">
+        <div class="conn-times tnum" :aria-label="`Odjazd ${clock(c.departure)}, przyjazd ${clock(c.arrival)}${nextDay(c.arrival) ? ' następnego dnia' : ''}`">
           <span class="t" :class="{ was: depDelay >= 2 }">{{ clock(c.departure) }}</span>
           <span v-if="depDelay >= 2" class="late">{{ clock(first.expectedDeparture) }}</span>
           <v-icon icon="arrow_forward" class="muted" size="20" />
-          <span class="t" :class="{ was: arrDelay >= 2 }">{{ clock(c.arrival) }}</span>
-          <span v-if="arrDelay >= 2" class="late">{{ clock(last.expectedArrival) }}</span>
+          <span class="t" :class="{ was: arrDelay >= 2 }">{{ clock(c.arrival) }}<sup v-if="nextDay(c.arrival)" class="plus-day">+1</sup></span>
+          <span v-if="arrDelay >= 2" class="late">{{ clock(last.expectedArrival) }}<sup v-if="nextDay(last.expectedArrival) && !nextDay(c.arrival)" class="plus-day">+1</sup></span>
         </div>
         <div class="text-right">
           <div class="text-title-medium tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
@@ -60,7 +62,7 @@ function watchJourney() {
       <div v-if="expanded" class="conn-detail">
         <template v-for="(leg, i) in c.legs" :key="leg.key">
           <div class="leg">
-            <span class="leg-t tnum">{{ clock(leg.departure) }}</span><span class="leg-rail"><i /></span>
+            <span class="leg-t tnum">{{ clock(leg.departure) }}<sup v-if="nextDay(leg.departure)" class="plus-day">+1</sup></span><span class="leg-rail"><i /></span>
             <div class="leg-s">
               <div class="text-title-small">{{ leg.from.name }}</div>
               <div class="text-body-small muted d-flex flex-wrap align-center ga-1">
@@ -71,7 +73,7 @@ function watchJourney() {
             </div>
           </div>
           <div class="leg">
-            <span class="leg-t tnum">{{ clock(leg.arrival) }}</span><span class="leg-rail end"><i /></span>
+            <span class="leg-t tnum">{{ clock(leg.arrival) }}<sup v-if="nextDay(leg.arrival)" class="plus-day">+1</sup></span><span class="leg-rail end"><i /></span>
             <div class="leg-s">
               <div class="text-title-small">{{ leg.to.name }}</div>
               <div v-if="leg.arrivalPlatform" class="text-body-small muted">peron {{ leg.arrivalPlatform }}</div>
@@ -98,7 +100,8 @@ function watchJourney() {
 .conn-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 8px; }
 .conn-detail { padding: 4px 16px 16px; border-top: 1px solid rgb(var(--v-theme-outline-variant)); background: rgb(var(--v-theme-surface-container-lowest)); }
 .leg { display: grid; grid-template-columns: 52px 20px minmax(0, 1fr); column-gap: 8px; }
-.leg-t { text-align: right; font-weight: 500; padding-top: 12px; }
+.leg-t { text-align: right; font-weight: 500; padding-top: 12px; white-space: nowrap; }
+.plus-day { margin-left: 2px; font-size: 11px; font-weight: 700; color: rgb(var(--v-theme-primary)); }
 .leg-rail { position: relative; }
 .leg-rail::before { content: ''; position: absolute; left: 9px; top: 20px; bottom: -12px; width: 2px; background: rgb(var(--v-theme-primary)); }
 .leg-rail.end::before { display: none; }

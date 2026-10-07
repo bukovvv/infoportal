@@ -15,7 +15,7 @@ import TimeField from '@/components/TimeField.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
 import { read, write } from '@/stores/ui'
-import { plural, warsawNow } from '@/utils/format'
+import { dayLabel, plural, warsawNow } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,6 +54,12 @@ async function search(scroll = true) {
   } finally {
     searching.value = false
   }
+}
+
+/** Nagłówek dnia nad połączeniem, które odjeżdża innego dnia niż poprzednie (lub niż data wyszukiwania). */
+function newDay(i: number) {
+  const list = result.value!.connections
+  return list[i].departure.slice(0, 10) !== (i ? list[i - 1].departure.slice(0, 10) : result.value!.date)
 }
 
 function swap() {
@@ -121,7 +127,10 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
               <h2 id="results-title" class="text-title-medium">{{ result.from.name }} → {{ result.to.name }}</h2>
               <span class="text-body-small muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} od {{ result.time }}</span>
             </div>
-            <ConnectionCard v-for="c in result.connections" :key="c.legs.map((l) => l.key).join('+')" :connection="c" />
+            <template v-for="(c, i) in result.connections" :key="c.legs.map((l) => l.key).join('+')">
+              <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
+              <ConnectionCard :connection="c" />
+            </template>
             <v-empty-state
               v-if="!result.connections.length"
               icon="search_off"
@@ -200,6 +209,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .search-btn { margin-left: auto; }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; }
 .justify-self-start { justify-self: start; }
+.day-sep { margin-top: 8px; padding: 0 4px; color: rgb(var(--v-theme-primary)); }
+.day-sep::first-letter { text-transform: uppercase; }
 .empty { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .empty-ic {
   display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);

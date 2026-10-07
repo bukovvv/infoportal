@@ -150,6 +150,26 @@ if (is_file(Config::path('gtfs_db'))) {
     $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => '07:00'];
     $conn = $api->connections()->data;
     check('API: wyszukiwarka z datą', $conn['date'] === $isoDay && $conn['connections'] !== []);
+    $_GET = ['from' => $byName['Leszno'] ?? '', 'to' => $byName['Gniezno'] ?? '', 'date' => $isoDay, 'time' => '23:30'];
+    $late = $api->connections()->data['connections'];
+    check('API: wieczorem połączenia z następnego dnia', $late !== [] && substr($late[0]['departure'], 0, 10) > $isoDay, (string) ($late[0]['departure'] ?? 'brak'));
+    // dzień z następnym: jutrzejsze kursy po 24:00, nocne kursy z dziś tylko raz
+    $today = DayTimetable::load($tt, (int) str_replace('-', '', $isoDay));
+    $next = DayTimetable::load($tt, Clock::addDays($today->date, 1));
+    $span = $today->withNextDay($next);
+    $own = count(array_filter($next->trips, static fn (array $t): bool => $t['serviceDate'] === $next->date));
+    $shifted = array_filter($span->trips, static fn (array $t): bool => $t['serviceDate'] === $next->date);
+    check('dzień z następnym: kursy jutra przesunięte o 24 h', count($span->trips) === count($today->trips) + $own
+        && $shifted !== [] && min(array_map(static fn (array $t): int => $t['stops'][0][DayTimetable::DEP] ?? PHP_INT_MAX, $shifted)) >= 86400);
+    // kurs przez północ jest w obu dniach (dziś po 24:00 i jutro jako nocny) — na tablicy tylko raz
+    $_GET = ['date' => $isoDay, 'time' => '22:00', 'mode' => 'arr', 'limit' => '40'];
+    $keys = [];
+    foreach (array_keys($byName) as $name) {
+        if (str_starts_with($name, 'Poznań Główny') || $name === 'Wolsztyn' || $name === 'Leszno') {
+            $keys = array_merge($keys, array_map(static fn (array $r): string => $name . $r['key'], $api->board(['id' => $byName[$name]])->data['rows']));
+        }
+    }
+    check('API: tablica bez powtórzonych kursów nocnych', $keys !== [] && count($keys) === count(array_unique($keys)));
     $_GET = [];
 } else {
     echo "[POMINIĘTO] testy na bazie — uruchom najpierw import-gtfs.php\n";
