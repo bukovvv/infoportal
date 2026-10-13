@@ -32,10 +32,10 @@ const nav = computed(() => [
   { to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' },
   { to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length },
 ])
-// strona pojedynczego komunikatu podświetla zakładkę Komunikaty
-const current = computed(() => (route.name === 'notice' ? 'notices' : String(route.name ?? '')))
+// strona pojedynczego komunikatu podświetla zakładkę Komunikaty, schemat połączeń — zakładkę Mapa
+const current = computed(() => (route.name === 'notice' ? 'notices' : route.name === 'scheme' ? 'map' : String(route.name ?? '')))
 const title = computed(() => {
-  const name = isAdmin.value ? 'admin' : titles[current.value] ? current.value : 'start'
+  const name = isAdmin.value ? 'admin' : route.name === 'scheme' ? 'scheme' : titles[current.value] ? current.value : 'start'
   return (!mdAndUp.value && shortTitles[name]) || titles[name]
 })
 

@@ -7,6 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { api } from '@/api/client'
 import type { LiveTrain } from '@/api/types'
+import MapSwitch from '@/components/MapSwitch.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useLive, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
@@ -305,6 +306,7 @@ const filters = [
     <div ref="container" class="map" role="region" aria-label="Mapa pociągów Kolei Wielkopolskich" />
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
 
+    <div class="switch"><MapSwitch /></div>
     <div class="legend" aria-hidden="true">
       <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span>
     </div>
@@ -374,6 +376,7 @@ const filters = [
 .lead.delay { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
 .lead.est { background: rgb(var(--v-theme-info-container)); color: rgb(var(--v-theme-on-info-container)); }
 .controls { position: absolute; z-index: 2; right: 16px; bottom: 32px; display: grid; gap: 12px; }
+.switch { position: absolute; z-index: 2; top: 16px; left: calc(50% + 196px); transform: translateX(-50%); }
 .legend { position: absolute; z-index: 2; right: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 14px; border-radius: 999px; background: rgb(var(--v-theme-surface-container-high)); font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .lg { width: 10px; height: 10px; border-radius: 50%; background: v-bind('legend.ontime'); }
@@ -389,7 +392,8 @@ const filters = [
   .panel.expanded { height: 72%; }
   .panel-head { padding-top: 0; }
   .controls { bottom: 148px; }
-  .legend { left: 16px; right: auto; }
+  .legend { left: 16px; right: auto; top: 68px; }
+  .switch { left: 50%; }
   .stats strong { font-size: 18px; }
 }
 </style>

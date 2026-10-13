@@ -4,6 +4,7 @@ import StartView from '@/views/StartView.vue'
 const titles: Record<string, string> = {
   start: 'Infoportal KW',
   map: 'Mapa pociągów',
+  scheme: 'Schemat połączeń',
   board: 'Odjazdy i przyjazdy',
   train: 'Pociąg',
   notices: 'Komunikaty',
@@ -16,6 +17,7 @@ const titles: Record<string, string> = {
 /** Tytuły na wąskie ekrany (górny pasek obok logo, przycisków stanu i biletu). */
 const shortTitles: Record<string, string> = {
   map: 'Mapa',
+  scheme: 'Schemat',
   board: 'Odjazdy',
   btk: 'Bilet BTK',
   admin: 'Panel admina',
@@ -28,6 +30,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'start', component: StartView },
     { path: '/mapa', name: 'map', component: () => import('@/views/MapView.vue') },
+    { path: '/schemat', name: 'scheme', component: () => import('@/views/SchemeView.vue') },
     { path: '/odjazdy/:stationId?', name: 'board', component: () => import('@/views/BoardView.vue') },
     { path: '/stacja/:stationId', redirect: (to) => ({ name: 'board', params: { stationId: to.params.stationId } }) },
     { path: '/pociag/:number', name: 'train', component: () => import('@/views/TrainView.vue') },
