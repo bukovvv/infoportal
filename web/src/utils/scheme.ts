@@ -89,7 +89,8 @@ export const NODES: Record<string, SchemeNode> = {
   zbaszynek: { x: 80, y: 465, name: 'Zbąszynek', label: 'Zbąszynek', at: 't', major: true },
   steszew: { x: 325, y: 470, name: 'Stęszew', label: 'Stęszew', at: 'tl' },
   grodzisk: { x: 290, y: 505, name: 'Grodzisk Wielkopolski', label: 'Grodzisk\nWlkp.', at: 'b' },
-  wolsztyn: { x: 190, y: 505, name: 'Wolsztyn', label: 'Wolsztyn', at: 'bl', major: true },
+  wolsztyn: { x: 190, y: 505, name: 'Wolsztyn', label: 'Wolsztyn', at: 'tr', major: true },
+  powodowo: { x: 120, y: 505, name: 'Powodowo', label: 'Powodowo', at: 'b', major: true },
   boszkowo: { x: 235, y: 550, name: 'Boszkowo', label: 'Boszkowo', at: 'l' },
   // południe: Leszno, Rawicz, Głogów
   koscian: { x: 360, y: 505, name: 'Kościan', label: 'Kościan', at: 'r' },
@@ -222,11 +223,11 @@ export const LINES: SchemeLine[] = [
     stations: ['Leszno', 'Lasocice', 'Wschowa', 'Stare Drzewce', 'Głogówko', 'Głogów'],
   },
   {
-    id: 'wolsztyn', name: 'Poznań – Wolsztyn', color: '#0B5A86',
-    path: ['poz', 'lubon', 'steszew', 'grodzisk', 'wolsztyn'],
+    id: 'wolsztyn', name: 'Poznań – Wolsztyn – Powodowo', color: '#0B5A86',
+    path: ['poz', 'lubon', 'steszew', 'grodzisk', 'wolsztyn', 'powodowo'],
     stations: [
       ...POZ_LUBON, 'Wiry', 'Szreniawa', 'Trzebaw Rosnówko', 'Stęszew', 'Strykowo Poznańskie', 'Granowo', 'Kotowo', 'Ptaszkowo', 'Grąblewo',
-      'Grodzisk Wielkopolski', 'Ruchocice', 'Drzymałowo', 'Rakoniewice', 'Rostarzewo', 'Tłoki', 'Adamowo', 'Wolsztyn',
+      'Grodzisk Wielkopolski', 'Ruchocice', 'Drzymałowo', 'Rakoniewice', 'Rostarzewo', 'Tłoki', 'Adamowo', 'Wolsztyn', 'Powodowo',
     ],
   },
   {
@@ -292,6 +293,10 @@ export const PKM_LINES: SchemeLine[] = [
     ],
   },
 ]
+
+/** Obrys Wielkopolski — z tła mapy przewoźnika, przeniesiony na współrzędne schematu (dopasowanie po położeniu stacji). */
+export const REGION =
+  'M359 -36 L408 -39 L425 -15 L434 -19 L485 -22 L501 -12 L502 8 L492 20 L491 46 L523 73 L524 94 L505 103 L512 119 L515 143 L510 189 L517 196 L536 191 L545 197 L552 194 L554 220 L553 240 L549 243 L563 248 L564 256 L569 256 L605 235 L606 248 L613 266 L642 266 L673 318 L694 327 L696 343 L735 351 L747 342 L769 341 L775 353 L802 351 L850 394 L857 410 L876 396 L892 395 L902 412 L904 423 L907 426 L911 451 L893 451 L884 462 L889 500 L861 503 L848 512 L848 548 L852 555 L851 578 L845 592 L803 603 L801 607 L795 645 L793 647 L781 688 L776 753 L771 762 L749 764 L740 761 L732 782 L703 795 L707 826 L722 828 L722 861 L719 861 L636 865 L625 854 L621 838 L624 813 L618 806 L623 790 L599 783 L580 784 L586 749 L591 750 L600 742 L596 732 L569 714 L507 701 L485 717 L485 723 L425 723 L379 720 L332 704 L323 704 L311 689 L303 683 L295 681 L305 656 L291 634 L259 625 L255 604 L225 584 L200 588 L196 586 L196 569 L176 567 L176 561 L165 552 L164 527 L159 522 L139 519 L135 452 L148 418 L148 377 L143 359 L135 351 L126 328 L126 301 L129 287 L161 284 L167 276 L163 257 L164 235 L170 231 L174 221 L171 172 L195 171 L209 176 L246 168 L266 157 L265 143 L290 130 L303 133 L315 113 L337 96 L350 89 L296 48 L294 9 L333 8 L351 -10Z'
 
 /** Odstęp osi linii biegnących obok siebie. */
 export const GAP = 6

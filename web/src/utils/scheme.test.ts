@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAP, LEGEND, LINES, NODES, PKM_LINES, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers } from './scheme'
+import { GAP, LEGEND, LINES, NODES, PKM_LINES, REGION, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers } from './scheme'
 
 const ALL = [...LINES, ...PKM_LINES]
 
@@ -17,6 +17,10 @@ describe('schemat połączeń', () => {
     }
   })
 
+  it('obrys Wielkopolski jest zamkniętą ścieżką', () => {
+    expect(REGION).toMatch(/^M[-\d. L]+Z$/)
+  })
+
   it('legenda zawiera każdą linię dokładnie raz', () => {
     expect(new Set(LEGEND.map((l) => l.id))).toEqual(new Set(LINES.map((l) => l.id)))
     expect(LEGEND).toHaveLength(LINES.length)
@@ -30,6 +34,7 @@ describe('schemat połączeń', () => {
     expect(LINES.find((l) => l.id === 'leka')!.stations.at(-1)).toBe('Łęka Opatowska')
     expect(LINES.find((l) => l.id === 'pila-krzyz')!.stations).toEqual(expect.arrayContaining(['Krzyż', 'Piła Główna']))
     expect(LINES.find((l) => l.id === 'glogow')!.stations).toEqual(expect.arrayContaining(['Leszno', 'Głogów']))
+    expect(LINES.find((l) => l.id === 'wolsztyn')!.stations.at(-1)).toBe('Powodowo')
   })
 
   it('rozsuwa linie na wspólnych odcinkach symetrycznie wokół osi', () => {

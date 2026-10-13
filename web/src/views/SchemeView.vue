@@ -7,7 +7,7 @@ import MapSwitch from '@/components/MapSwitch.vue'
 import { useStations } from '@/stores/data'
 import { plural } from '@/utils/format'
 import {
-  GAP, LEGEND, LINES, NODES, PKM_LINES, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers,
+  GAP, LEGEND, LINES, NODES, PKM_LINES, REGION, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers,
   type SchemeLine, type StationMarker,
 } from '@/utils/scheme'
 
@@ -248,6 +248,7 @@ const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.
       @click="onBackground"
     >
       <g :transform="`translate(${view.x} ${view.y}) scale(${view.k})`">
+        <path class="region" :d="REGION" />
         <!-- w widoku PKM pozostałe linie jako tło -->
         <g v-if="mode === 'pkm'" class="ghost">
           <path v-for="g in ghostGeo" :key="g.id" :d="g.d" />
@@ -416,6 +417,7 @@ const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.
 .canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; user-select: none; cursor: grab; }
 .canvas:active { cursor: grabbing; }
 
+.region { fill: rgb(var(--v-theme-surface-container)); stroke: rgb(var(--v-theme-outline-variant)); stroke-width: 2; stroke-linejoin: round; }
 .lines path, .ghost path { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; transition: opacity .15s; }
 .ghost path { stroke: rgb(var(--v-theme-outline-variant)); stroke-width: 4; }
 .lines path.dim { opacity: .14; }
