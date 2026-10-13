@@ -7,7 +7,7 @@ import MapSwitch from '@/components/MapSwitch.vue'
 import { useStations } from '@/stores/data'
 import { plural } from '@/utils/format'
 import {
-  GAP, LEGEND, LINES, NODES, PKM_LINES, REGION, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers,
+  LEGEND, LINES, NODES, PKM_LINES, REGION, edgeOffsets, linePoints, linesAt, roundedPath, stationMarkers,
   type SchemeLine, type StationMarker,
 } from '@/utils/scheme'
 
@@ -58,8 +58,8 @@ watch([selectedLine, selectedNode], ([l, s]) => {
 })
 
 // --- geometria (stała — liczona raz) ---
-const baseLoads = edgeLoads(LINES)
-const pkmLoads = edgeLoads(PKM_LINES)
+const baseLoads = edgeOffsets(LINES)
+const pkmLoads = edgeOffsets(PKM_LINES)
 const baseGeo = LINES.map((l) => ({ line: l, d: roundedPath(linePoints(l, baseLoads)) }))
 // tło widoku PKM: sieć jako pojedyncze osie (bez rozsuwania linii na wspólnych odcinkach)
 const ghostGeo = LINES.map((l) => ({ id: l.id, d: roundedPath(l.path.map((id) => NODES[id])) }))
@@ -90,8 +90,8 @@ const dimNode = (id: string) => !!focusNodes.value && !focusNodes.value.has(id)
 
 // --- znaczniki i podpisy ---
 const R = 4.5
-const HUB = 12
-const markerHalf = (m: StationMarker) => (m.id === 'poz' ? HUB : m.width > 1 ? ((m.width - 1) * GAP) / 2 + R + 1 : m.terminal ? 7 : R)
+const HUB = 16
+const markerHalf = (m: StationMarker) => (m.id === 'poz' ? HUB : m.width > 1 ? m.span / 2 + R + 1 : m.terminal ? 7 : R)
 
 function labelOf(m: StationMarker) {
   const n = NODES[m.id]
@@ -104,13 +104,13 @@ function labelOf(m: StationMarker) {
   const dx = at.includes('l') ? -(at.length > 1 ? diag : o) : at.includes('r') ? (at.length > 1 ? diag : o) : 0
   const anchor = dx < 0 ? 'end' : dx > 0 ? 'start' : 'middle'
   let top: number // linia bazowa pierwszego wiersza
-  if (at === 'l' || at === 'r') top = n.y - ((lines.length - 1) * lh) / 2 + fs * 0.35
-  else if (at.startsWith('t')) top = n.y - (at.length > 1 ? diag : o) - (lines.length - 1) * lh
-  else top = n.y + (at.length > 1 ? diag : o) + fs * 0.75
-  return { x: n.x + dx, top, lh, fs, anchor, lines, major: !!n.major, home: m.id === 'poz' }
+  if (at === 'l' || at === 'r') top = m.y - ((lines.length - 1) * lh) / 2 + fs * 0.35
+  else if (at.startsWith('t')) top = m.y - (at.length > 1 ? diag : o) - (lines.length - 1) * lh
+  else top = m.y + (at.length > 1 ? diag : o) + fs * 0.75
+  return { x: m.x + dx, top, lh, fs, anchor, lines, major: !!n.major, home: m.id === 'poz' }
 }
 const labels = computed(() => markers.value.map((m) => ({ id: m.id, ...labelOf(m) })))
-const pillLength = (m: StationMarker) => (m.width - 1) * GAP + 2 * R
+const pillLength = (m: StationMarker) => m.span + 2 * R
 
 // --- przesuwanie i przybliżanie ---
 const svgEl = ref<SVGSVGElement | null>(null)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { GAP, LEGEND, LINES, NODES, PKM_LINES, REGION, edgeLoads, linePoints, linesAt, roundedPath, stationMarkers } from './scheme'
+import { GAP, LEGEND, LINES, NODES, PKM_LINES, REGION, edgeOffsets, linePoints, linesAt, roundedPath, stationMarkers } from './scheme'
 
 const ALL = [...LINES, ...PKM_LINES]
 
@@ -37,25 +37,30 @@ describe('schemat połączeń', () => {
     expect(LINES.find((l) => l.id === 'wolsztyn')!.stations.at(-1)).toBe('Powodowo')
   })
 
-  it('rozsuwa linie na wspólnych odcinkach symetrycznie wokół osi', () => {
-    const loads = edgeLoads(LINES)
-    expect(loads.get('jarocin|sroda')).toHaveLength(5)
-    const [a, b] = ['poz', 'sroda'].map((id) => NODES[id])
-    const len = Math.hypot(b.x - a.x, b.y - a.y)
-    const offsets = loads.get('poz|sroda')!.map((id) => {
-      const p = linePoints(LINES.find((l) => l.id === id)!, loads)[0]
-      return ((p.x - a.x) * (b.y - a.y) - (p.y - a.y) * (b.x - a.x)) / len
-    })
-    expect(offsets.map((o) => Math.round(Math.abs(o)))).toEqual([2 * GAP, GAP, 0, GAP, 2 * GAP])
+  it('linie mają stały tor na prostych ciągach odcinków — bez uskoków przy rozejściu się wiązki', () => {
+    const offsets = edgeOffsets(LINES)
+    expect(offsets.get('jarocin|sroda')!.size).toBe(5)
+    // linia biegnąca najdalej leży na osi i nie zmienia toru
+    for (const key of ['poz|wsch', 'b_gol1|wsch', 'b_gol1|b_mog', 'b_mog|wrzesnia']) expect(offsets.get(key)!.get('kutno'), key).toBe(0)
+    expect(offsets.get('poz|wsch')!.get('mogilno')).toBe(offsets.get('b_gol1|b_mog')!.get('mogilno'))
+    expect(offsets.get('lubon|poz')!.get('rawicz')).toBe(0)
+    expect(offsets.get('jarocin|sroda')!.get('kalisz')).toBe(offsets.get('jarocin|pleszew')!.get('kalisz'))
+    for (const l of LINES) {
+      const pts = linePoints(l, offsets)
+      // brak skoków w poprzek na odcinkach współliniowych: kolejne punkty nie powtarzają się w jednym miejscu
+      expect(pts.every((p, i) => i === 0 || Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) > 1), l.id).toBe(true)
+    }
     for (const line of ALL) {
-      const d = roundedPath(linePoints(line, edgeLoads(line.badge ? PKM_LINES : LINES)))
+      const d = roundedPath(linePoints(line, edgeOffsets(line.badge ? PKM_LINES : LINES)))
       expect(d, line.id).not.toMatch(/NaN|Infinity/)
     }
   })
 
   it('znaczniki stacji i linie przez stację', () => {
-    const markers = stationMarkers(LINES, edgeLoads(LINES))
-    expect(markers.find((m) => m.id === 'wsch')!.width).toBe(3)
+    const markers = stationMarkers(LINES, edgeOffsets(LINES))
+    const wsch = markers.find((m) => m.id === 'wsch')!
+    expect(wsch.width).toBe(3)
+    expect(wsch.span).toBe(2 * GAP)
     expect(markers.find((m) => m.id === 'leka')!.terminal).toBe(true)
     expect(markers.find((m) => m.id === 'b_kob')).toBeUndefined()
     expect(linesAt('Września', LINES).map((l) => l.id).sort()).toEqual(['gniezno-krotoszyn', 'kutno'])

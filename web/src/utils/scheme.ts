@@ -319,27 +319,61 @@ function canonicalDir(a: Pt, b: Pt): Pt {
   return d.x > 1e-9 || (Math.abs(d.x) <= 1e-9 && d.y > 0) ? d : { x: -d.x, y: -d.y }
 }
 
-/** Linie na każdym odcinku schematu, w kolejności z listy. */
-export function edgeLoads(lines: SchemeLine[]) {
+/** Przesunięcie każdej linii względem osi odcinka: odcinek → linia → px. */
+export type Offsets = Map<string, Map<string, number>>
+
+const parallel = (a: Pt, b: Pt) => Math.abs(a.x * b.y - a.y * b.x) < 1e-6
+
+/**
+ * Tory linii na wspólnych odcinkach. Odcinki leżące w jednej prostej, przez które linia przejeżdża na wprost, tworzą ciąg
+ * i linia ma w nim stały tor — przy rozejściu się wiązki pozostałe linie jadą dalej prosto, bez uskoków. Na osi (tor 0)
+ * leży linia biegnąca przez ciąg najdalej, pozostałe obok niej w kolejności z listy.
+ */
+export function edgeOffsets(lines: SchemeLine[], nodes = NODES): Offsets {
+  const dir = (key: string) => {
+    const [a, b] = key.split('|')
+    return canonicalDir(nodes[a], nodes[b])
+  }
   const loads = new Map<string, string[]>()
+  const parent = new Map<string, string>()
+  const find = (k: string): string => {
+    const p = parent.get(k) ?? k
+    if (p === k) return k
+    const root = find(p)
+    parent.set(k, root)
+    return root
+  }
   for (const line of lines) {
     for (let i = 1; i < line.path.length; i++) {
       const key = edgeKey(line.path[i - 1], line.path[i])
       const list = loads.get(key) ?? []
       if (!list.includes(line.id)) list.push(line.id)
       loads.set(key, list)
+      if (i > 1) {
+        const prev = edgeKey(line.path[i - 2], line.path[i - 1])
+        if (parallel(dir(prev), dir(key))) parent.set(find(prev), find(key))
+      }
     }
   }
-  return loads
+  const chains = new Map<string, string[]>()
+  for (const key of loads.keys()) chains.set(find(key), [...(chains.get(find(key)) ?? []), key])
+  const out: Offsets = new Map()
+  for (const keys of chains.values()) {
+    const ids = lines.map((l) => l.id).filter((id) => keys.some((k) => loads.get(k)!.includes(id)))
+    const cover = ids.map((id) => keys.filter((k) => loads.get(k)!.includes(id)).length)
+    const longest = ids.map((_, i) => i).filter((i) => cover[i] === Math.max(...cover))
+    const zero = longest.reduce((sum, i) => sum + i, 0) / longest.length
+    for (const k of keys) out.set(k, new Map(loads.get(k)!.map((id) => [id, (ids.indexOf(id) - zero) * GAP])))
+  }
+  return out
 }
 
 /** Punkty osi linii przesuniętej równolegle na wspólnych odcinkach (połączenia ukośne liczone jako przecięcie przesuniętych prostych). */
-export function linePoints(line: SchemeLine, loads: Map<string, string[]>, nodes = NODES): LinePt[] {
+export function linePoints(line: SchemeLine, offsets: Offsets, nodes = NODES): LinePt[] {
   const pts = line.path.map((id) => nodes[id])
   const segs = pts.slice(1).map((b, i) => {
     const a = pts[i]
-    const ids = loads.get(edgeKey(line.path[i], line.path[i + 1])) ?? [line.id]
-    const off = (ids.indexOf(line.id) - (ids.length - 1) / 2) * GAP
+    const off = offsets.get(edgeKey(line.path[i], line.path[i + 1]))?.get(line.id) ?? 0
     const d = canonicalDir(a, b)
     const n = { x: -d.y, y: d.x }
     return { a: { x: a.x + n.x * off, y: a.y + n.y * off }, b: { x: b.x + n.x * off, y: b.y + n.y * off }, d: unit(sub(b, a)) }
@@ -351,7 +385,7 @@ export function linePoints(line: SchemeLine, loads: Map<string, string[]>, nodes
     const stop = !!nodes[line.path[i]].name
     const cross = p.d.x * q.d.y - p.d.y * q.d.x
     if (Math.abs(cross) < 1e-6) {
-      // odcinki współliniowe: zmiana liczby linii w wiązce — krótkie przejście na nowy tor
+      // odcinki współliniowe z innym torem (rzadkie) — krótkie przejście
       out.push({ ...p.b, stop })
       if (Math.hypot(p.b.x - q.a.x, p.b.y - q.a.y) > 0.01) out.push({ ...q.a, stop })
       continue
@@ -390,30 +424,35 @@ export interface StationMarker {
   y: number
   /** liczba linii w najszerszej wiązce przy stacji */
   width: number
+  /** odległość skrajnych torów tej wiązki (px) */
+  span: number
   /** kąt osi znacznika (prostopadle do najszerszej wiązki), w stopniach */
   angle: number
   terminal: boolean
 }
 
-/** Znaczniki stacji: kółko albo „pigułka” w poprzek wiązki linii. */
-export function stationMarkers(lines: SchemeLine[], loads: Map<string, string[]>, nodes = NODES): StationMarker[] {
+/** Znaczniki stacji: kółko albo „pigułka” w poprzek najszerszej wiązki, ustawione na torach linii. */
+export function stationMarkers(lines: SchemeLine[], offsets: Offsets, nodes = NODES): StationMarker[] {
   const ends = new Set(lines.flatMap((l) => [l.path[0], l.path[l.path.length - 1]]))
   const used = new Set(lines.flatMap((l) => l.path))
   return Object.entries(nodes)
     .filter(([id, n]) => n.name && used.has(id))
     .map(([id, n]) => {
-      let width = 1
-      let angle = 0
-      for (const [key, ids] of loads) {
+      let best: { offs: number[]; d: Pt } | null = null
+      for (const [key, map] of offsets) {
         const [a, b] = key.split('|')
-        if ((a !== id && b !== id) || ids.length < width) continue
-        if (ids.length > width || width === 1) {
-          const d = canonicalDir(nodes[a], nodes[b])
-          width = ids.length
-          angle = (Math.atan2(d.y, d.x) * 180) / Math.PI + 90
-        }
+        if ((a !== id && b !== id) || (best && map.size <= best.offs.length)) continue
+        best = { offs: [...map.values()], d: canonicalDir(nodes[a], nodes[b]) }
       }
-      return { id, x: n.x, y: n.y, width, angle, terminal: ends.has(id) }
+      const offs = best?.offs ?? [0]
+      const d = best?.d ?? { x: 1, y: 0 }
+      const lo = Math.min(...offs)
+      const hi = Math.max(...offs)
+      const mid = (lo + hi) / 2
+      return {
+        id, x: n.x - d.y * mid, y: n.y + d.x * mid, width: offs.length, span: hi - lo,
+        angle: (Math.atan2(d.y, d.x) * 180) / Math.PI + 90, terminal: ends.has(id),
+      }
     })
 }
 
