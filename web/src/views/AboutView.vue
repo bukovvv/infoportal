@@ -1,12 +1,11 @@
 <script setup lang="ts">
-// O nas: czym jest Infoportal, co w nim jest, skąd dane (z podziękowaniem dla vagonWEB) i prywatność.
+// O nas: czym jest Infoportal, co w nim jest, skąd dane i prywatność.
 
 const features = [
   { icon: 'search', title: 'Wyszukiwarka połączeń', text: 'Do dwóch przesiadek, „przyjazd do” wybranej godziny, połączenia po północy i wszystkie stacje po drodze.' },
   { icon: 'departure_board', title: 'Odjazdy i przyjazdy', text: 'Tablica każdej stacji KW z opóźnieniami i peronami. Ulubione stacje masz zawsze pod ręką.' },
   { icon: 'map', title: 'Mapa i schemat', text: 'Gdzie są teraz pociągi i jak biegną linie przewoźnika w Wielkopolsce.' },
   { icon: 'bookmark', title: 'Moje podróże', text: 'Obserwuj połączenie, a pokażemy odliczanie, opóźnienia i komunikaty dla Twojej trasy.' },
-  { icon: 'train', title: 'Pojazd', text: 'Przy pociągu podpowiadamy, jakim pojazdem najpewniej pojedziesz.' },
   { icon: 'commute', title: 'Bus-Tramwaj-Kolej', text: 'Kalkulator i zasady wspólnego biletu KW, POLREGIO i ZTM Poznań.' },
 ]
 
@@ -20,15 +19,6 @@ const sources: { icon: string; title: string; parts: Part[] }[] = [
   },
   { icon: 'schedule', title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
   { icon: 'route', title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
-  {
-    icon: 'train',
-    title: 'Pojazdy i ich rysunki',
-    parts: [
-      'Zestawienia pociągów i rysunki pojazdów pochodzą z serwisu ',
-      ['vagonWEB.cz', 'https://www.vagonweb.cz/razeni/razeni.php?zeme=KW'],
-      ' i są używane za zgodą. Dziękujemy autorom rysunków i wszystkim, którzy zgłaszają tam składy!',
-    ],
-  },
   {
     icon: 'map',
     title: 'Mapa',

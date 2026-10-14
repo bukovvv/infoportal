@@ -29,6 +29,11 @@ $log = static function (string $line): void {
     echo '[' . date('H:i:s') . '] ' . $line . PHP_EOL;
 };
 
+if (Config::get('vagonweb_enabled') !== true) {
+    $log('vagonWEB wyłączony (vagonweb_enabled) — nic nie pobieram.');
+    exit(0);
+}
+
 $lock = fopen(sys_get_temp_dir() . '/kw-fetch-vehicles.lock', 'c');
 if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);

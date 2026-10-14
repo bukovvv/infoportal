@@ -88,7 +88,7 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 
 `deploy.sh` dopisuje trzy ostatnie wpisy sam, jeśli ich brakuje (pozostałe zostawia bez zmian).
 
-**Pojazdy (vagonWEB).** `fetch-vehicles.php` pobiera z vagonWEB.cz (za zgodą serwisu) zestawienia pociągów KW z bieżącego roku rozkładu i rysunki pojazdów: lista pociągów, potem strona każdego pociągu z przerwą 3 s (ok. 200 pociągów, kilkanaście minut). Wynik: `server/storage/vehicles.json` i rysunki w `server/storage/vehicles/` (serwowane przez `/api/vehicles/img/…`). Strona pociągu pokazuje ostatnie zestawienie, jeśli nie jest starsze niż 180 dni. Błąd pobrania listy zostawia poprzednie dane. Pierwsze pobranie `deploy.sh` uruchamia w tle, gdy pliku jeszcze nie ma.
+**Pojazdy (vagonWEB).** Obecnie wyłączone (`vagonweb_enabled` = false): skrypt kończy się od razu, portal nie pokazuje zestawień ani rysunków. Po włączeniu `fetch-vehicles.php` pobiera z vagonWEB.cz zestawienia pociągów KW z bieżącego roku rozkładu i rysunki pojazdów: lista pociągów, potem strona każdego pociągu z przerwą 3 s (ok. 200 pociągów, kilkanaście minut). Wynik: `server/storage/vehicles.json` i rysunki w `server/storage/vehicles/` (serwowane przez `/api/vehicles/img/…`). Strona pociągu pokazuje ostatnie zestawienie, jeśli nie jest starsze niż 180 dni. Błąd pobrania listy zostawia poprzednie dane. Pierwsze pobranie `deploy.sh` uruchamia w tle, gdy pliku jeszcze nie ma.
 
 **Kopia bazy.** `backup-db.php` zapisuje spójną kopię `app.sqlite` (komunikaty, ustawienia) do `server/storage/backups/` i trzyma 14 ostatnich; `deploy.sh` pobiera najnowszą do lokalnego katalogu `backups/` (30 ostatnich, poza gitem). Rozkładu nie kopiujemy — odtwarza go import. Odtworzenie: podmienić `server/storage/app.sqlite` wybraną kopią.
 

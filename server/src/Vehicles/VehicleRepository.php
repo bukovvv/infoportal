@@ -53,7 +53,8 @@ final class VehicleRepository
      */
     public function forNumbers(array $numbers, ?int $now = null): ?array
     {
-        $data = $this->data ??= Realtime::readJson(Config::path('vehicles_file'));
+        // bez zgody vagonWEB: tylko ręczne przypisania, bez rysunków i zestawień z vagonWEB
+        $data = Config::get('vagonweb_enabled') === true ? $this->data ??= Realtime::readJson(Config::path('vehicles_file')) : [];
         // w rozkładzie numer pociągu nazwanego zawiera nazwę („77318 Cytadela”), bywa też łamany („77122/3”)
         $numbers = array_values(array_unique(array_merge(...array_map(
             static fn (string $n): array => preg_match('#^\d+(?:/\d+)?#', trim($n), $m) === 1 ? self::expandNumber($m[0]) : [$n],
@@ -139,7 +140,8 @@ final class VehicleRepository
     /** Ścieżka pliku rysunku albo null (bezpieczna nazwa, plik istnieje). */
     public static function imagePath(string $file): ?string
     {
-        if (preg_match('/^[A-Za-z0-9_-]+_[A-Za-z0-9_.-]+\.(?:gif|png)$/', $file) !== 1 || str_contains($file, '..')) {
+        if (Config::get('vagonweb_enabled') !== true
+            || preg_match('/^[A-Za-z0-9_-]+_[A-Za-z0-9_.-]+\.(?:gif|png)$/', $file) !== 1 || str_contains($file, '..')) {
             return null;
         }
         $path = Config::path('vehicles_img_dir') . '/' . $file;

@@ -11,7 +11,7 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 | Pozycje GPS | wyłączone (`gps_enabled`), bo Mapa BILKOM od dawna nie zwraca pozycji | — |
 | Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
 | Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
-| Pojazdy (zestawienia, rysunki) | [vagonWEB.cz](https://www.vagonweb.cz/razeni/razeni.php?zeme=KW) — za zgodą serwisu | codziennie (CRON) |
+| Pojazdy (zestawienia, rysunki) | vagonWEB.cz — **wyłączone** (`vagonweb_enabled`) do czasu zgody serwisu; działają tylko ręczne przypisania | — |
 
 Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
 
