@@ -66,7 +66,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
   <v-app>
     <v-navigation-drawer v-if="mdAndUp && !isAdmin" permanent width="88" class="rail" floating aria-label="Nawigacja główna">
       <div class="rail-inner">
-        <router-link to="/" class="brand-mark" aria-label="Infoportal KW – start">KW</router-link>
+        <router-link to="/" class="brand-mark" aria-label="Infoportal KW – start"><img src="/favicon.svg" width="40" height="40" alt=""></router-link>
         <v-btn class="rail-fab" color="primary-container" icon="search" size="56" elevation="3" aria-label="Wyszukaj połączenie" @click="searchFab" />
         <nav class="rail-items">
           <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-current="current === item.name ? 'page' : undefined">
@@ -82,7 +82,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 
     <v-app-bar :elevation="0" color="surface" height="64" scroll-behavior="elevate" :scroll-threshold="4">
       <template #prepend>
-        <router-link v-if="!mdAndUp || isAdmin" to="/" class="brand-mark ml-2" aria-label="Infoportal KW – start">KW</router-link>
+        <router-link v-if="!mdAndUp || isAdmin" to="/" class="brand-mark ml-2" aria-label="Infoportal KW – start"><img src="/favicon.svg" width="40" height="40" alt=""></router-link>
       </template>
       <v-app-bar-title class="text-title-large app-title">{{ title }}</v-app-bar-title>
       <template #append>
@@ -107,11 +107,13 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
         </v-btn>
         <v-menu location="bottom end">
           <template #activator="{ props }">
-            <v-btn v-bind="props" :icon="themeIcon" variant="text" aria-label="Zmień motyw" class="mr-1" />
+            <v-btn v-bind="props" :icon="themeIcon" variant="text" aria-label="Motyw i informacje" class="mr-1" />
           </template>
           <v-list density="compact" nav>
             <v-list-subheader>Motyw</v-list-subheader>
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
+            <v-divider class="my-1" />
+            <v-list-item prepend-icon="info" title="O nas" to="/o-nas" />
           </v-list>
         </v-menu>
       </template>

@@ -10,6 +10,7 @@ const titles: Record<string, string> = {
   notices: 'Komunikaty',
   notice: 'Komunikat',
   btk: 'Bus-Tramwaj-Kolej',
+  about: 'O nas',
   admin: 'Panel administratora',
   missing: 'Nie znaleziono strony',
 }
@@ -37,6 +38,7 @@ const router = createRouter({
     { path: '/komunikaty', name: 'notices', component: () => import('@/views/NoticesView.vue') },
     { path: '/komunikaty/:id', name: 'notice', component: () => import('@/views/NoticeView.vue') },
     { path: '/bus-tramwaj-kolej', name: 'btk', component: () => import('@/views/BtkView.vue') },
+    { path: '/o-nas', name: 'about', component: () => import('@/views/AboutView.vue') },
     {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),
