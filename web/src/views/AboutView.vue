@@ -41,7 +41,7 @@ const privacy = [
       <img src="/favicon.svg" width="88" height="88" alt="" class="logo">
       <div class="d-grid ga-2">
         <h1 class="text-headline-medium">zanimwyjdziesz</h1>
-        <p class="motto text-title-large">Wiesz, zanim wyjdziesz z domu.</p>
+        <p class="motto text-title-large">Już wiesz, jak pojedziesz.</p>
       </div>
     </header>
 

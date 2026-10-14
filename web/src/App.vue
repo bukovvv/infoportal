@@ -2,6 +2,7 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
+import InstallPrompt from '@/components/InstallPrompt.vue'
 import TrainSheet from '@/components/TrainSheet.vue'
 import { shortTitles, titles } from '@/router'
 import { useLive, useNotices, useStatus } from '@/stores/data'
@@ -140,6 +141,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
     </nav>
 
     <TrainSheet />
+    <InstallPrompt v-if="!isAdmin" />
 
     <v-snackbar v-model="snackOpen" :timeout="4500" :key="ui.snack?.id" class="kw-snack">
       {{ ui.snack?.text }}
@@ -171,5 +173,9 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 @media (max-width: 480px) {
   .live-text { display: none; }
   .live-chip .live-dot { margin-right: 0 !important; }
+  .app-title { font-size: 20px; }
+}
+@media (max-width: 379px) {
+  .app-title { font-size: 18px; }
 }
 </style>

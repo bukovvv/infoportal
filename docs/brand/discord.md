@@ -1,4 +1,4 @@
-## 🚆 zanimwyjdziesz — wiesz, zanim wyjdziesz z domu.
+## 🚆 zanimwyjdziesz — już wiesz, jak pojedziesz.
 
 Hej! Chcemy pokazać Wam **zanimwyjdziesz**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
 
