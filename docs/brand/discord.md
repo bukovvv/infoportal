@@ -1,6 +1,6 @@
-## 🚆 Infoportal — wiesz, zanim wyjdziesz z domu.
+## 🚆 zanimwyjdziesz — wiesz, zanim wyjdziesz z domu.
 
-Hej! Chcemy pokazać Wam **Infoportal**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
+Hej! Chcemy pokazać Wam **zanimwyjdziesz**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
 
 Na start: pociągi **Kolei Wielkopolskich**. W przyszłości dołączy też **POLREGIO** na terenie Wielkopolski.
 

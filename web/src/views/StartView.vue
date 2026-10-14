@@ -213,7 +213,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
         </section>
 
         <p class="text-body-small muted footnote">
-          Infoportal to nieoficjalny serwis pasażerski, niezwiązany z przewoźnikami. Bilety kupisz na stronie przewoźnika. <router-link to="/o-nas">O nas</router-link>
+          zanimwyjdziesz to nieoficjalny serwis pasażerski, niezwiązany z przewoźnikami. Bilety kupisz na stronie przewoźnika. <router-link to="/o-nas">O nas</router-link>
         </p>
       </div>
     </div>

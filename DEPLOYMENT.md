@@ -1,4 +1,4 @@
-# Wdrożenie Infoportalu (`infoportal.abuczek.pl`)
+# Wdrożenie zanimwyjdziesz (`infoportal.abuczek.pl`)
 
 ## Wymagania hostingu
 

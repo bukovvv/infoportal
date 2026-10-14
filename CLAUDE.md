@@ -1,6 +1,6 @@
-# Infoportal — kontekst dla Claude
+# zanimwyjdziesz — kontekst dla Claude
 
-Nazwa serwisu: **„Infoportal”** (nie „Infoportal KW” — zmiana na życzenie użytkownika 2026-10-14). Obejmuje pociągi Kolei Wielkopolskich, w przyszłości także POLREGIO na terenie Wielkopolski. Identyfikatory w kodzie (`KwInfo`, `kw_*`) zostają.
+Nazwa serwisu: **„zanimwyjdziesz”** — jedno słowo, małymi literami, także na początku zdania (zmiana na życzenie użytkownika 2026-10-14; wcześniej „Infoportal KW”, potem „Infoportal”). Docelowa domena **zanimwyjdziesz.pl**, a infoportal.abuczek.pl będzie na nią przekierowywać; dopóki nowa domena nie działa, adresy (Open Graph, podpis, linki, `site_url`) zostają na infoportal.abuczek.pl. Obejmuje pociągi Kolei Wielkopolskich, w przyszłości także POLREGIO na terenie Wielkopolski. Identyfikatory w kodzie (`KwInfo`, `kw_*`, folder repo) zostają.
 
 Nieoficjalny serwis pasażerski Kolei Wielkopolskich. **Działa produkcyjnie: https://infoportal.abuczek.pl** (od 2026-10-02).
 Stack: Vue 3 + Vuetify 4 (blueprint MD3) + Pinia + MapLibre (`web/`), PHP 8.1+ bez frameworka + SQLite (`server/`).

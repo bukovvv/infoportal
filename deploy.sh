@@ -114,7 +114,7 @@ if grep -q 'refresh-live.php' ~/kw-deploy/crontab.current; then
   cron_add '45 4 * * *' fetch-vehicles.php
   cmp -s ~/kw-deploy/crontab.current ~/kw-deploy/crontab.new || crontab ~/kw-deploy/crontab.new
 else
-  echo "   CRON: brak wpisów Infoportalu — nowych zadań nie dopisano, dodaj ręcznie (DEPLOYMENT.md)"
+  echo "   CRON: brak wpisów zanimwyjdziesz — nowych zadań nie dopisano, dodaj ręcznie (DEPLOYMENT.md)"
 fi
 "$PHP" server/bin/backup-db.php || true
 echo

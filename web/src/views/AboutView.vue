@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// O nas: czym jest Infoportal, co w nim jest, skąd dane i prywatność.
+// O nas: czym jest zanimwyjdziesz, co w nim jest, skąd dane i prywatność.
 
 const features = [
   { icon: 'search', title: 'Wyszukiwarka połączeń', text: 'Do dwóch przesiadek, „przyjazd do” wybranej godziny, połączenia po północy i wszystkie stacje po drodze.' },
@@ -40,13 +40,13 @@ const privacy = [
     <header class="hero">
       <img src="/favicon.svg" width="88" height="88" alt="" class="logo">
       <div class="d-grid ga-2">
-        <h1 class="text-headline-medium">Infoportal</h1>
+        <h1 class="text-headline-medium">zanimwyjdziesz</h1>
         <p class="motto text-title-large">Wiesz, zanim wyjdziesz z domu.</p>
       </div>
     </header>
 
     <p class="text-body-large lead">
-      Infoportal to nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Na razie obejmuje pociągi Kolei Wielkopolskich,
+      zanimwyjdziesz to nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Na razie obejmuje pociągi Kolei Wielkopolskich,
       a w przyszłości także POLREGIO na terenie Wielkopolski. Zbiera w jednym miejscu to, czego szukasz przed
       podróżą: połączenia z przesiadkami, odjazdy ze stacji, opóźnienia prosto z systemu PKP PLK, mapę pociągów i komunikaty o utrudnieniach.
       Bez reklam i bez zakładania konta: otwierasz i jedziesz.

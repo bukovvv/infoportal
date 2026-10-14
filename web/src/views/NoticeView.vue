@@ -16,7 +16,7 @@ const timer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onBeforeUnmount(() => window.clearInterval(timer))
 
 watchEffect(() => {
-  if (notice.value) document.title = `${notice.value.title} · Infoportal`
+  if (notice.value) document.title = `${notice.value.title} · zanimwyjdziesz`
 })
 
 const facts = computed(() => {
