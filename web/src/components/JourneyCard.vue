@@ -44,7 +44,19 @@ function remove() {
         <div class="label">{{ state.label }}<template v-if="otherDay"> · {{ dayLabel(journey.connection.departure) }}</template></div>
         <h3 class="text-title-medium">{{ journey.from }} → {{ journey.to }}</h3>
       </div>
-      <v-btn icon="close" variant="text" size="small" aria-label="Przestań obserwować" @click="remove" />
+      <span class="d-flex">
+        <v-btn
+          :icon="journey.notify ? 'notifications_active' : 'notifications'"
+          variant="text"
+          size="small"
+          :loading="!!journeys.pending[journey.id]"
+          :aria-pressed="!!journey.notify"
+          :aria-label="journey.notify ? 'Wyłącz powiadomienia o tej podróży' : 'Powiadom o opóźnieniu tej podróży'"
+          :title="journey.notify ? 'Powiadomienia włączone' : 'Powiadom o opóźnieniu'"
+          @click="journeys.setNotify(journey.id, !journey.notify)"
+        />
+        <v-btn icon="close" variant="text" size="small" aria-label="Przestań obserwować" @click="remove" />
+      </span>
     </div>
     <div class="d-flex justify-space-between align-end ga-2 flex-wrap">
       <span class="big-line"><span v-if="state.lead" class="lead">{{ state.lead }}</span> <span class="big tnum" :class="{ msg: !state.lead }">{{ state.big }}</span></span>

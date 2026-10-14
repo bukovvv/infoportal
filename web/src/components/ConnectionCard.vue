@@ -4,6 +4,8 @@ import type { Connection, Leg } from '@/api/types'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
+import { downloadIcs } from '@/utils/ics'
+import { connectionUrl, shareConnection } from '@/utils/share'
 import { unitLabel, vehicleTitle } from '@/utils/vehicle'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
@@ -27,6 +29,12 @@ const last = computed(() => c.value.legs[c.value.legs.length - 1])
 const depDelay = computed(() => first.value.departureDelay ?? 0)
 const arrDelay = computed(() => last.value.arrivalDelay ?? 0)
 const saved = computed(() => journeys.has(c.value))
+const notifying = computed(() => journeys.notifying(c.value))
+const notifyBusy = computed(() => !!journeys.pending[journeys.idOf(c.value)])
+function toggleNotify() {
+  if (notifying.value) void journeys.setNotify(journeys.idOf(c.value), false)
+  else void journeys.notifyFor(c.value)
+}
 /** Godzina z innego dnia niż odjazd (kurs przez północ) dostaje dopisek „+1”. */
 const nextDay = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) !== c.value.departure.slice(0, 10)
 
@@ -94,6 +102,17 @@ function watchJourney() {
     </div>
     <v-expand-transition>
       <div v-if="expanded" class="conn-detail">
+        <div class="detail-actions">
+          <button type="button" class="detail-action" :aria-pressed="notifying" :disabled="notifyBusy" @click="toggleNotify">
+            <v-icon :icon="notifying ? 'notifications_active' : 'notifications'" />{{ notifying ? 'Powiadamiamy' : 'Powiadom' }}
+          </button>
+          <button type="button" class="detail-action" @click="downloadIcs(c, connectionUrl(c))">
+            <v-icon icon="calendar_add_on" />Do kalendarza
+          </button>
+          <button type="button" class="detail-action" @click="shareConnection(c)">
+            <v-icon icon="share" />Udostępnij
+          </button>
+        </div>
         <template v-for="(leg, i) in c.legs" :key="leg.key">
           <div class="leg" :style="{ '--leg': legColor(leg) }">
             <span class="leg-t tnum">{{ clock(leg.departure) }}<sup v-if="nextDay(leg.departure)" class="plus-day">+1</sup></span><span class="leg-rail"><i /></span>
@@ -184,6 +203,16 @@ function watchJourney() {
 .wait { display: inline-flex; align-items: center; gap: 2px; }
 .conn-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 8px; }
 .conn-detail { padding: 6px 16px 16px 8px; border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
+/* Powiadom / Do kalendarza / Udostępnij: ikona nad podpisem */
+.detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px 8px; }
+.detail-action {
+  display: grid; justify-items: center; gap: 4px; padding: 10px 4px; border: 0; border-radius: var(--kw-r-m); cursor: pointer;
+  background: rgb(var(--v-theme-surface-container)); color: rgb(var(--v-theme-primary)); font: inherit; font-size: 13px; font-weight: 700;
+}
+.detail-action:hover { background: rgb(var(--v-theme-surface-container-high)); }
+.detail-action:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+.detail-action[aria-pressed='true'] { background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
+.detail-action:disabled { opacity: .6; cursor: progress; }
 .leg { display: grid; grid-template-columns: 52px 24px minmax(0, 1fr); column-gap: 10px; }
 .leg-t { text-align: right; font-weight: 800; padding-top: 11px; white-space: nowrap; }
 .plus-day { margin-left: 2px; font-size: 11px; font-weight: 700; color: rgb(var(--v-theme-primary)); }

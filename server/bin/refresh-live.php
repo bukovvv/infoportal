@@ -8,6 +8,7 @@ require dirname(__DIR__) . '/bootstrap.php';
 
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\LiveBuilder;
+use KwInfo\Push\JourneyWatcher;
 
 if (PHP_SAPI !== 'cli') {
     exit(1);
@@ -20,10 +21,18 @@ if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
+$log = static function (string $line): void {
+    echo '[' . date('H:i:s') . '] ' . $line . PHP_EOL;
+};
 try {
-    (new LiveBuilder(new Timetable(), static function (string $line): void {
-        echo '[' . date('H:i:s') . '] ' . $line . PHP_EOL;
-    }))->run();
+    $tt = new Timetable();
+    (new LiveBuilder($tt, $log))->run();
+    // powiadomienia o obserwowanych podróżach — ich błąd nie psuje odświeżania danych
+    try {
+        (new JourneyWatcher($tt, $log))->run();
+    } catch (Throwable $exception) {
+        fwrite(STDERR, '[BŁĄD powiadomień] ' . $exception->getMessage() . PHP_EOL);
+    }
     exit(0);
 } catch (Throwable $exception) {
     fwrite(STDERR, '[BŁĄD] ' . $exception->getMessage() . PHP_EOL);

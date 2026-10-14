@@ -17,6 +17,8 @@ use KwInfo\Gtfs\PositionEstimator;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\GtfsRtDecoder;
 use KwInfo\Live\Realtime;
+use KwInfo\Push\JourneyWatcher;
+use KwInfo\Push\WebPush;
 use KwInfo\Vehicles\Vagonweb;
 use KwInfo\Vehicles\VehicleRepository;
 
@@ -221,6 +223,44 @@ if (is_file(Config::path('gtfs_db'))) {
 } else {
     echo "[POMINIĘTO] testy na bazie — uruchom najpierw import-gtfs.php\n";
 }
+
+// --- Web Push: szyfrowanie RFC 8291 (zaszyfruj jako serwer, odszyfruj jako przeglądarka) i podpis VAPID
+$ua = WebPush::newKey();
+$secret = random_bytes(16);
+$body = WebPush::encrypt('{"title":"Test ąę"}', WebPush::rawPublic($ua), $secret);
+check('push: odszyfrowanie treści', WebPush::decrypt($body, $ua, $secret) === '{"title":"Test ąę"}');
+check('push: nagłówek rekordu aes128gcm', strlen($body) === 16 + 4 + 1 + 65 + strlen('{"title":"Test ąę"}') + 1 + 16 && unpack('N', substr($body, 16, 4))[1] === 4096);
+$vapid = WebPush::newKey();
+$vapidPem = WebPush::exportPem($vapid);
+$auth = WebPush::vapidAuthorization('https://fcm.googleapis.com/fcm/send/abc', ['public' => WebPush::b64(WebPush::rawPublic($vapid)), 'pem' => $vapidPem]);
+preg_match('/^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/', $auth, $jwt);
+$claims = json_decode(WebPush::unb64($jwt[2] ?? ''), true);
+check('push: token VAPID z poprawnym podpisem ES256', isset($jwt[4]) && openssl_verify($jwt[1] . '.' . $jwt[2], WebPush::rawToDerSignature(WebPush::unb64($jwt[3])), WebPush::publicKey(WebPush::unb64($jwt[4])), OPENSSL_ALGO_SHA256) === 1
+    && ($claims['aud'] ?? '') === 'https://fcm.googleapis.com');
+check('push: tylko adresy usług push', WebPush::allowedEndpoint('https://fcm.googleapis.com/fcm/send/x') && WebPush::allowedEndpoint('https://web.push.apple.com/abc')
+    && !WebPush::allowedEndpoint('https://example.com/push') && !WebPush::allowedEndpoint('http://fcm.googleapis.com/x') && !WebPush::allowedEndpoint('https://evilgoogleapis.com/x'));
+
+// --- powiadomienia o podróży: kiedy wysłać
+$t0 = strtotime('2026-10-14 16:00');
+$leg = static fn (array $o): array => $o + ['number' => '77615', 'from' => 'Poznań Główny', 'to' => 'Gniezno', 'dep' => $t0 + 1800, 'arr' => $t0 + 4200, 'depDelay' => null, 'arrDelay' => null, 'cancelled' => false];
+[$m] = JourneyWatcher::evaluate([$leg(['depDelay' => 2])], [], $t0);
+check('podróż: opóźnienie 2 min bez powiadomienia', $m === []);
+[$m, $st] = JourneyWatcher::evaluate([$leg(['depDelay' => 5])], [], $t0);
+check('podróż: opóźnienie 5 min — powiadomienie', count($m) === 1 && str_contains($m[0]['title'], '+5 min') && str_contains($m[0]['body'], '16:35 zamiast 16:30'));
+[$m, $st] = JourneyWatcher::evaluate([$leg(['depDelay' => 6])], $st, $t0);
+check('podróż: zmiana o 1 min bez ponownego powiadomienia', $m === []);
+[$m, $st] = JourneyWatcher::evaluate([$leg(['depDelay' => 0])], $st, $t0);
+check('podróż: powrót do rozkładu', count($m) === 1 && str_contains($m[0]['title'], 'planowo'));
+[$m, $st] = JourneyWatcher::evaluate([$leg(['cancelled' => true])], [], $t0);
+[$again] = JourneyWatcher::evaluate([$leg(['cancelled' => true])], $st, $t0);
+check('podróż: odwołanie zgłoszone raz', count($m) === 1 && str_contains($m[0]['title'], 'odwołany') && $again === []);
+[$m] = JourneyWatcher::evaluate([$leg(['depDelay' => 10, 'dep' => $t0 + 5 * 3600])], [], $t0);
+check('podróż: odjazd za kilka godzin — jeszcze bez powiadomień', $m === []);
+$transfer = [$leg(['to' => 'Poznań Wschód', 'arr' => $t0 + 2400, 'arrDelay' => 6]), $leg(['number' => '77711', 'from' => 'Poznań Wschód', 'dep' => $t0 + 2700, 'arr' => $t0 + 6000])];
+[$m] = JourneyWatcher::evaluate($transfer, [], $t0);
+check('podróż: zagrożona przesiadka', count($m) === 1 && str_contains($m[0]['title'], 'Przesiadka zagrożona'));
+[, , $done] = JourneyWatcher::evaluate([$leg([])], [], $t0 + 4200 + 1000);
+check('podróż: koniec po przyjeździe', $done);
 
 echo PHP_EOL . "Wynik: {$passed} OK, {$failed} błędów" . PHP_EOL;
 exit($failed > 0 ? 1 : 0);

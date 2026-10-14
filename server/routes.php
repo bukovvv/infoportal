@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use KwInfo\Api\AdminApi;
 use KwInfo\Api\PublicApi;
+use KwInfo\Api\PushApi;
 use KwInfo\Http\Router;
 
 $api = new PublicApi();
 $admin = new AdminApi();
+$push = new PushApi();
 $router = new Router();
 
 $router->get('/stations', [$api, 'stations']);
@@ -21,6 +23,9 @@ $router->get('/live', [$api, 'live']);
 $router->get('/status', [$api, 'status']);
 $router->get('/notices', [$api, 'notices']);
 $router->get('/vehicles/img/{file}', [$api, 'vehicleImage']);
+$router->get('/push/key', [$push, 'key']);
+$router->post('/push/watch', [$push, 'watch']);
+$router->post('/push/unwatch', [$push, 'unwatch']);
 
 $router->get('/admin/session', [$admin, 'session']);
 $router->post('/admin/login', [$admin, 'login']);

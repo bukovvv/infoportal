@@ -6,6 +6,7 @@ import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { clock, dayLabel } from '@/utils/format'
+import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
@@ -74,8 +75,8 @@ function fullView() {
 }
 function share() {
   if (!trip.value) return
-  const url = `${location.origin}/pociag/${trip.value.number.split('/')[0]}`
-  navigator.clipboard?.writeText(url).then(() => ui.notify('Skopiowano link do pociągu.'), () => ui.notify(url))
+  const t = trip.value
+  void shareLink({ title: `KW ${t.number}`, text: `KW ${t.number} ${t.origin} → ${t.destination}`, url: `${location.origin}/pociag/${t.number.split('/')[0]}` })
 }
 defineExpose({ trip })
 </script>
@@ -117,7 +118,7 @@ defineExpose({ trip })
       <div class="actions">
         <v-btn variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
         <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
-        <v-btn v-else variant="outlined" prepend-icon="link" @click="share">Kopiuj link</v-btn>
+        <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>
       <div v-if="related.length" class="notices divider">
         <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />

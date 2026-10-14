@@ -48,6 +48,12 @@ export const api = {
   live: () => request<Live>('GET', '/live'),
   status: () => request<Status>('GET', '/status'),
   notices: () => request<Notice[]>('GET', '/notices'),
+  push: {
+    key: () => request<{ key: string }>('GET', '/push/key'),
+    watch: (body: { subscription: PushSubscriptionJSON; journeyId: string; legs: { key: string; from: string; to: string }[] }) =>
+      request<{ watching: boolean }>('POST', '/push/watch', body),
+    unwatch: (body: { endpoint: string; journeyId?: string }) => request<{ watching: boolean }>('POST', '/push/unwatch', body),
+  },
   admin: {
     session: () => request<AdminSession>('GET', '/admin/session'),
     login: (username: string, password: string) => request<AdminSession>('POST', '/admin/login', { username, password }),

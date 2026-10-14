@@ -5,9 +5,10 @@ public/assets/
 public/index.html
 public/favicon.svg
 public/manifest.webmanifest
-public/icon-192.png
-public/icon-512.png
+public/app-icon-192.png
+public/app-icon-512.png
 public/og-image.png
+public/sw.js
 
 # dane lokalne
 server/storage/*

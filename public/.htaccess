@@ -28,7 +28,7 @@ Options -Indexes
     <FilesMatch "\.(js|css|woff2?|svg|png)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
-    <FilesMatch "^(index\.html|manifest\.webmanifest|favicon\.svg)$">
+    <FilesMatch "^(index\.html|manifest\.webmanifest|favicon\.svg|sw\.js|og-image\.png|app-icon-(192|512)\.png)$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
 </IfModule>

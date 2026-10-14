@@ -10,7 +10,7 @@ const features = [
   { icon: 'search', title: 'Wyszukiwarka połączeń', text: 'Do dwóch przesiadek, „przyjazd do” wybranej godziny, połączenia po północy i wszystkie stacje po drodze.' },
   { icon: 'departure_board', title: 'Odjazdy i przyjazdy', text: 'Tablica każdej stacji KW z opóźnieniami i peronami. Ulubione stacje masz zawsze pod ręką.' },
   { icon: 'map', title: 'Mapa i schemat', text: 'Gdzie są teraz pociągi i jak biegną linie przewoźnika w Wielkopolsce.' },
-  { icon: 'bookmark', title: 'Moje podróże', text: 'Obserwuj połączenie, a pokażemy odliczanie, opóźnienia i komunikaty dla Twojej trasy.' },
+  { icon: 'bookmark', title: 'Moje podróże', text: 'Obserwuj połączenie, a pokażemy odliczanie, opóźnienia i komunikaty dla Twojej trasy. Możesz też dostać powiadomienie o opóźnieniu, dodać podróż do kalendarza albo ją udostępnić.' },
   { icon: 'commute', title: 'Bus-Tramwaj-Kolej', text: 'Kalkulator i zasady wspólnego biletu KW, POLREGIO i ZTM Poznań.' },
 ]
 
@@ -34,7 +34,8 @@ const sources: { icon: string; title: string; parts: Part[] }[] = [
 
 const privacy = [
   'Bez kont, reklam i statystyk odwiedzin. Nie używamy ciasteczek (poza panelem administratora).',
-  'Ulubione stacje, obserwowane podróże, ostatnie wyszukiwanie, motyw i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer. Usuniesz je, czyszcząc dane tej strony.',
+  'Ulubione stacje, obserwowane podróże, ostatnie wyszukiwanie, motyw i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
+  'Gdy włączysz powiadomienia o podróży, serwer zapisuje adres subskrypcji powiadomień Twojej przeglądarki i pociągi tej podróży. Usuwamy je po jej zakończeniu albo po wyłączeniu powiadomień. Powiadomienia dostarcza usługa producenta przeglądarki (Google, Mozilla, Apple, Microsoft).',
   'Lokalizacji używamy tylko po kliknięciu „Najbliższa stacja” albo „Moja lokalizacja”. Najbliższą stację wylicza Twoja przeglądarka.',
   'Podkład mapy pobierany jest z OpenFreeMap, więc ten serwis widzi Twój adres IP. Hosting może zapisywać standardowe logi serwera.',
 ]

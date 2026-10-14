@@ -12,6 +12,8 @@ use KwInfo\Config;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
+use KwInfo\Push\PushRepository;
+use KwInfo\Push\WebPush;
 
 $errors = [];
 $warnings = [];
@@ -57,6 +59,13 @@ try {
     $line('Baza komunikatów (app.sqlite)', true, '');
 } catch (Throwable $e) {
     $line('Baza komunikatów (app.sqlite)', false, 'SQLite: ' . $e->getMessage());
+}
+
+try {
+    $keys = WebPush::keys();
+    $line('Powiadomienia push (klucze VAPID, obserwowane podróże: ' . (new PushRepository())->count() . ')', strlen(WebPush::unb64($keys['public'])) === 65, 'Nieprawidłowy klucz VAPID w server/storage/vapid.json.', true);
+} catch (Throwable $e) {
+    $line('Powiadomienia push', false, 'Powiadomienia nie zadziałają: ' . $e->getMessage(), true);
 }
 
 $line('Hasło administratora', AdminAuth::isConfigured() || PHP_SAPI === 'cli' && (getenv('KW_ADMIN_PASSWORD_HASH') || is_file(Config::path('root') . '/config/admin-password.php')),

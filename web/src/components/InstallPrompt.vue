@@ -79,7 +79,7 @@ onBeforeUnmount(() => {
 <template>
   <transition name="pop">
     <aside v-if="open && mode" class="install" role="dialog" aria-labelledby="install-title" aria-describedby="install-text">
-      <img src="/icon-192.png" width="48" height="48" alt="" class="install-logo">
+      <img src="/app-icon-192.png" width="48" height="48" alt="" class="install-logo">
       <div class="install-body">
         <h2 id="install-title" class="text-title-medium">Dodaj nas na ekran główny</h2>
         <p v-if="mode === 'native'" id="install-text" class="text-body-medium">
