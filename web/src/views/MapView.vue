@@ -93,11 +93,16 @@ function refreshRoute() {
   ;(map.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson())
   ;(map.getSource('kw-route-stops') as GeoJSONSource | undefined)?.setData(routeStopsGeoJson())
   if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.35 : 0.9)
+  // trasa wybranego kursu w kolorze jego linii (jak kółko w pastylce), autobus i brak koloru — kolor akcji
+  const trip = routeTrip.value
+  const color = trip && !trip.isBus && trip.route?.color ? trip.route.color : colors().primary
+  if (map.getLayer('kw-route')) map.setPaintProperty('kw-route', 'line-color', color)
+  if (map.getLayer('kw-route-stops')) map.setPaintProperty('kw-route-stops', 'circle-stroke-color', color)
 }
 
 /**
- * Pociągi jako pastylki HTML w kolorze linii (jak plakietka linii): strzałka w kierunku jazdy, ikona pociągu/autobusu
- * i numer; opóźnienie jako żółta plakietka w rogu. Mapa się nie obraca, więc obrót strzałki = kierunek względem północy.
+ * Pociągi jako pastylki HTML: grafitowe tło (marka; w ciemnym motywie jasne), kółko w kolorze linii ze strzałką
+ * w kierunku jazdy i numer; opóźnienie jako żółta plakietka w rogu. Mapa się nie obraca, więc obrót strzałki = kierunek względem północy.
  */
 // marker: element pozycjonowany przez MapLibre (transform — bez animacji!), el: pastylka w środku (wygląd, powiększenie)
 const markers = new Map<string, { marker: Marker; el: HTMLButtonElement }>()
@@ -154,6 +159,7 @@ function syncTrains() {
     m.el.classList.toggle('selected', selected)
     m.el.classList.toggle('dim', !!selectedKey.value && !selected)
     m.el.classList.toggle('still', t.bearing === null || t.dwelling)
+    m.el.classList.toggle('bus', t.isBus)
     m.el.querySelector('.no')!.textContent = number
     m.el.querySelector('.late')!.textContent = late ? `+${t.delay}` : ''
     m.el.setAttribute('aria-label', `KW ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
@@ -177,7 +183,7 @@ function layoutPills() {
       .map((m) => ({ m, p: map!.project(m.marker.getLngLat()), priority: Number(m.el.dataset.priority ?? 1) }))
       .sort((a, b) => b.priority - a.priority)
     for (const { m, p } of items) {
-      const width = 48 + 7.5 * (m.el.querySelector('.no')?.textContent?.length ?? 5)
+      const width = (m.el.classList.contains('bus') ? 58 : 40) + 7.5 * (m.el.querySelector('.no')?.textContent?.length ?? 5)
       const box: [number, number, number, number] = [p.x - width / 2 - 2, p.y - 16, p.x + width / 2 + 6, p.y + 14]
       const hit = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])
       m.el.classList.toggle('compact', hit)
@@ -226,6 +232,7 @@ function addOverlays() {
   map.addLayer({ id: 'kw-route-labels', type: 'symbol', source: 'kw-route-stops', minzoom: 8,
     layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0.9, 0], 'text-anchor': 'left', 'text-optional': true },
     paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2 } })
+  refreshRoute()
 }
 
 /** Marginesy na panel listy i arkusz pociągu, zmniejszane proporcjonalnie w małych oknach. */
@@ -246,8 +253,10 @@ function fitCoords(coords: [number, number][], maxZoom = 11) {
   map.fitBounds(b as LngLatBoundsLike, { padding: padding(), maxZoom, duration: 600 })
 }
 
+/** Widok na wszystkie jadące pociągi (sieć KW sięga daleko poza region, np. do Łodzi — na telefonie byłaby za mała); bez pociągów — sieć. */
 function fitNetwork() {
-  const coords = (network.value?.features ?? []).flatMap((f: GeoJSON.Feature) => (f.geometry as GeoJSON.LineString).coordinates as [number, number][])
+  const trains = live.trains.map((t) => [t.lon, t.lat] as [number, number])
+  const coords = trains.length ? trains : (network.value?.features ?? []).flatMap((f: GeoJSON.Feature) => (f.geometry as GeoJSON.LineString).coordinates as [number, number][])
   fitCoords(coords.length ? coords : stations.list.map((s) => [s.lon, s.lat]), 9)
 }
 
@@ -296,6 +305,14 @@ function locate() {
 }
 
 watch([() => live.trains, filter, query, selectedKey], syncTrains)
+// pierwsze pozycje przyszły po wczytaniu mapy — dopasuj widok raz, jeśli pasażer jeszcze nie ruszał mapy
+let userMoved = false
+let fittedTrains = false
+watch(() => live.trains.length, (n) => {
+  if (!map?.loaded() || fittedTrains || userMoved || selectedKey.value || !n) return
+  fittedTrains = true
+  fitNetwork()
+})
 // pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
 watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
 watch(() => stations.list, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
@@ -330,12 +347,16 @@ onMounted(async () => {
     m.touchZoomRotate.disableRotation()
     m.on('style.load', addOverlays)
     m.on('move', layoutPills)
+    m.on('movestart', (e) => { if (e.originalEvent) userMoved = true })
     m.once('load', () => {
       // informacja o autorach mapy zwinięta do ikonki ⓘ (MapLibre rozwija ją na starcie)
       container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
       syncTrains()
       if (selectedKey.value) void select(selectedKey.value)
-      else fitNetwork()
+      else {
+        fittedTrains = live.trains.length > 0
+        fitNetwork()
+      }
     })
   } catch (e) {
     mapError.value = (e as Error).message || 'Nie udało się wczytać mapy.'
@@ -387,7 +408,7 @@ const filters = [
         <v-btn icon="add" color="surface-container-high" size="44" elevation="3" aria-label="Przybliż" @click="zoom(1)" />
         <v-btn icon="remove" color="surface-container-high" size="44" elevation="3" aria-label="Oddal" @click="zoom(-1)" />
       </template>
-      <v-btn icon="fit_screen" color="surface-container-high" size="48" elevation="3" aria-label="Pokaż całą sieć" @click="fitNetwork" />
+      <v-btn icon="fit_screen" color="surface-container-high" size="48" elevation="3" aria-label="Pokaż wszystkie pociągi" @click="fitNetwork" />
       <v-btn icon="my_location" color="surface-container-high" size="48" elevation="3" aria-label="Moja lokalizacja" @click="locate" />
     </div>
 
@@ -445,13 +466,21 @@ const filters = [
 
 /* pastylki pociągów (znaczniki HTML MapLibre, tworzone w syncTrains): kolor linii, kierunek, ikona, numer */
 .map :deep(.train-pill) {
-  position: relative; display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px 0 5px; border: 0; border-radius: 12px; cursor: pointer;
-  background: var(--c); color: var(--on); font: 800 12px/1 var(--kw-font); font-variant-numeric: tabular-nums; white-space: nowrap;
+  position: relative; display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px 0 3px; border: 0; border-radius: 13px; cursor: pointer;
+  background: rgb(var(--v-theme-inverse-surface)); color: rgb(var(--v-theme-on-inverse-surface));
+  font: 800 12px/1 var(--kw-font); font-variant-numeric: tabular-nums; white-space: nowrap;
   box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface)), 0 1px 4px rgb(0 0 0 / .35); transition: opacity .15s, transform .15s;
 }
 .map :deep(.train-pill svg) { width: 14px; height: 14px; fill: currentColor; flex: none; }
+/* kółko linii: strzałka kierunku (albo ikona pojazdu, gdy stoi) na kolorze linii */
+.map :deep(.train-pill .arr), .map :deep(.train-pill.still .veh) {
+  width: 20px; height: 20px; padding: 3px; border-radius: 50%; background: var(--c); fill: var(--on); box-sizing: border-box;
+}
 .map :deep(.train-pill .arr) { transform: rotate(var(--bearing)); }
 .map :deep(.train-pill.still .arr) { display: none; }
+/* ikona pojazdu w pastylce tylko dla autobusu zastępczego (i w kółku stojącego pojazdu) */
+.map :deep(.train-pill .veh) { display: none; }
+.map :deep(.train-pill.bus .veh), .map :deep(.train-pill.still .veh) { display: block; }
 /* opóźnienie: żółta plakietka w rogu */
 .map :deep(.train-pill .late) {
   position: absolute; top: -9px; right: -8px; height: 16px; padding: 0 5px; border-radius: 8px; font-size: 10px; line-height: 16px;
@@ -470,12 +499,16 @@ const filters = [
 .map :deep(.train-pill.dim) { opacity: .35; }
 .map :deep(.train-marker:hover), .map :deep(.train-marker:focus-within) { z-index: 10 !important; }
 /* zasłonięta przez inną (layoutPills): kółko z ikoną i trójkątem kierunku, numer po najechaniu */
-.map :deep(.train-pill.compact) { width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: 50%; }
+.map :deep(.train-pill.compact) { width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: 50%; background: var(--c); color: var(--on); }
+.map :deep(.train-pill.compact .veh) { display: block; width: 14px; height: 14px; padding: 0; background: none; fill: currentColor; }
 .map :deep(.train-pill.compact .arr), .map :deep(.train-pill.compact .no), .map :deep(.train-pill.compact .late) { display: none; }
 .map :deep(.train-pill.compact .orbit) { display: block; }
 .map :deep(.train-pill.compact.still .orbit) { display: none; }
-.map :deep(.train-pill.compact:hover), .map :deep(.train-pill.compact:focus-visible) { width: auto; padding: 0 8px 0 5px; border-radius: 12px; }
+.map :deep(.train-pill.compact:hover), .map :deep(.train-pill.compact:focus-visible) {
+  width: auto; height: 26px; padding: 0 10px 0 3px; border-radius: 13px; background: rgb(var(--v-theme-inverse-surface)); color: rgb(var(--v-theme-on-inverse-surface));
+}
 .map :deep(.train-pill.compact:hover .no), .map :deep(.train-pill.compact:hover .arr) { display: inline; }
+.map :deep(.train-pill.compact:hover .veh) { display: none; }
 .map :deep(.train-pill.compact:hover .orbit) { display: none; }
 
 @media (max-width: 839px) {
