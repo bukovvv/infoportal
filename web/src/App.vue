@@ -86,7 +86,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       </template>
       <v-app-bar-title class="text-title-large app-title">{{ title }}</v-app-bar-title>
       <template #append>
-        <v-chip v-if="!isAdmin" variant="flat" color="surface-container-high" class="live-chip mr-2 tnum" :title="liveState.title" to="/#stan-danych">
+        <v-chip v-if="!isAdmin" variant="flat" color="surface-container-high" class="live-chip mr-2 tnum" :title="liveState.title">
           <span class="live-dot mr-2" :class="liveState.cls" aria-hidden="true" />
           <span class="live-text">{{ liveState.text }}</span>
         </v-chip>

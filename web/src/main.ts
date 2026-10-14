@@ -1,4 +1,4 @@
-import '@fontsource-variable/nunito/wght.css'
+import '@fontsource-variable/figtree/wght.css'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import App from './App.vue'

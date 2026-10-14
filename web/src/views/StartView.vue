@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { ConnectionsResult } from '@/api/types'
 import ConnectionCard from '@/components/ConnectionCard.vue'
-import DataStatusCard from '@/components/DataStatusCard.vue'
 import DateField from '@/components/DateField.vue'
 import FavoriteStations from '@/components/FavoriteStations.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
@@ -211,11 +210,6 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact link />
             <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line" color="transparent" />
           </v-card>
-        </section>
-
-        <section id="stan-danych" aria-labelledby="status-title">
-          <div class="section-head"><h2 id="status-title" class="text-title-large">Stan danych</h2></div>
-          <DataStatusCard />
         </section>
 
         <p class="text-body-small muted footnote">

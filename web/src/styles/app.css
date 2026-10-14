@@ -4,8 +4,8 @@
 
 @layer overrides {
   :root {
-    /* Nunito (OFL, zmienna grubość 200–1000) — zaokrąglony krój całego serwisu */
-    --kw-font: 'Nunito Variable', 'Nunito', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    /* Figtree (OFL, zmienna grubość 300–900) — krój całego serwisu */
+    --kw-font: 'Figtree Variable', 'Figtree', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
     /* skala zaokrągleń: małe elementy, kafelki, karty, duże powierzchnie; przyciski, chipy i pola — pigułki */
     --kw-r-s: 12px;
     --kw-r-m: 16px;
@@ -15,8 +15,8 @@
 
   html, body { font-family: var(--kw-font); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
-  /* Nunito jest lżejsza od kroju MD3 — nagłówki o stopień grubsze */
-  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 700; letter-spacing: 0; }
+  /* nagłówki półgrube — Figtree w grubości 400 wygląda w nich zbyt lekko */
+  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 600; letter-spacing: 0; }
 
   /* pola formularzy zaokrąglone jak przyciski */
   .v-field--variant-outlined, .v-field--variant-filled, .v-field--variant-solo { border-radius: var(--kw-r-m); }
