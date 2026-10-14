@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import type { Station } from '@/api/types'
 import { useStations } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
-import { plural } from '@/utils/format'
 
 const model = defineModel<string | null>({ default: null })
 defineProps<{ label: string; icon?: string; hideDetails?: boolean; density?: 'default' | 'comfortable' | 'compact' }>()
@@ -41,11 +40,7 @@ const items = computed<Station[]>(() => {
     :menu-props="{ maxHeight: 360 }"
   >
     <template #item="{ props: itemProps, item }">
-      <v-list-item v-bind="itemProps" :prepend-icon="favorites.has(item.id) ? 'star-fill' : 'signpost'">
-        <template #subtitle>
-          {{ item.daily }} {{ plural(item.daily, 'kurs', 'kursy', 'kursów') }} dziennie · {{ item.lines.filter((l: string) => l.startsWith('PKM')).join(', ') || 'KW' }}
-        </template>
-      </v-list-item>
+      <v-list-item v-bind="itemProps" :prepend-icon="favorites.has(item.id) ? 'star-fill' : 'signpost'" />
     </template>
   </v-autocomplete>
 </template>

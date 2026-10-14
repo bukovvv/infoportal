@@ -15,8 +15,8 @@
 
   html, body { font-family: var(--kw-font); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
-  /* nagłówki półgrube — Figtree w grubości 400 wygląda w nich zbyt lekko */
-  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 600; letter-spacing: 0; }
+  /* nagłówki pogrubione — Figtree w grubości 400 wygląda w nich zbyt lekko */
+  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 700; letter-spacing: 0; }
 
   /* pola formularzy zaokrąglone jak przyciski */
   .v-field--variant-outlined, .v-field--variant-filled, .v-field--variant-solo { border-radius: var(--kw-r-m); }

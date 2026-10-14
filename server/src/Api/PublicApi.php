@@ -193,6 +193,7 @@ final class PublicApi
                     'track' => $a[D::TRACK],
                     'arrivalPlatform' => $b[D::PLATFORM],
                     'stopsBetween' => $l['to'] - $l['from'] - 1,
+                    'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
                 ];
             }
             $connections[] = [
@@ -379,6 +380,30 @@ final class PublicApi
     private function applied(array $trip, int $nowSec): array
     {
         return $this->applied[$trip['key']] ??= $this->rt()->apply($trip, $nowSec);
+    }
+
+    /**
+     * Stacje pośrednie odcinka (bez początkowej i końcowej) z godziną odjazdu.
+     * @param array<string, mixed> $trip @param array<string, mixed>|null $exp @return array<int, array<string, mixed>>
+     */
+    private function legStops(array $trip, int $from, int $to, int $date, ?array $exp): array
+    {
+        $stops = [];
+        for ($i = $from + 1; $i < $to; $i++) {
+            $s = $trip['stops'][$i];
+            $e = $exp['stops'][$i] ?? null;
+            $delay = $e['depDelay'] ?? null;
+            $stops[] = [
+                'id' => $s[D::STATION],
+                'name' => $this->name($s[D::STATION]),
+                'departure' => Clock::iso($date, $s[D::DEP]),
+                'expectedDeparture' => $delay !== null ? Clock::iso($date, $e['dep']) : null,
+                'delay' => Realtime::minutes($delay),
+                'skipped' => $e['skipped'] ?? false,
+                'requestOnly' => $s[D::PICKUP] === 3 || $s[D::DROPOFF] === 3,
+            ];
+        }
+        return $stops;
     }
 
     /** @return array<string, mixed>|null */

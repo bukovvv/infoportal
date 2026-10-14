@@ -11,6 +11,13 @@ const props = defineProps<{ connection: Connection }>()
 const journeys = useJourneys()
 const ui = useUi()
 const expanded = ref(false)
+/** odcinki z rozwiniętą listą stacji pośrednich */
+const openLegs = ref(new Set<string>())
+function toggleLeg(key: string) {
+  const next = new Set(openLegs.value)
+  if (!next.delete(key)) next.add(key)
+  openLegs.value = next
+}
 const c = computed(() => props.connection)
 const first = computed(() => c.value.legs[0])
 const last = computed(() => c.value.legs[c.value.legs.length - 1])
@@ -68,10 +75,37 @@ function watchJourney() {
               <div class="text-body-small muted d-flex flex-wrap align-center ga-1">
                 <RouteBadge :route="leg.route" :bus="leg.isBus" />
                 KW {{ leg.number }} w kierunku {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
-                · {{ leg.stopsBetween }} {{ plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków') }} po drodze
+              </div>
+              <v-btn
+                v-if="leg.stops?.length"
+                variant="text"
+                size="small"
+                class="stops-btn"
+                :append-icon="openLegs.has(leg.key) ? 'keyboard_arrow_up' : 'keyboard_arrow_down'"
+                :aria-expanded="openLegs.has(leg.key)"
+                @click="toggleLeg(leg.key)"
+              >
+                {{ leg.stopsBetween }} {{ plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków') }} po drodze
+              </v-btn>
+              <div v-else class="text-body-small muted mt-1">
+                {{ leg.stopsBetween ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze` : 'bez zatrzymań po drodze' }}
               </div>
             </div>
           </div>
+          <template v-if="openLegs.has(leg.key)">
+            <div v-for="st in leg.stops" :key="st.id + st.departure" class="leg mid" :class="{ skipped: st.skipped }">
+              <span class="leg-t tnum text-body-small">
+                <span :class="{ was: (st.delay ?? 0) >= 2 }">{{ clock(st.departure) }}</span><sup v-if="nextDay(st.departure)" class="plus-day">+1</sup>
+                <span v-if="(st.delay ?? 0) >= 2" class="late d-block">{{ clock(st.expectedDeparture) }}</span>
+              </span>
+              <span class="leg-rail"><i /></span>
+              <div class="leg-s text-body-medium">
+                {{ st.name }}
+                <span v-if="st.skipped" class="text-body-small late"> · nie zatrzyma się</span>
+                <span v-else-if="st.requestOnly" class="text-body-small muted"> · na żądanie</span>
+              </div>
+            </div>
+          </template>
           <div class="leg">
             <span class="leg-t tnum">{{ clock(leg.arrival) }}<sup v-if="nextDay(leg.arrival)" class="plus-day">+1</sup></span><span class="leg-rail end"><i /></span>
             <div class="leg-s">
@@ -107,6 +141,13 @@ function watchJourney() {
 .leg-rail.end::before { display: none; }
 .leg-rail i { position: absolute; left: 4px; top: 14px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgb(var(--v-theme-primary)); background: rgb(var(--v-theme-surface-container-lowest)); }
 .leg-s { padding: 10px 0; min-width: 0; }
+.stops-btn { margin: 2px 0 -6px -12px; }
+.leg.mid .leg-t { font-weight: 400; padding-top: 6px; color: rgb(var(--v-theme-on-surface-variant)); }
+.leg.mid .leg-rail i { left: 6px; top: 12px; width: 8px; height: 8px; border-width: 0; background: rgb(var(--v-theme-primary)); }
+.leg.mid .leg-rail::before { top: 0; bottom: -14px; }
+.leg.mid .leg-s { padding: 4px 0; }
+.leg.mid.skipped .leg-s { text-decoration: line-through; text-decoration-color: rgb(var(--v-theme-on-surface-variant)); }
+.leg.mid.skipped .leg-s span { text-decoration: none; display: inline-block; }
 .leg-transfer { grid-column: 3; margin: 4px 0; display: inline-flex; align-items: center; gap: 6px; color: rgb(var(--v-theme-warning)); font-size: 12px; font-weight: 500; }
 @media (max-width: 480px) { .conn-times .t { font-size: 22px; } }
 </style>

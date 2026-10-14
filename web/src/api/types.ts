@@ -69,6 +69,18 @@ export interface Leg {
   track: string | null
   arrivalPlatform: string | null
   stopsBetween: number
+  /** stacje pośrednie (bez początkowej i końcowej); brak w podróżach zapisanych przed dodaniem pola */
+  stops?: LegStop[]
+}
+
+export interface LegStop {
+  id: string
+  name: string
+  departure: string
+  expectedDeparture: string | null
+  delay: number | null
+  skipped: boolean
+  requestOnly: boolean
 }
 
 export interface Connection {
