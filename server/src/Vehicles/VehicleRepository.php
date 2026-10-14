@@ -27,7 +27,7 @@ final class VehicleRepository
      * Rysunek bierzemy z dowolnego zestawienia tej serii.
      */
     private const MANUAL = [
-        '71202' => 'EN76',
+        // '71202' => 'EN76',
     ];
 
     /** Zestawienie starsze niż tyle dni nie jest już pokazywane. */

@@ -77,6 +77,10 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
             <span>{{ item.label }}</span>
           </router-link>
         </nav>
+        <router-link to="/o-nas" class="nav-item rail-about" :aria-current="current === 'about' ? 'page' : undefined">
+          <span class="nav-ind"><v-icon :icon="current === 'about' ? 'info-fill' : 'info'" /></span>
+          <span>O nas</span>
+        </router-link>
       </div>
     </v-navigation-drawer>
 
@@ -107,7 +111,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
         </v-btn>
         <v-menu location="bottom end">
           <template #activator="{ props }">
-            <v-btn v-bind="props" :icon="themeIcon" variant="text" aria-label="Motyw i informacje" class="mr-1" />
+            <v-btn v-bind="props" :icon="mdAndUp ? themeIcon : 'more_vert'" variant="text" aria-label="Motyw i informacje" class="mr-1" />
           </template>
           <v-list density="compact" nav>
             <v-list-subheader>Motyw</v-list-subheader>
@@ -148,7 +152,8 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 
 <style scoped>
 .rail { background: rgb(var(--v-theme-surface)) !important; }
-.rail-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 24px; }
+.rail-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 24px; min-height: 100%; }
+.rail-about { margin-top: auto; }
 .rail-fab { margin: 8px 0 20px; }
 .rail-items { display: grid; gap: 12px; }
 .navbar {
