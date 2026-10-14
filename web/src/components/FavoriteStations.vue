@@ -40,11 +40,11 @@ watch(() => favorites.ids.join(), () => void refresh())
 </script>
 
 <template>
-  <v-card color="surface-container-low" class="fav">
-    <div v-for="s in list" :key="s.id" class="fav-station">
+  <div class="fav-list">
+    <article v-for="s in list" :key="s.id" class="fav-station card">
       <router-link :to="{ name: 'board', params: { stationId: s.id } }" class="fav-head">
         <v-icon icon="star-fill" color="primary" size="20" />
-        <span class="text-title-small ellipsis">{{ s.name }}</span>
+        <h3 class="fav-name ellipsis">{{ s.name }}</h3>
         <v-icon icon="chevron_right" class="muted ml-auto" size="20" />
       </router-link>
       <v-skeleton-loader v-if="!s.rows" type="text@2" color="transparent" class="px-4" />
@@ -60,28 +60,42 @@ watch(() => favorites.ids.join(), () => void refresh())
           @click="ui.openTrain({ key: r.key })"
         >
           <span class="t tnum" :class="{ late: late(r) }">{{ clock(late(r) ? r.expected : r.scheduled) }}</span>
-          <span class="ellipsis">{{ r.destination }}</span>
+          <span class="fav-main">
+            <span class="dest ellipsis">{{ r.destination }}</span>
+            <span class="text-body-small muted ellipsis">{{ r.isBus ? 'ZKA' : r.route?.short ?? 'KW' }}<template v-if="r.platform"> · peron {{ r.platform }}</template></span>
+          </span>
           <StatusTag v-if="r.cancelled || late(r)" :delay="r.delay" :source="r.delaySource" :cancelled="r.cancelled" />
-          <span v-else class="text-body-small muted">{{ soon(r) }}</span>
+          <span v-else class="countdown text-body-small">{{ soon(r) }}</span>
         </button>
       </template>
-    </div>
-  </v-card>
+    </article>
+  </div>
 </template>
 
 <style scoped>
-.fav-station + .fav-station { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
-.fav-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px 4px; color: inherit; text-decoration: none; }
-.fav-head:hover .text-title-small { text-decoration: underline; }
-.fav-head:focus-visible { outline: 3px solid rgb(var(--v-theme-secondary)); outline-offset: -3px; }
-.fav-row {
-  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; align-items: center;
-  width: 100%; padding: 6px 16px; border: 0; background: transparent; text-align: left; color: inherit; font: inherit; cursor: pointer;
+/* na telefonie karty stacji obok siebie (przewijane w bok), szerzej — jedna pod drugą */
+.fav-list { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 4px; scroll-snap-type: x mandatory; }
+.fav-list::-webkit-scrollbar { display: none; }
+.fav-station { flex: none; width: min(300px, 82vw); padding-bottom: 6px; scroll-snap-align: start; }
+.fav-list:has(> :only-child) .fav-station { width: 100%; }
+@media (min-width: 600px) {
+  .fav-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); overflow: visible; margin: 0; padding: 0; }
+  .fav-station { width: auto; }
 }
-.fav-row:last-child { padding-bottom: 12px; }
+.fav-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 6px; color: inherit; text-decoration: none; }
+.fav-name { font-size: 16px; font-weight: 800; margin: 0; min-width: 0; }
+.fav-head:hover .fav-name { text-decoration: underline; }
+.fav-head:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: -3px; border-radius: var(--kw-r-l); }
+.fav-row {
+  display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 48px;
+  width: 100%; padding: 6px 16px; border: 0; border-top: 1px solid rgb(var(--v-theme-outline-variant)); background: transparent;
+  text-align: left; color: inherit; font: inherit; cursor: pointer;
+}
 .fav-row:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 6%, transparent); }
-.fav-row:focus-visible { outline: 3px solid rgb(var(--v-theme-secondary)); outline-offset: -3px; }
-.fav-row .t { font-weight: 500; }
-.cancelled .t, .cancelled .ellipsis { text-decoration: line-through; color: rgb(var(--v-theme-on-surface-variant)); }
+.fav-row:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: -3px; }
+.fav-row .t { font-size: 16px; font-weight: 800; }
+.fav-main { display: grid; min-width: 0; }
+.dest { font-size: 15px; font-weight: 600; }
+.cancelled .t, .cancelled .dest { text-decoration: line-through; color: rgb(var(--v-theme-on-surface-variant)); }
 .fav-note { padding: 4px 16px 12px; }
 </style>

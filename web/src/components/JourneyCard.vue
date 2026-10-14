@@ -19,13 +19,13 @@ const cancelled = computed(() => legs.value.some((l) => l.cancelled))
 const state = computed(() => {
   const toDep = minutesUntil(departure.value, props.now)
   const toArr = minutesUntil(arrival.value, props.now)
-  if (cancelled.value) return { label: 'Odwołany kurs', big: 'Znajdź inne połączenie', progress: null, done: false }
-  if (toDep > 0) return { label: 'Zaplanowana', big: `Odjazd ${relative(toDep)}`, progress: null, done: false }
+  if (cancelled.value) return { label: 'Odwołany kurs', lead: '', big: 'Znajdź inne połączenie', progress: null, done: false }
+  if (toDep > 0) return { label: 'Zaplanowana', lead: 'Odjazd', big: relative(toDep), progress: null, done: false }
   if (toArr > 0) {
     const total = (new Date(arrival.value).getTime() - new Date(departure.value).getTime()) / 60000
-    return { label: 'W drodze', big: `Przyjazd ${relative(toArr)}`, progress: Math.round((1 - toArr / Math.max(1, total)) * 100), done: false }
+    return { label: 'W drodze', lead: 'Przyjazd', big: relative(toArr), progress: Math.round((1 - toArr / Math.max(1, total)) * 100), done: false }
   }
-  return { label: 'Zakończona', big: `Przyjazd ${clock(arrival.value)}`, progress: null, done: true }
+  return { label: 'Zakończona', lead: 'Przyjazd', big: clock(arrival.value), progress: null, done: true }
 })
 const otherDay = computed(() => props.journey.connection.departure.slice(0, 10) !== warsawNow(new Date(props.now)).date)
 const numbers = computed(() => props.journey.connection.legs.flatMap((l) => splitNumbers(l.number)))
@@ -41,13 +41,13 @@ function remove() {
   <article class="journey" :class="{ done: state.done, cancelled }">
     <div class="d-flex justify-space-between align-start ga-2">
       <div class="min-w-0">
-        <div class="text-label-medium">{{ state.label }}<template v-if="otherDay"> · {{ dayLabel(journey.connection.departure) }}</template></div>
+        <div class="label">{{ state.label }}<template v-if="otherDay"> · {{ dayLabel(journey.connection.departure) }}</template></div>
         <h3 class="text-title-medium">{{ journey.from }} → {{ journey.to }}</h3>
       </div>
       <v-btn icon="close" variant="text" size="small" aria-label="Przestań obserwować" @click="remove" />
     </div>
     <div class="d-flex justify-space-between align-end ga-2 flex-wrap">
-      <span class="text-headline-small">{{ state.big }}</span>
+      <span class="big-line"><span v-if="state.lead" class="lead">{{ state.lead }}</span> <span class="big tnum" :class="{ msg: !state.lead }">{{ state.big }}</span></span>
       <span class="text-title-small tnum">{{ clock(departure) }} – {{ clock(arrival) }}</span>
     </div>
     <v-progress-linear v-if="state.progress !== null" :model-value="state.progress" rounded height="4" aria-label="Postęp podróży" />
@@ -66,7 +66,12 @@ function remove() {
 </template>
 
 <style scoped>
-.journey { display: grid; gap: 12px; padding: 16px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
+.label { font-size: 12px; font-weight: 700; opacity: .8; }
+.big-line { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lead { font-size: 16px; font-weight: 600; }
+.big { font-size: 34px; line-height: 38px; font-weight: 800; letter-spacing: -0.4px; }
+.big.msg { font-size: 22px; line-height: 28px; }
+.journey { display: grid; gap: 12px; padding: 16px 16px 16px 18px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
 .journey.done { background: rgb(var(--v-theme-surface-container-high)); color: rgb(var(--v-theme-on-surface)); }
 .journey.cancelled { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
 .journey :deep(.v-progress-linear__background) { background: currentColor; opacity: .16; }

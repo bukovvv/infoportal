@@ -29,7 +29,7 @@ const docked = computed(() => !!ui.sheet?.docked && mdAndUp.value)
   </v-navigation-drawer>
   <v-bottom-sheet v-else v-model="open" max-height="90dvh" scrollable aria-label="Szczegóły pociągu">
     <v-card color="surface-container-low" rounded="t-xl" class="sheet-card">
-      <div class="handle" aria-hidden="true" />
+      <div class="handle-bar" aria-hidden="true"><div class="handle" /></div>
       <div class="sheet-scroll">
         <TrainDetail v-if="ui.sheet" :trip-key="ui.sheet.key" :number="ui.sheet.number" in-sheet @close="ui.closeTrain()" />
       </div>
@@ -38,9 +38,11 @@ const docked = computed(() => !!ui.sheet?.docked && mdAndUp.value)
 </template>
 
 <style scoped>
-.train-sheet { background: rgb(var(--v-theme-surface-container-low)) !important; border-radius: var(--kw-r-xl) 0 0 var(--kw-r-xl); }
+.train-sheet { background: rgb(var(--v-theme-surface-container-low)) !important; border-radius: var(--kw-r-xl) 0 0 var(--kw-r-xl); overflow: hidden; }
 .train-sheet.docked { border-left: 1px solid rgb(var(--v-theme-outline-variant)); }
 .sheet-card { display: flex; flex-direction: column; max-height: 90dvh; }
 .sheet-scroll { overflow-y: auto; }
-.handle { width: 32px; height: 4px; margin: 12px auto 0; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-surface-variant)) 40%, transparent); flex: none; }
+/* uchwyt na kolorze nagłówka kursu (grafitowy pasek) */
+.handle-bar { flex: none; padding-top: 12px; background: rgb(var(--v-theme-band)); }
+.handle { width: 32px; height: 4px; margin: 0 auto; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 45%, transparent); }
 </style>

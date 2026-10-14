@@ -81,6 +81,24 @@
     background: rgb(var(--v-theme-error)); color: rgb(var(--v-theme-surface)); font-size: 11px; font-weight: 500; line-height: 16px; text-align: center;
   }
 
+  /* grafitowy pasek (BandHero): karta nachodząca na pasek i chipy na pasku */
+  .band-lift { position: relative; margin-top: -60px; box-shadow: 0 1px 3px rgb(0 0 0 / .10), 0 6px 20px rgb(0 0 0 / .08); }
+  .band-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  .band-chips::-webkit-scrollbar { display: none; }
+  .band-chip {
+    flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px; border: 0; border-radius: 18px; cursor: pointer;
+    background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); color: rgb(var(--v-theme-on-band));
+    font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; text-decoration: none; transition: background-color .15s;
+  }
+  .band-chip:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 22%, transparent); }
+  .band-chip:focus-visible { outline: 3px solid rgb(var(--v-theme-brand-red)); outline-offset: 2px; }
+  .band-chip[aria-pressed='true'], .band-chip.on { background: rgb(var(--v-theme-on-band)); color: rgb(var(--v-theme-band)); font-weight: 700; }
+  .band-chip .v-icon { font-size: 18px; margin-left: -4px; }
+  .band-chip:disabled { opacity: .6; cursor: default; }
+  /* karta na tle strony: biała z delikatnym cieniem (w ciemnym motywie cień niewidoczny, wystarczy kontrast tła) */
+  .card { border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface)); box-shadow: 0 1px 2px rgb(0 0 0 / .06); }
+  .countdown { color: rgb(var(--v-theme-primary)); font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
   /* znak serwisu (BrandMark.vue) jako link do startu */
   .brand-mark { display: block; flex: none; border-radius: var(--kw-r-s); }
   .brand-mark:focus-visible, .brand-logo:focus-visible { outline: 3px solid rgb(var(--v-theme-brand-red)); outline-offset: 2px; }

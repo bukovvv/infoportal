@@ -91,34 +91,34 @@ defineExpose({ trip })
     <template v-else-if="trip">
       <header class="head">
         <div class="d-flex align-center justify-space-between ga-2">
-          <span class="text-label-medium muted d-flex align-center ga-2">
-            <RouteBadge :route="trip.route" :bus="trip.isBus" />{{ category }} · {{ dayLabel(trip.serviceDate + 'T12:00:00') }}
+          <span class="head-label d-flex align-center ga-2">
+            <RouteBadge :route="trip.route" :bus="trip.isBus" class="badge-on-band" />{{ category }} · {{ dayLabel(trip.serviceDate + 'T12:00:00') }}
           </span>
-          <v-btn v-if="inSheet" icon="close" variant="text" aria-label="Zamknij" @click="emit('close')" />
+          <v-btn v-if="inSheet" icon="close" variant="text" color="on-band" aria-label="Zamknij" @click="emit('close')" />
         </div>
-        <h2 class="text-headline-small">KW {{ trip.number }}<span v-if="trip.name && !trip.name.startsWith('PKM')" class="muted"> „{{ trip.name }}”</span></h2>
-        <p class="text-title-medium font-weight-regular">{{ trip.origin }} → {{ trip.destination }}</p>
+        <h2 class="head-title">KW {{ trip.number }}<span v-if="trip.name && !trip.name.startsWith('PKM')" class="head-name"> „{{ trip.name }}”</span></h2>
+        <p class="head-route">{{ trip.origin }} → {{ trip.destination }}</p>
         <div class="d-flex flex-wrap ga-2">
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
-          <span v-if="trip.position?.source === 'gps'" class="tag tag-neutral"><v-icon icon="satellite_alt" />GPS · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</span>
-          <span class="tag tag-neutral"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
+          <span v-if="trip.position?.source === 'gps'" class="tag tag-band"><v-icon icon="satellite_alt" />GPS · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</span>
+          <span class="tag tag-band tnum"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
         </div>
-        <v-progress-linear v-if="progress !== null" :model-value="progress" rounded height="4" bg-color="surface-container-highest" aria-label="Postęp kursu" />
+        <v-progress-linear v-if="progress !== null" :model-value="progress" rounded height="6" color="on-band" class="head-progress" aria-label="Postęp kursu" />
         <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact">
           Ten kurs dziś nie jedzie. Wyszukaj inne połączenie.
         </v-alert>
-        <div v-if="trip.otherLegs.length" class="text-body-small muted">
+        <div v-if="trip.otherLegs.length" class="text-body-small head-legs">
           Ten kurs składa się z kilku odcinków:
-          <a v-for="leg in trip.otherLegs" :key="leg.key" href="#" class="text-primary mr-2" @click.prevent="ui.openTrain({ key: leg.key }, false)">
+          <a v-for="leg in trip.otherLegs" :key="leg.key" href="#" class="mr-2" @click.prevent="ui.openTrain({ key: leg.key }, false)">
             {{ leg.isBus ? 'autobus' : 'pociąg' }} {{ leg.from }} – {{ leg.to }}
           </a>
         </div>
-        <div class="d-flex flex-wrap ga-2">
-          <v-btn variant="flat" color="secondary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
-          <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
-          <v-btn v-else variant="outlined" prepend-icon="link" @click="share">Kopiuj link</v-btn>
-        </div>
       </header>
+      <div class="actions">
+        <v-btn variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
+        <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
+        <v-btn v-else variant="outlined" prepend-icon="link" @click="share">Kopiuj link</v-btn>
+      </div>
       <div v-if="related.length" class="notices divider">
         <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
       </div>
@@ -137,6 +137,21 @@ defineExpose({ trip })
 </template>
 
 <style scoped>
-.head { display: grid; gap: 12px; padding: 16px 16px 20px 24px; }
+/* nagłówek kursu na grafitowym pasku (jak górny pasek aplikacji) */
+.head {
+  display: grid; gap: 10px; padding: 16px 16px 20px 24px; border-radius: 0 0 var(--kw-r-l) var(--kw-r-l);
+  background: rgb(var(--v-theme-band)); color: rgb(var(--v-theme-on-band));
+}
+.head-label { font-size: 13px; font-weight: 600; opacity: .9; }
+.badge-on-band { box-shadow: 0 0 0 1.5px color-mix(in srgb, rgb(var(--v-theme-on-band)) 70%, transparent); }
+.head-title { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.3px; }
+.head-name { opacity: .75; }
+.head-route { font-size: 18px; font-weight: 600; }
+.tag-band { background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 16%, transparent); color: rgb(var(--v-theme-on-band)); }
+.head-progress { margin-top: 4px; }
+.head-progress :deep(.v-progress-linear__background) { background: rgb(var(--v-theme-on-band)); opacity: .22; }
+.head-legs { opacity: .9; }
+.head-legs a { color: inherit; font-weight: 700; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 6px 24px; }
 .notices { background: rgb(var(--v-theme-surface-container-low)); }
 </style>

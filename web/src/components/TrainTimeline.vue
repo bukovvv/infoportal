@@ -53,6 +53,8 @@ const rows = computed<Row[]>(() => {
 })
 
 const speed = computed(() => props.trip.position?.speed ?? null)
+/** Kolor linii z rozkładu (autobus zastępczy neutralnie): oś przed pociągiem w tym kolorze, przejechana — wyszarzona. */
+const routeColor = computed(() => (props.trip.isBus ? 'rgb(var(--v-theme-outline))' : props.trip.route?.color ?? 'rgb(var(--v-theme-primary))'))
 const lastIndex = computed(() => props.trip.stops.length - 1)
 
 /** Godzina planowa i — przy opóźnieniu od 2 min (jak w wyszukiwarce) — oczekiwana; pierwsza stacja nie ma przyjazdu, ostatnia odjazdu. */
@@ -87,7 +89,7 @@ function details(s: TripStop, row: Row) {
   <div class="tl-head text-label-small muted" aria-hidden="true">
     <span>przyj.</span><span>odj.</span>
   </div>
-  <ol class="timeline" aria-label="Postoje pociągu">
+  <ol class="timeline" aria-label="Postoje pociągu" :style="{ '--route': routeColor }">
     <li
       v-for="row in rows"
       :key="row.kind + row.index"
@@ -141,24 +143,27 @@ function details(s: TripStop, row: Row) {
 .tl-time { display: grid; align-content: center; justify-items: end; color: rgb(var(--v-theme-on-surface)); }
 .tl-time .text-body-medium { font-weight: 500; }
 
-/* linia trasy: przejechany odcinek w kolorze głównym, pozostały w neutralnym */
+/* linia trasy: przed pociągiem w kolorze linii, przejechany odcinek wyszarzony */
 .tl-rail { position: relative; }
-.tl-rail::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 4px; background: rgb(var(--v-theme-outline-variant)); }
+.tl-rail::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 4px; background: var(--route); }
 .tl.first .tl-rail::before { top: 50%; }
 .tl.last .tl-rail::before { bottom: 50%; }
-.tl.passed .tl-rail::before { background: rgb(var(--v-theme-primary)); }
+.tl.passed .tl-rail::before { background: rgb(var(--v-theme-outline-variant)); }
 
 /* punkty postoju */
-.tl-rail i { position: absolute; left: 7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; border: 3px solid rgb(var(--v-theme-outline)); background: rgb(var(--v-theme-surface)); }
-.tl.passed .tl-rail i { border-color: rgb(var(--v-theme-primary)); background: rgb(var(--v-theme-primary)); }
-.tl.terminal .tl-rail i { left: 4px; width: 20px; height: 20px; margin-top: -10px; border-width: 5px; border-color: rgb(var(--v-theme-primary)); }
+.tl-rail i { position: absolute; left: 7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; border: 3px solid var(--route); background: rgb(var(--v-theme-surface)); }
+.tl.passed .tl-rail i { border-color: rgb(var(--v-theme-outline-variant)); background: rgb(var(--v-theme-surface)); }
+.tl.terminal .tl-rail i { left: 4px; width: 20px; height: 20px; margin-top: -10px; border-width: 5px; border-color: var(--route); }
+.tl.terminal.last .tl-rail i { background: var(--route); }
+.tl.terminal.passed .tl-rail i { border-color: rgb(var(--v-theme-outline-variant)); }
 .tl.skipped .tl-rail i { left: 10px; width: 8px; height: 8px; margin-top: -4px; border-width: 2px; border-color: rgb(var(--v-theme-outline-variant)); }
-.tl.here .tl-rail i, .tl.next .tl-rail i { border-color: rgb(var(--v-theme-primary)); box-shadow: 0 0 0 4px color-mix(in srgb, rgb(var(--v-theme-primary)) 20%, transparent); }
+.tl.here .tl-rail i, .tl.next .tl-rail i { border-color: var(--route); box-shadow: 0 0 0 4px color-mix(in srgb, var(--route) 25%, transparent); }
 
 /* nazwy: przejechane wyciszone, krańcowe i następna pogrubione */
 .tl-stn { display: grid; align-content: center; justify-items: start; min-width: 0; padding: 6px 0; border: 0; background: none; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .tl-name { max-width: 100%; font-size: 16px; line-height: 24px; }
-.tl.terminal .tl-name, .tl.next .tl-name, .tl.here .tl-name { font-weight: 600; }
+.tl-name { font-weight: 600; }
+.tl.terminal .tl-name, .tl.next .tl-name, .tl.here .tl-name { font-weight: 800; }
 button.tl-stn:hover .tl-name, button.tl-stn:focus-visible .tl-name { color: rgb(var(--v-theme-primary)); text-decoration: underline; }
 .tl.passed .tl-name, .tl.passed .tl-time { color: rgb(var(--v-theme-on-surface-variant)); }
 .tl.passed .tl-time .text-body-medium { font-weight: 400; }
@@ -166,9 +171,9 @@ button.tl-stn:hover .tl-name, button.tl-stn:focus-visible .tl-name { color: rgb(
 .tl-flag { padding: 0 8px; border-radius: 10px; background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container)); }
 
 .tl.now { min-height: 44px; }
-.tl.now .tl-rail::before { background: linear-gradient(rgb(var(--v-theme-primary)) 50%, rgb(var(--v-theme-outline-variant)) 50%); }
-.tl-rail b { position: absolute; left: 1px; top: 50%; width: 26px; height: 26px; margin-top: -13px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); }
-.tl-here { color: rgb(var(--v-theme-primary)); font-weight: 500; cursor: default; }
+.tl.now .tl-rail::before { background: linear-gradient(rgb(var(--v-theme-outline-variant)) 50%, var(--route) 50%); }
+.tl-rail b { position: absolute; left: -2px; top: 50%; width: 32px; height: 32px; margin-top: -16px; box-shadow: 0 0 0 4px rgb(var(--v-theme-surface)); border-radius: 50%; display: grid; place-items: center; background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); }
+.tl-here { color: rgb(var(--v-theme-primary)); font-weight: 700; cursor: default; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>

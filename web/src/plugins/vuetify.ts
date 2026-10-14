@@ -7,6 +7,7 @@ import MsIcon from './MsIcon'
 
 // Kolory z logo: grafit #1A1111 (górny pasek „band”) i czerwień #D2232A (akcja; „brand-red” = strzałka w znaku),
 // ciepłe neutralne tła + kolory rozszerzone: planowo, opóźnienie, estymacja.
+// Tło strony (background) jest ciemniejsze od kart: karty to surface / surface-container-low (ten sam kolor).
 const light: ThemeDefinition = {
   dark: false,
   colors: {
@@ -19,7 +20,7 @@ const light: ThemeDefinition = {
     'surface-variant': '#E9E4E4',
     'on-surface-variant': '#544A4B',
     'surface-container-lowest': '#FFFFFF',
-    'surface-container-low': '#F4F1F1',
+    'surface-container-low': '#FFFFFF',
     'surface-container': '#F1EDED',
     'surface-container-high': '#E9E4E4',
     'surface-container-highest': '#E3DDDD',
@@ -69,7 +70,7 @@ const dark: ThemeDefinition = {
     'surface-variant': '#2F2727',
     'on-surface-variant': '#CDBDBD',
     'surface-container-lowest': '#0D0808',
-    'surface-container-low': '#201919',
+    'surface-container-low': '#1C1616',
     'surface-container': '#251E1E',
     'surface-container-high': '#2F2727',
     'surface-container-highest': '#3A3131',

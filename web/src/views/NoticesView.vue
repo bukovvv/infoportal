@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import BandHero from '@/components/BandHero.vue'
 import NoticeCard from '@/components/NoticeCard.vue'
 import { useNotices } from '@/stores/data'
 import { normalize, plural } from '@/utils/format'
@@ -41,6 +42,26 @@ const summary = computed(() => {
 </script>
 
 <template>
+  <BandHero narrow>
+    <div class="band-chips" role="group" aria-label="Rodzaj komunikatów">
+      <button v-for="f in filters" :key="f.value" type="button" class="band-chip" :aria-pressed="filter === f.value" @click="filter = f.value">
+        {{ f.label }}<span class="chip-count">{{ f.count }}</span>
+      </button>
+    </div>
+    <v-text-field
+      v-if="counts.all > 1"
+      v-model="query"
+      class="search"
+      placeholder="Pociąg, linia albo stacja"
+      prepend-inner-icon="search"
+      density="compact"
+      variant="solo"
+      flat
+      clearable
+      hide-details
+      aria-label="Szukaj w komunikatach"
+    />
+  </BandHero>
   <div class="page-narrow notices-page">
     <section v-if="notices.loaded" class="summary" :class="worst" aria-live="polite">
       <span class="summary-ic"><v-icon :icon="summary.icon" size="28" /></span>
@@ -51,26 +72,6 @@ const summary = computed(() => {
     </section>
     <v-skeleton-loader v-else type="list-item-avatar-two-line" class="summary-skel" />
 
-    <div class="toolbar">
-      <v-chip-group v-model="filter" mandatory selected-class="chip-on" aria-label="Rodzaj komunikatów">
-        <v-chip v-for="f in filters" :key="f.value" :value="f.value" variant="outlined" filter>
-          {{ f.label }}<span class="chip-count">{{ f.count }}</span>
-        </v-chip>
-      </v-chip-group>
-      <v-text-field
-        v-if="counts.all > 1"
-        v-model="query"
-        class="search"
-        placeholder="Pociąg, linia albo stacja"
-        prepend-inner-icon="search"
-        density="compact"
-        variant="solo-filled"
-        flat
-        clearable
-        hide-details
-        aria-label="Szukaj w komunikatach"
-      />
-    </div>
 
     <div v-if="!notices.loaded" class="list">
       <v-skeleton-loader v-for="i in 3" :key="i" type="article" class="skel" />
@@ -101,18 +102,14 @@ const summary = computed(() => {
 .summary-text { display: grid; gap: 2px; min-width: 0; }
 .summary-text p { opacity: .85; text-wrap: pretty; }
 .summary-skel, .skel { border-radius: var(--kw-r-l); }
-.toolbar > .v-chip-group { min-width: 0; max-width: 100%; }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
-.search { flex: 0 1 300px; min-width: 220px; }
-.search :deep(.v-field) { border-radius: 999px; }
+.notices-page { padding-top: 0; }
+.search :deep(.v-field) { border-radius: 999px; background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); }
 .chip-count { margin-left: 8px; font-variant-numeric: tabular-nums; opacity: .7; }
-:deep(.chip-on) { background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); border-color: transparent; }
 .list { display: grid; gap: 12px; }
 .empty { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; text-align: center; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .empty-ic { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); margin-bottom: 4px; }
 @media (max-width: 599px) {
   .summary { padding: 16px; gap: 12px; }
   .summary-ic { width: 44px; height: 44px; }
-  .search { flex: 1 1 100%; }
 }
 </style>

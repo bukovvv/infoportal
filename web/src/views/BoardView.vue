@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { Board } from '@/api/types'
+import BandHero from '@/components/BandHero.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import DateField from '@/components/DateField.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
@@ -124,54 +125,55 @@ const when = (iso: string) => {
 </script>
 
 <template>
-  <div class="page-narrow">
-    <div class="board-head">
-      <div class="row1">
-        <div class="station-pick">
-          <StationField v-model="stationId" label="Stacja" icon="signpost" hide-details />
-          <v-btn
-            :icon="isFavorite ? 'star-fill' : 'star'"
-            :color="isFavorite ? 'primary' : undefined"
-            variant="text"
-            :aria-label="isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'"
-            :aria-pressed="isFavorite"
-            :disabled="!stationId"
-            @click="toggleFavorite"
-          />
-        </div>
-        <v-chip variant="outlined" prepend-icon="my_location" :disabled="locating" @click="nearest">{{ locating ? 'Szukam…' : 'Najbliższa stacja' }}</v-chip>
-      </div>
-      <div v-if="favoriteStations.length" class="fav-row" role="group" aria-label="Ulubione stacje">
-        <v-chip
-          v-for="s in favoriteStations"
-          :key="s.id"
-          :variant="s.id === stationId ? 'flat' : 'outlined'"
-          :color="s.id === stationId ? 'secondary-container' : undefined"
-          :prepend-icon="s.id === stationId ? 'check' : 'star'"
-          @click="stationId = s.id"
-        >
-          {{ s.name }}
-        </v-chip>
-      </div>
-      <div class="d-flex align-center justify-space-between flex-wrap ga-3">
-        <v-btn-toggle v-model="mode" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj tablicy">
-          <v-btn value="dep" :prepend-icon="mode === 'dep' ? 'check' : undefined">Odjazdy</v-btn>
-          <v-btn value="arr" :prepend-icon="mode === 'arr' ? 'check' : undefined">Przyjazdy</v-btn>
-        </v-btn-toggle>
-        <div class="when-fields">
-          <DateField v-model="dateField" label="Data" :min="range.min" :max="range.max" density="compact" class="f-date" />
-          <TimeField v-model="timeField" :label="mode === 'dep' ? 'Odjazdy od' : 'Przyjazdy od'" density="compact" class="f-time" />
-          <v-btn v-if="pinned" variant="text" prepend-icon="update" @click="resetToNow">Teraz</v-btn>
-        </div>
-      </div>
-      <span v-if="board" class="text-body-small muted px-1" aria-live="polite">
-        {{ station?.name ?? board.station.name }} ·
-        <template v-if="pinned">rozkład na {{ dayLabel(date + 'T12:00:00') }}, od {{ time }}</template>
-        <template v-else>na żywo, stan na {{ clock(board.generatedAt) }}</template>
-      </span>
+  <BandHero narrow>
+    <div class="station-pick">
+      <StationField v-model="stationId" label="Stacja" icon="search" hide-details variant="solo" flat class="station-field" />
+      <button
+        type="button"
+        class="star-btn"
+        :class="{ on: isFavorite }"
+        :aria-label="isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'"
+        :aria-pressed="isFavorite"
+        :disabled="!stationId"
+        @click="toggleFavorite"
+      >
+        <v-icon :icon="isFavorite ? 'star-fill' : 'star'" />
+      </button>
     </div>
+    <div class="band-chips" role="group" aria-label="Szybki wybór stacji">
+      <button type="button" class="band-chip" :disabled="locating" @click="nearest"><v-icon icon="my_location" />{{ locating ? 'Szukam…' : 'Najbliższa' }}</button>
+      <button
+        v-for="s in favoriteStations"
+        :key="s.id"
+        type="button"
+        class="band-chip"
+        :aria-pressed="s.id === stationId"
+        @click="stationId = s.id"
+      >
+        {{ s.name }}
+      </button>
+    </div>
+  </BandHero>
 
-    <v-card color="surface-container-low" class="board">
+  <div class="page-narrow board-page">
+    <div class="board-head">
+      <v-btn-toggle v-model="mode" mandatory variant="outlined" divided density="comfortable" aria-label="Rodzaj tablicy">
+        <v-btn value="dep" :prepend-icon="mode === 'dep' ? 'check' : undefined">Odjazdy</v-btn>
+        <v-btn value="arr" :prepend-icon="mode === 'arr' ? 'check' : undefined">Przyjazdy</v-btn>
+      </v-btn-toggle>
+      <div class="when-fields">
+        <DateField v-model="dateField" label="Data" :min="range.min" :max="range.max" density="compact" variant="solo-filled" flat class="f-date" />
+        <TimeField v-model="timeField" :label="mode === 'dep' ? 'Odjazdy od' : 'Przyjazdy od'" density="compact" variant="solo-filled" flat class="f-time" />
+        <v-btn v-if="pinned" variant="text" prepend-icon="update" @click="resetToNow">Teraz</v-btn>
+      </div>
+    </div>
+    <span v-if="board" class="text-body-small muted state-line" aria-live="polite">
+      {{ station?.name ?? board.station.name }} ·
+      <template v-if="pinned">rozkład na {{ dayLabel(date + 'T12:00:00') }}, od {{ time }}</template>
+      <template v-else>na żywo, stan na {{ clock(board.generatedAt) }}</template>
+    </span>
+
+    <div class="board card">
       <v-progress-linear v-if="loading" indeterminate absolute />
       <v-empty-state v-if="error" icon="error" :title="error">
         <template #actions><v-btn variant="flat" color="secondary-container" @click="load()">Spróbuj ponownie</v-btn></template>
@@ -189,14 +191,14 @@ const when = (iso: string) => {
           <span class="dep-time tnum">
             <span class="t" :class="{ late: (row.delay ?? 0) >= 2 }">{{ clock((row.delay ?? 0) >= 2 ? row.expected : row.scheduled) }}</span>
             <span v-if="(row.delay ?? 0) >= 2" class="was text-body-small">{{ clock(row.scheduled) }}</span>
-            <span v-else class="text-body-small muted">{{ when(row.expected ?? row.scheduled) }}</span>
+            <span v-else class="countdown text-body-small">{{ when(row.expected ?? row.scheduled) }}</span>
           </span>
           <span class="dep-main">
             <span class="dest ellipsis">{{ mode === 'arr' ? 'z: ' : '' }}{{ mode === 'dep' ? row.destination : row.origin }}</span>
             <span v-if="row.via.length" class="text-body-small muted ellipsis">przez {{ row.via.join(', ') }}</span>
             <span class="d-flex align-center flex-wrap ga-2">
               <RouteBadge :route="row.route" :bus="row.isBus" />
-              <span class="text-label-medium text-primary">KW {{ row.number }}</span>
+              <span class="text-label-medium number">KW {{ row.number }}</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
             </span>
           </span>
@@ -206,38 +208,50 @@ const when = (iso: string) => {
         </button>
         <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" :text="pinned ? 'W wybranym czasie i do rana następnego dnia nie ma tu żadnego kursu KW.' : 'Z tej stacji nie odjeżdża dziś ani jutro rano żaden pociąg KW.'" />
       </template>
-    </v-card>
+    </div>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>
     <BtkHint :stations="[station?.name ?? board?.station.name]" context="board" class="mt-4" />
   </div>
 </template>
 
 <style scoped>
-.board-head { display: grid; gap: 16px; padding: 8px 0 16px; }
-.row1 { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
-.station-pick { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.station-pick > :first-child { flex: 1 1 auto; min-width: 0; }
-.fav-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.station-pick { display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; align-items: center; }
+.station-field :deep(.v-field) { background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); }
+.station-field :deep(input) { font-size: 17px; font-weight: 700; }
+.star-btn {
+  display: grid; place-items: center; height: 56px; border: 0; border-radius: var(--kw-r-m); cursor: pointer;
+  background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); color: rgb(var(--v-theme-on-band));
+}
+.star-btn.on { color: #FFD45C; }
+.star-btn:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 22%, transparent); }
+.star-btn:focus-visible { outline: 3px solid rgb(var(--v-theme-brand-red)); outline-offset: 2px; }
+.star-btn:disabled { opacity: .5; cursor: default; }
+
+.board-page { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); padding-top: 0; }
+.board-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .when-fields { display: flex; flex: 1 1 320px; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 /* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
-.when-fields :deep(.f-date) { flex: 0 1 230px; min-width: 190px; }
+.when-fields :deep(.f-date) { flex: 0 1 220px; min-width: 180px; }
 .when-fields :deep(.f-time) { flex: 0 1 140px; min-width: 120px; }
+.when-fields :deep(.v-field--variant-solo-filled) { background: rgb(var(--v-theme-surface)); }
+.state-line { padding: 0 4px; }
+
 .board { overflow: hidden; position: relative; }
-.dep { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 16px; align-items: center; width: 100%; padding: 14px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+.dep { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 14px; align-items: center; width: 100%; padding: 12px 14px 12px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .dep + .dep { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
 .dep:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 6%, transparent); }
-.dep:focus-visible { outline: 3px solid rgb(var(--v-theme-secondary)); outline-offset: -3px; }
-.dep-time { display: grid; }
-.dep-time .t { font-size: 22px; line-height: 28px; }
-.dep-main { display: grid; gap: 4px; min-width: 0; }
-.dest { font-size: 16px; line-height: 24px; font-weight: 500; }
-.platform { display: grid; justify-items: center; min-width: 52px; padding: 4px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-highest)); }
-.platform strong { font-size: 18px; line-height: 22px; font-weight: 500; }
+.dep:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: -3px; }
+.dep-time { display: grid; gap: 1px; }
+.dep-time .t { font-size: 22px; line-height: 26px; font-weight: 800; }
+.dep-main { display: grid; gap: 3px; min-width: 0; }
+.dest { font-size: 16px; line-height: 22px; font-weight: 700; }
+.number { color: rgb(var(--v-theme-on-surface-variant)); font-weight: 700; }
+.platform { display: grid; justify-items: center; min-width: 56px; padding: 6px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); }
+.platform strong { font-size: 20px; line-height: 24px; font-weight: 800; }
 .platform small { font-size: 11px; line-height: 14px; color: rgb(var(--v-theme-on-surface-variant)); white-space: nowrap; }
 .cancelled .t, .cancelled .dest { text-decoration: line-through; color: rgb(var(--v-theme-on-surface-variant)); }
 @media (max-width: 839px) {
-  .row1 { grid-template-columns: minmax(0, 1fr); }
-  .row1 .v-chip { justify-self: start; }
+  .board-head { align-items: stretch; }
   .when-fields { justify-content: flex-start; }
   .when-fields :deep(.f-date), .when-fields :deep(.f-time) { flex: 1 1 calc(50% - 4px); min-width: 0; }
   .dep { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; padding: 12px; }

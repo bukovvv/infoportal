@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { ConnectionsResult } from '@/api/types'
+import BandHero from '@/components/BandHero.vue'
 import ConnectionCard from '@/components/ConnectionCard.vue'
 import DateField from '@/components/DateField.vue'
 import FavoriteStations from '@/components/FavoriteStations.vue'
@@ -103,73 +104,69 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 </script>
 
 <template>
-  <div class="page">
-    <div class="start">
-      <StatusBanner class="full" />
+  <BandHero overlap>
+    <div class="hero">
+      <h1 id="search-title" class="hero-title">Dokąd jedziesz?</h1>
+      <p class="hero-sub">Rozkład Kolei Wielkopolskich z opóźnieniami na żywo.</p>
+    </div>
+  </BandHero>
 
-      <div class="col">
-        <form id="szukaj" class="search" aria-labelledby="search-title" @submit.prevent="search()">
-          <div class="d-flex align-end justify-space-between flex-wrap ga-3">
-            <h1 id="search-title" class="text-headline-small">Dokąd jedziesz?</h1>
-          </div>
-          <div class="route-fields">
-            <div class="stack">
-              <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details />
-              <StationField v-model="to" label="Dokąd" icon="location_on" hide-details />
-            </div>
-            <v-btn icon="swap_vert" variant="outlined" aria-label="Zamień stacje" @click="swap" />
-          </div>
-          <div class="search-row">
-            <DateField v-model="date" label="Data" :min="range.min" :max="range.max" class="f-date" />
-            <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" class="f-time" />
-          </div>
-          <div class="search-row">
-            <v-btn-toggle v-model="timeMode" mandatory variant="outlined" divided density="comfortable" aria-label="Godzina oznacza">
-              <v-btn value="dep" :prepend-icon="arriveBy ? undefined : 'check'">Odjazd</v-btn>
-              <v-btn value="arr" :prepend-icon="arriveBy ? 'check' : undefined">Przyjazd</v-btn>
-            </v-btn-toggle>
-            <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
-              Tylko bezpośrednie
-            </v-chip>
-            <v-btn type="submit" size="large" prepend-icon="search" :loading="searching" class="search-btn">Szukaj połączeń</v-btn>
-          </div>
-          <v-alert v-if="error" color="error-container" icon="error" density="compact">{{ error }}</v-alert>
-        </form>
-
-        <section ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
-          <template v-if="result">
-            <div class="d-flex align-baseline justify-space-between flex-wrap ga-2 px-1">
-              <h2 id="results-title" class="text-title-medium">{{ result.from.name }} → {{ result.to.name }}</h2>
-              <span class="text-body-small muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} {{ result.arriveBy ? 'z przyjazdem do' : 'od' }} {{ result.time }}</span>
-            </div>
-            <template v-for="(c, i) in result.connections" :key="c.legs.map((l) => l.key).join('+')">
-              <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
-              <ConnectionCard :connection="c" />
-            </template>
-            <v-empty-state
-              v-if="!result.connections.length"
-              icon="search_off"
-              title="Brak połączeń KW w ciągu 12 godzin"
-              :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
-            />
-            <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="justify-self-start" @click="more">
-              {{ result.arriveBy ? 'Wcześniejsze połączenia' : 'Późniejsze połączenia' }}
-            </v-btn>
-            <BtkHint
-              v-if="result.connections.length"
-              :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
-              context="trip"
-            />
-          </template>
-        </section>
+  <div class="page start">
+    <form id="szukaj" class="search card band-lift" aria-labelledby="search-title" @submit.prevent="search()">
+      <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat class="f-from" />
+      <v-btn icon="swap_vert" variant="flat" color="surface-container" class="f-swap" aria-label="Zamień stacje" @click="swap" />
+      <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat class="f-to" />
+      <DateField v-model="date" label="Data" :min="range.min" :max="range.max" variant="solo-filled" flat class="f-date" />
+      <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" variant="solo-filled" flat class="f-time" />
+      <div class="f-opts">
+        <v-btn-toggle v-model="timeMode" mandatory variant="outlined" divided density="comfortable" aria-label="Godzina oznacza">
+          <v-btn value="dep" :prepend-icon="arriveBy ? undefined : 'check'">Odjazd</v-btn>
+          <v-btn value="arr" :prepend-icon="arriveBy ? 'check' : undefined">Przyjazd</v-btn>
+        </v-btn-toggle>
+        <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
+          Tylko bezpośrednie
+        </v-chip>
       </div>
+      <v-btn type="submit" size="x-large" prepend-icon="search" :loading="searching" class="f-btn">Szukaj połączeń</v-btn>
+      <v-alert v-if="error" color="error-container" icon="error" density="compact" class="f-error">{{ error }}</v-alert>
+    </form>
 
-      <div class="col">
+    <StatusBanner />
+
+    <div class="cols" :class="{ 'has-result': !!result }">
+      <section v-if="result" ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
+        <div class="results-head">
+          <h2 id="results-title" class="text-title-large">{{ result.from.name }} → {{ result.to.name }}</h2>
+          <span class="text-body-medium muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} {{ result.arriveBy ? 'z przyjazdem do' : 'od' }} {{ result.time }}</span>
+        </div>
+        <template v-for="(c, i) in result.connections" :key="c.legs.map((l) => l.key).join('+')">
+          <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
+          <ConnectionCard :connection="c" :now="now" :highlight="i === 0" />
+        </template>
+        <v-empty-state
+          v-if="!result.connections.length"
+          icon="search_off"
+          title="Brak połączeń KW w ciągu 12 godzin"
+          :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
+          class="card"
+        />
+        <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="more" @click="more">
+          {{ result.arriveBy ? 'Wcześniejsze połączenia' : 'Późniejsze połączenia' }}
+        </v-btn>
+        <BtkHint
+          v-if="result.connections.length"
+          :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
+          context="trip"
+        />
+      </section>
+      <div v-else ref="resultsEl" class="results-anchor" />
+
+      <div class="aside">
         <section id="moje-podroze" aria-labelledby="journeys-title">
           <div class="section-head"><h2 id="journeys-title" class="text-title-large">Moje podróże</h2></div>
           <div class="gap-grid">
             <JourneyCard v-for="j in journeys.sorted" :key="j.id" :journey="j" :now="now" />
-            <div v-if="!journeys.list.length" class="empty">
+            <div v-if="!journeys.list.length" class="empty card">
               <span class="empty-ic"><v-icon icon="bookmark" /></span>
               <div class="d-grid ga-1">
                 <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
@@ -185,7 +182,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             <v-btn v-if="favorites.ids.length" variant="text" append-icon="chevron_right" to="/odjazdy">Tablica</v-btn>
           </div>
           <FavoriteStations v-if="favorites.ids.length" :now="now" />
-          <div v-else class="empty">
+          <div v-else class="empty card">
             <span class="empty-ic"><v-icon icon="star" /></span>
             <div class="d-grid ga-1">
               <strong class="text-title-small">Nie masz ulubionych stacji</strong>
@@ -199,17 +196,17 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
             <h2 id="notices-title" class="text-title-large">Komunikaty</h2>
             <v-btn variant="text" append-icon="chevron_right" to="/komunikaty">Wszystkie</v-btn>
           </div>
-          <div v-if="notices.loaded && !notices.list.length" class="empty">
-            <span class="empty-ic"><v-icon icon="check_circle" /></span>
+          <div v-if="notices.loaded && !notices.list.length" class="empty card">
+            <span class="empty-ic ok"><v-icon icon="check_circle" /></span>
             <div class="d-grid ga-1">
               <strong class="text-title-small">Brak aktywnych komunikatów</strong>
               <span class="text-body-medium muted">Ruch odbywa się zgodnie z rozkładem, o ile pojedynczy pociąg nie ma opóźnienia.</span>
             </div>
           </div>
-          <v-card v-else color="surface-container-low">
+          <div v-else class="card notices">
             <NoticeItem v-for="n in notices.list.slice(0, 2)" :key="n.id" :notice="n" compact link />
             <v-skeleton-loader v-if="!notices.loaded" type="list-item-avatar-three-line" color="transparent" />
-          </v-card>
+          </div>
         </section>
 
         <p class="text-body-small muted footnote">
@@ -221,34 +218,62 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 </template>
 
 <style scoped>
-.start { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
-.col { display: grid; gap: 24px; align-content: start; min-width: 0; }
-@media (min-width: 1145px) {
-  .start { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
-  .full { grid-column: 1 / -1; }
+.hero { display: grid; gap: 4px; padding-top: 4px; }
+.hero-title { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.3px; }
+.hero-sub { font-size: 16px; opacity: .85; }
+.start { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); padding-top: 0; }
+
+/* wyszukiwarka: na telefonie pola jedno pod drugim, na komputerze w jednym rzędzie */
+.search {
+  display: grid; gap: 12px; padding: 16px; align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
+  grid-template-areas: 'from from swap' 'to to swap' 'date time time' 'opts opts opts' 'btn btn btn' 'err err err';
 }
-.search { display: grid; gap: 20px; padding: 24px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
-.route-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
-.stack { display: grid; gap: 12px; min-width: 0; }
-.search-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.f-from { grid-area: from; }
+.f-to { grid-area: to; }
+.f-swap { grid-area: swap; justify-self: center; }
 /* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
-.search-row :deep(.f-date) { flex: 3 1 230px; min-width: 190px; }
-.search-row :deep(.f-time) { flex: 2 1 140px; min-width: 120px; }
-.search-btn { margin-left: auto; }
-.results { display: grid; gap: 12px; scroll-margin-top: 80px; }
-.justify-self-start { justify-self: start; }
+.search :deep(.f-date) { grid-area: date; }
+.search :deep(.f-time) { grid-area: time; }
+.f-opts { grid-area: opts; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.f-btn { grid-area: btn; }
+.f-error { grid-area: err; }
+.search :deep(.v-field--variant-solo-filled) { background: rgb(var(--v-theme-surface-container)); }
+@media (min-width: 960px) {
+  .search {
+    padding: 20px; gap: 12px 8px;
+    grid-template-columns: minmax(0, 3fr) 48px minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.4fr) auto;
+    grid-template-areas: 'from swap to date time btn' 'opts opts opts opts opts opts' 'err err err err err err';
+  }
+  .f-swap :deep(.v-icon) { transform: rotate(90deg); }
+  .f-btn { height: 56px !important; margin-left: 4px; }
+}
+
+.cols { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.aside { display: grid; gap: 24px; align-content: start; min-width: 0; }
+/* bez wyników: podróże, ulubione i komunikaty obok siebie */
+@media (min-width: 1145px) {
+  .cols.has-result { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .cols:not(.has-result) .aside { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols:not(.has-result) .footnote { grid-column: 1 / -1; }
+}
+.results { display: grid; gap: 12px; scroll-margin-top: 80px; min-width: 0; }
+.results-anchor { display: none; }
+.results-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 0 4px; }
+.more { justify-self: center; }
 .day-sep { margin-top: 8px; padding: 0 4px; color: rgb(var(--v-theme-primary)); }
 .day-sep::first-letter { text-transform: uppercase; }
-.empty { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
+.notices { overflow: hidden; }
+.empty { display: flex; align-items: flex-start; gap: 16px; padding: 16px; }
 .empty-ic {
   display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-m);
-  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
+  background: rgb(var(--v-theme-surface-container-high)); color: rgb(var(--v-theme-on-surface-variant));
 }
+.empty-ic.ok { background: rgb(var(--v-theme-success-container)); color: rgb(var(--v-theme-on-success-container)); }
 .d-grid { display: grid; }
 .footnote { max-width: 70ch; padding: 0 4px; }
 @media (max-width: 839px) {
-  .search { padding: 20px 16px; border-radius: var(--kw-r-l); }
-  .search-row :deep(.f-date), .search-row :deep(.f-time) { flex: 1 1 calc(50% - 6px); min-width: 0; }
-  .search-btn { width: 100%; margin: 0; }
+  .hero-title { font-size: 28px; line-height: 34px; }
+  .hero-sub { display: none; }
 }
 </style>
