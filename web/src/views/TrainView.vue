@@ -11,7 +11,7 @@ const number = computed(() => route.params.number as string)
 const trip = ref<Trip | null>(null)
 function loaded(t: Trip) {
   trip.value = t
-  document.title = `KW ${t.number} ${t.origin} – ${t.destination} · Infoportal KW`
+  document.title = `KW ${t.number} ${t.origin} – ${t.destination} · Infoportal`
 }
 </script>
 

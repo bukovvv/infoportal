@@ -1,4 +1,6 @@
-# Infoportal KW — kontekst dla Claude
+# Infoportal — kontekst dla Claude
+
+Nazwa serwisu: **„Infoportal”** (nie „Infoportal KW” — zmiana na życzenie użytkownika 2026-10-14). Obejmuje pociągi Kolei Wielkopolskich, w przyszłości także POLREGIO na terenie Wielkopolski. Identyfikatory w kodzie (`KwInfo`, `kw_*`) zostają.
 
 Nieoficjalny serwis pasażerski Kolei Wielkopolskich. **Działa produkcyjnie: https://infoportal.abuczek.pl** (od 2026-10-02).
 Stack: Vue 3 + Vuetify 4 (blueprint MD3) + Pinia + MapLibre (`web/`), PHP 8.1+ bez frameworka + SQLite (`server/`).

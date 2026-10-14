@@ -1,6 +1,8 @@
-## 🚆 Infoportal KW — wiesz, zanim wyjdziesz z domu.
+## 🚆 Infoportal — wiesz, zanim wyjdziesz z domu.
 
-Hej! Chcemy pokazać Wam **Infoportal KW**: nieoficjalny, niekomercyjny serwis dla pasażerów Kolei Wielkopolskich. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
+Hej! Chcemy pokazać Wam **Infoportal**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
+
+Na start: pociągi **Kolei Wielkopolskich**. W przyszłości dołączy też **POLREGIO** na terenie Wielkopolski.
 
 **Co potrafi:**
 🔎 **Wyszukiwarka połączeń**: do 2 przesiadek, „przyjazd do” wybranej godziny, wszystkie stacje po drodze
@@ -13,6 +15,6 @@ Hej! Chcemy pokazać Wam **Infoportal KW**: nieoficjalny, niekomercyjny serwis d
 👉 **https://infoportal.abuczek.pl**
 
 Rozkład: GTFS mkuran.pl (PKP PLK) · opóźnienia: PKP PLK.
-Serwis nie jest związany z Kolejami Wielkopolskimi.
+Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami.
 
 Uwagi, błędy, pomysły? Piszcie tutaj! 💬

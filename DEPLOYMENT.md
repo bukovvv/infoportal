@@ -1,4 +1,4 @@
-# Wdrożenie Infoportalu KW (`infoportal.abuczek.pl`)
+# Wdrożenie Infoportalu (`infoportal.abuczek.pl`)
 
 ## Wymagania hostingu
 

@@ -13,7 +13,7 @@ const ui = useUi()
 const notice = computed(() => notices.list.find((n) => String(n.id) === route.params.id) ?? null)
 
 watchEffect(() => {
-  if (notice.value) document.title = `${notice.value.title} · Infoportal KW`
+  if (notice.value) document.title = `${notice.value.title} · Infoportal`
 })
 
 async function share() {

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <title>Infoportal KW</title>
+  <title>Infoportal</title>
   <rect width="512" height="512" rx="120" fill="#B3122D"/>
   <path d="M256 84c-82 0-128 40-128 112v152c0 22 18 40 40 40h176c22 0 40-18 40-40V196c0-72-46-112-128-112z" fill="#fff"/>
   <rect x="164" y="132" width="184" height="128" rx="44" fill="#B3122D"/>

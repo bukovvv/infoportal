@@ -40,13 +40,14 @@ const privacy = [
     <header class="hero">
       <img src="/favicon.svg" width="88" height="88" alt="" class="logo">
       <div class="d-grid ga-2">
-        <h1 class="text-headline-medium">Infoportal KW</h1>
+        <h1 class="text-headline-medium">Infoportal</h1>
         <p class="motto text-title-large">Wiesz, zanim wyjdziesz z domu.</p>
       </div>
     </header>
 
     <p class="text-body-large lead">
-      Infoportal KW to nieoficjalny, niekomercyjny serwis dla pasażerów Kolei Wielkopolskich. Zbiera w jednym miejscu to, czego szukasz przed
+      Infoportal to nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Na razie obejmuje pociągi Kolei Wielkopolskich,
+      a w przyszłości także POLREGIO na terenie Wielkopolski. Zbiera w jednym miejscu to, czego szukasz przed
       podróżą: połączenia z przesiadkami, odjazdy ze stacji, opóźnienia prosto z systemu PKP PLK, mapę pociągów i komunikaty o utrudnieniach.
       Bez reklam i bez zakładania konta: otwierasz i jedziesz.
     </p>
@@ -94,7 +95,7 @@ const privacy = [
     </section>
 
     <v-alert color="surface-container-high" icon="info">
-      Serwis nie jest związany z Kolejami Wielkopolskimi. Rozkład i opóźnienia mogą się różnić od rzeczywistości. W razie wątpliwości sprawdź
+      Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami. Rozkład i opóźnienia mogą się różnić od rzeczywistości. W razie wątpliwości sprawdź
       na <a href="https://koleje-wielkopolskie.com.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">stronie przewoźnika</a>,
       a bilety kup na <a href="https://wielkopolskiebilety.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">wielkopolskiebilety.pl</a>.
     </v-alert>

@@ -1,7 +1,7 @@
 {
-  "name": "Infoportal KW",
-  "short_name": "Infoportal KW",
-  "description": "Rozkład, odjazdy, mapa pociągów i komunikaty Kolei Wielkopolskich. Nieoficjalny serwis pasażerski.",
+  "name": "Infoportal",
+  "short_name": "Infoportal",
+  "description": "Rozkład, odjazdy, mapa pociągów i komunikaty kolei w Wielkopolsce (Koleje Wielkopolskie). Nieoficjalny serwis pasażerski.",
   "lang": "pl",
   "start_url": "/",
   "display": "standalone",

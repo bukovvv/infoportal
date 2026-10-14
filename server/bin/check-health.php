@@ -34,7 +34,7 @@ $send = static function (string $subject, string $body) use ($to, $dryRun): void
     }
     $from = Config::path('alert_from');
     $headers = implode("\r\n", [
-        "From: Infoportal KW <$from>",
+        "From: Infoportal <$from>",
         'Content-Type: text/plain; charset=UTF-8',
         'Content-Transfer-Encoding: 8bit',
     ]);
@@ -48,7 +48,7 @@ $site = rtrim((string) Config::get('site_url'), '/');
 
 try {
     if (in_array('--test', $argv, true)) {
-        $send('Infoportal KW: próbny alert', "To jest próbna wiadomość z serwera Infoportalu KW.\nAlerty o stanie danych działają.\n\n$site/api/status");
+        $send('Infoportal: próbny alert', "To jest próbna wiadomość z serwera Infoportalu.\nAlerty o stanie danych działają.\n\n$site/api/status");
         echo "Wysłano próbny e-mail.\n";
         exit(0);
     }
@@ -65,7 +65,7 @@ try {
     if ($level === 'ok') {
         if ($state['alertedLevel'] !== null) {
             $minutes = (int) round(($now - (int) $state['since']) / 60);
-            $send('Infoportal KW: dane wróciły do normy', "Stan danych znów jest prawidłowy (problem trwał ok. $minutes min).\n\n$site/api/status");
+            $send('Infoportal: dane wróciły do normy', "Stan danych znów jest prawidłowy (problem trwał ok. $minutes min).\n\n$site/api/status");
         }
         $state = ['since' => null, 'alertedLevel' => null, 'alertedAt' => null];
     } else {
@@ -76,7 +76,7 @@ try {
             $label = $level === 'down' ? 'awaria' : 'problem z danymi';
             $since = date('H:i', (int) $state['since']);
             $send(
-                "Infoportal KW: $label",
+                "Infoportal: $label",
                 "Od {$since} — {$label}:\n" . implode("\n", $texts)
                 . "\n\nPortal pokazuje wtedy sam rozkład. Szczegóły: $site/admin/stan\n"
                 . "Częsta przyczyna: feed GTFS-RT mkuran.pl stoi — wtedy wystarczy poczekać.\n"
