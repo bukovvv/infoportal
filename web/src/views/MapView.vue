@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { type GeoJSONSource, type LngLatBoundsLike, Map as MlMap, setWorkerUrl } from 'maplibre-gl'
+import { type GeoJSONSource, type LngLatBoundsLike, Map as MlMap, Marker, setWorkerUrl } from 'maplibre-gl'
 import maplibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -100,16 +100,89 @@ function refreshRoute() {
   if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.35 : 0.9)
 }
 
-function trainsGeoJson(): GeoJSON.FeatureCollection {
-  const ids = new Set(visible.value.map(keyOf))
-  return {
-    type: 'FeatureCollection',
-    features: live.trains.filter((t) => ids.has(keyOf(t))).map((t) => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [t.lon, t.lat] },
-      properties: { key: keyOf(t), number: t.number.split('/')[0], state: stateOf(t), selected: keyOf(t) === selectedKey.value, dim: !!selectedKey.value && keyOf(t) !== selectedKey.value, bus: t.isBus },
-    })),
+/**
+ * Pociągi jako pastylki HTML: kółko w kolorze stanu ze strzałką w kierunku jazdy i numer. Mapa się nie obraca,
+ * więc obrót strzałki = kierunek względem północy. Bez kierunku (postój, brak kształtu trasy) — kropka zamiast strzałki.
+ */
+// marker: element pozycjonowany przez MapLibre (transform — bez animacji!), el: pastylka w środku (wygląd, powiększenie)
+const markers = new Map<string, { marker: Marker; el: HTMLButtonElement }>()
+const ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 20l-7-3.6L5 20z"/></svg>'
+const stateLabel = (t: LiveTrain) => (t.delay === null ? 'bez danych na żywo' : t.delay >= 2 ? `opóźnienie ${t.delay} min` : 'planowo')
+
+function pill(key: string): HTMLButtonElement {
+  const el = document.createElement('button')
+  el.type = 'button'
+  el.className = 'train-pill'
+  el.innerHTML = `<span class="dir">${ARROW}</span><span class="no"></span>`
+  el.addEventListener('click', (e) => {
+    e.stopPropagation()
+    void select(key)
+  })
+  return el
+}
+
+function syncTrains() {
+  if (!map) return
+  const shown = new Set(visible.value.map(keyOf))
+  for (const [key, m] of markers) {
+    if (!shown.has(key)) {
+      m.marker.remove()
+      markers.delete(key)
+    }
   }
+  for (const t of live.trains) {
+    const key = keyOf(t)
+    if (!shown.has(key)) continue
+    let m = markers.get(key)
+    if (!m) {
+      const el = pill(key)
+      const holder = document.createElement('div')
+      holder.className = 'train-marker'
+      holder.appendChild(el)
+      m = { el, marker: new Marker({ element: holder, anchor: 'center' }).setLngLat([t.lon, t.lat]).addTo(map) }
+      markers.set(key, m)
+    } else {
+      m.marker.setLngLat([t.lon, t.lat])
+    }
+    const selected = key === selectedKey.value
+    // sam numer (bez nazwy kursu i drugiego numeru po „/”)
+    const number = t.number.match(/^\d+/)?.[0] ?? t.number.split('/')[0]
+    m.el.dataset.state = stateOf(t)
+    m.el.classList.toggle('selected', selected)
+    m.el.classList.toggle('dim', !!selectedKey.value && !selected)
+    m.el.classList.toggle('still', t.bearing === null || t.dwelling)
+    m.el.style.setProperty('--bearing', `${t.bearing ?? 0}deg`)
+    m.el.querySelector('.no')!.textContent = t.isBus ? `ZKA ${number}` : number
+    m.el.setAttribute('aria-label', `KW ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
+    m.el.dataset.priority = selected ? '3' : t.delay !== null && t.delay >= 2 ? '2' : '1'
+  }
+  layoutPills()
+}
+
+/**
+ * Jak etykiety na mapie: pastylka, która zasłoniłaby już ułożoną, chowa numer (zostaje kółko ze strzałką).
+ * Kolejność: wybrany pociąg, opóźnione, reszta. Liczone przy każdym ruchu mapy (raz na klatkę).
+ */
+let layoutFrame = 0
+function layoutPills() {
+  if (!map || layoutFrame) return
+  layoutFrame = requestAnimationFrame(() => {
+    layoutFrame = 0
+    if (!map) return
+    const placed: [number, number, number, number][] = []
+    const items = [...markers.values()]
+      .map((m) => ({ m, p: map!.project(m.marker.getLngLat()), priority: Number(m.el.dataset.priority ?? 1) }))
+      .sort((a, b) => b.priority - a.priority)
+    for (const { m, p } of items) {
+      const width = 36 + 8 * (m.el.querySelector('.no')?.textContent?.length ?? 5)
+      const box: [number, number, number, number] = [p.x - width / 2 - 2, p.y - 14, p.x + width / 2 + 2, p.y + 14]
+      const hit = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])
+      m.el.classList.toggle('compact', hit)
+      // kółka pod pełnymi pastylkami, wybrany pociąg na wierzchu
+      m.marker.getElement().style.zIndex = hit ? '0' : m.el.dataset.priority ?? '1'
+      if (!hit) placed.push(box)
+    }
+  })
 }
 
 function stationsGeoJson(): GeoJSON.FeatureCollection {
@@ -120,13 +193,12 @@ function stationsGeoJson(): GeoJSON.FeatureCollection {
 }
 
 function addOverlays() {
-  if (!map || map.getSource('kw-trains')) return
+  if (!map || map.getSource('kw-network')) return
   const c = colors()
   map.addSource('kw-network', { type: 'geojson', data: network.value ?? empty })
   map.addSource('kw-route', { type: 'geojson', data: routeGeoJson() })
   map.addSource('kw-route-stops', { type: 'geojson', data: routeStopsGeoJson() })
   map.addSource('kw-stations', { type: 'geojson', data: stationsGeoJson() })
-  map.addSource('kw-trains', { type: 'geojson', data: trainsGeoJson() })
   map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['!', ['get', 'bus']], layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 11, 3, 14, 5] } })
   map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -151,18 +223,6 @@ function addOverlays() {
   map.addLayer({ id: 'kw-route-labels', type: 'symbol', source: 'kw-route-stops', minzoom: 8,
     layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0.9, 0], 'text-anchor': 'left', 'text-optional': true },
     paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2 } })
-  const stateColor = ['match', ['get', 'state'], 'delay', c.delay, 'est', c.est, c.ontime] as unknown as string
-  const dimmed = ['case', ['get', 'dim'], 0.35, 1] as unknown as number
-  map.addLayer({ id: 'kw-trains-halo', type: 'circle', source: 'kw-trains', filter: ['get', 'selected'], paint: { 'circle-radius': 18, 'circle-color': c.primary, 'circle-opacity': 0.18 } })
-  map.addLayer({ id: 'kw-trains', type: 'circle', source: 'kw-trains',
-    paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, ['case', ['get', 'selected'], 7, 5], 12, ['case', ['get', 'selected'], 10, 8]],
-      'circle-color': stateColor, 'circle-stroke-color': c.surface, 'circle-stroke-width': 2.5, 'circle-opacity': dimmed, 'circle-stroke-opacity': dimmed,
-    } })
-  map.addLayer({ id: 'kw-train-labels', type: 'symbol', source: 'kw-trains',
-    filter: ['any', ['get', 'selected'], ['>=', ['zoom'], 10]],
-    layout: { 'text-field': ['get', 'number'], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-offset': [0, -1.5], 'text-allow-overlap': false },
-    paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2, 'text-opacity': dimmed } })
 }
 
 /** Marginesy na panel listy i arkusz pociągu, zmniejszane proporcjonalnie w małych oknach. */
@@ -232,9 +292,7 @@ function locate() {
   )
 }
 
-watch([() => live.trains, filter, query, selectedKey], () => {
-  ;(map?.getSource('kw-trains') as GeoJSONSource | undefined)?.setData(trainsGeoJson())
-})
+watch([() => live.trains, filter, query, selectedKey], syncTrains)
 // pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
 watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
 watch(() => stations.list, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
@@ -268,13 +326,9 @@ onMounted(async () => {
     map = m
     m.touchZoomRotate.disableRotation()
     m.on('style.load', addOverlays)
-    m.on('click', 'kw-trains', (e) => {
-      const key = e.features?.[0]?.properties?.key
-      if (key) void select(String(key))
-    })
-    m.on('mouseenter', 'kw-trains', () => { m.getCanvas().style.cursor = 'pointer' })
-    m.on('mouseleave', 'kw-trains', () => { m.getCanvas().style.cursor = '' })
+    m.on('move', layoutPills)
     m.once('load', () => {
+      syncTrains()
       if (selectedKey.value) void select(selectedKey.value)
       else fitNetwork()
     })
@@ -284,6 +338,8 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => {
   if (ui.sheet?.docked) ui.closeTrain()
+  markers.clear()
+  cancelAnimationFrame(layoutFrame)
   map?.remove()
   map = null
 })
@@ -308,7 +364,7 @@ const filters = [
 
     <div class="switch"><MapSwitch /></div>
     <div class="legend" aria-hidden="true">
-      <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span>
+      <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span><span class="lg-dir"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 20l-7-3.6L5 20z" /></svg>kierunek jazdy</span>
     </div>
     <div class="controls">
       <v-btn icon="add" color="surface-container-high" size="40" elevation="2" aria-label="Przybliż" @click="zoom(1)" />
@@ -384,6 +440,31 @@ const filters = [
 .lg.e { background: v-bind('legend.est'); }
 :deep(.chip-on) { background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); border-color: transparent; }
 :deep(.maplibregl-ctrl-attrib) { font-size: 11px; }
+.lg-dir svg { width: 12px; height: 12px; fill: currentColor; transform: rotate(45deg); }
+
+/* pastylki pociągów (znaczniki HTML MapLibre, tworzone w syncTrains) */
+.map :deep(.train-pill) {
+  --c: v-bind('legend.ontime');
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 3px; border: 0; border-radius: 12px; cursor: pointer;
+  background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); font: 800 12px/1 var(--kw-font); font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 1.5px var(--c), 0 1px 3px rgb(0 0 0 / .35); transition: opacity .15s, transform .15s;
+}
+.map :deep(.train-pill[data-state='delay']) { --c: v-bind('legend.late'); }
+.map :deep(.train-pill[data-state='est']) { --c: v-bind('legend.est'); }
+.map :deep(.train-pill .dir) { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--c); }
+.map :deep(.train-pill .dir svg) { width: 13px; height: 13px; fill: #fff; transform: rotate(var(--bearing)); }
+.map :deep(.train-pill.still .dir svg) { display: none; }
+.map :deep(.train-pill.still .dir::after) { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.map :deep(.train-pill:hover) { transform: scale(1.08); }
+.map :deep(.train-pill:focus-visible) { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+.map :deep(.train-pill.selected) { transform: scale(1.15); box-shadow: 0 0 0 2.5px rgb(var(--v-theme-primary)), 0 2px 8px rgb(0 0 0 / .4); }
+.map :deep(.train-pill.dim) { opacity: .4; }
+/* zasłonięta przez inną (layoutPills): samo kółko ze strzałką, numer po najechaniu */
+.map :deep(.train-marker:hover), .map :deep(.train-marker:focus-within) { z-index: 10 !important; }
+.map :deep(.train-pill.compact) { padding: 0; gap: 0; height: 18px; border-radius: 9px; box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface)), 0 1px 3px rgb(0 0 0 / .35); }
+.map :deep(.train-pill.compact .no) { display: none; }
+.map :deep(.train-pill.compact:hover), .map :deep(.train-pill.compact:focus-visible) { height: 24px; padding-right: 8px; gap: 4px; border-radius: 12px; }
+.map :deep(.train-pill.compact:hover .no), .map :deep(.train-pill.compact:focus-visible .no) { display: inline; }
 .handle { display: grid; place-items: center; width: 100%; height: 24px; border: 0; background: none; cursor: pointer; }
 .handle::before { content: ''; width: 32px; height: 4px; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-surface-variant)) 40%, transparent); }
 @media (max-width: 839px) {

@@ -1,35 +1,25 @@
 <script setup lang="ts">
-// O nas: czym jest zanimwyjdziesz.pl, co w nim jest, skąd dane i prywatność.
-import { useTheme } from 'vuetify'
-import logoDark from '@/assets/logo-na-ciemne.svg'
-import logoLight from '@/assets/logo-na-jasne.svg'
+// O nas jak ekran „O aplikacji”: logo na grafitowym pasku, wsparcie, lista skrótów; źródła danych i prywatność rozwijane.
+import BandHero from '@/components/BandHero.vue'
+import logoOnBand from '@/assets/logo-na-ciemne.svg'
 
-const theme = useTheme()
+const SUPPORT_URL = 'https://buycoffee.to/zanimwyjdziesz'
 
-const features = [
-  { icon: 'search', title: 'Wyszukiwarka połączeń', text: 'Do dwóch przesiadek, „przyjazd do” wybranej godziny, połączenia po północy i wszystkie stacje po drodze.' },
-  { icon: 'departure_board', title: 'Odjazdy i przyjazdy', text: 'Tablica każdej stacji KW z opóźnieniami i peronami. Ulubione stacje masz zawsze pod ręką.' },
-  { icon: 'map', title: 'Mapa i schemat', text: 'Gdzie są teraz pociągi i jak biegną linie przewoźnika w Wielkopolsce.' },
-  { icon: 'bookmark', title: 'Moje podróże', text: 'Obserwuj połączenie, a pokażemy odliczanie, opóźnienia i komunikaty dla Twojej trasy. Możesz też dostać powiadomienie o opóźnieniu, dodać podróż do kalendarza albo ją udostępnić.' },
-  { icon: 'commute', title: 'Bus-Tramwaj-Kolej', text: 'Kalkulator i zasady wspólnego biletu KW, POLREGIO i ZTM Poznań.' },
+const links = [
+  { icon: 'search', title: 'Wyszukiwarka połączeń', to: { name: 'start', hash: '#szukaj' } },
+  { icon: 'departure_board', title: 'Odjazdy i przyjazdy', to: '/odjazdy' },
+  { icon: 'map', title: 'Mapa pociągów', to: '/mapa' },
+  { icon: 'commute', title: 'Bilet Bus-Tramwaj-Kolej', to: '/bus-tramwaj-kolej' },
 ]
 
 /** Opis źródła jako fragmenty: tekst albo link [etykieta, adres]. */
 type Part = string | [string, string]
-const sources: { icon: string; title: string; parts: Part[] }[] = [
-  {
-    icon: 'event',
-    title: 'Rozkład jazdy',
-    parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy.'],
-  },
-  { icon: 'schedule', title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
-  { icon: 'route', title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
-  {
-    icon: 'map',
-    title: 'Mapa',
-    parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'],
-  },
-  { icon: 'confirmation_number', title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] },
+const sources: { title: string; parts: Part[] }[] = [
+  { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy.'] },
+  { title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
+  { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
+  { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
+  { title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] },
 ]
 
 const privacy = [
@@ -42,89 +32,106 @@ const privacy = [
 </script>
 
 <template>
+  <BandHero narrow>
+    <div class="hero">
+      <h1 class="logo-h"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" class="logo"></h1>
+      <p class="motto">Już wiesz, jak pojedziesz.</p>
+      <p class="intro">Nieoficjalny serwis dla pasażerów kolei w Wielkopolsce. Bez reklam i bez konta.</p>
+    </div>
+  </BandHero>
+
   <div class="page-narrow about">
-    <header class="hero">
-      <h1 class="logo-h"><img :src="theme.current.value.dark ? logoDark : logoLight" alt="zanimwyjdziesz.pl" class="logo"></h1>
-      <p class="motto text-title-large">Już wiesz, jak pojedziesz.</p>
-    </header>
-
-    <p class="text-body-large lead">
-      zanimwyjdziesz.pl to nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Na razie obejmuje pociągi Kolei Wielkopolskich,
-      a w przyszłości także POLREGIO na terenie Wielkopolski. Zbiera w jednym miejscu to, czego szukasz przed
-      podróżą: połączenia z przesiadkami, odjazdy ze stacji, opóźnienia prosto z systemu PKP PLK, mapę pociągów i komunikaty o utrudnieniach.
-      Bez reklam i bez zakładania konta: otwierasz i jedziesz.
-    </p>
-
-    <section aria-labelledby="features-title">
-      <h2 id="features-title" class="text-title-large section-title">Co tu znajdziesz</h2>
-      <ul class="tiles">
-        <li v-for="f in features" :key="f.title">
-          <span class="item-ic"><v-icon :icon="f.icon" /></span>
-          <span class="d-grid ga-1">
-            <strong class="text-title-small">{{ f.title }}</strong>
-            <span class="text-body-medium muted">{{ f.text }}</span>
-          </span>
-        </li>
-      </ul>
+    <section class="support card" aria-labelledby="support-title">
+      <span class="support-ic"><v-icon icon="coffee" size="26" /></span>
+      <div class="support-text">
+        <h2 id="support-title" class="support-title">Wesprzyj nas</h2>
+        <p class="text-body-medium muted">Wesprzyj nas na buycoffee.to/zanimwyjdziesz. Za każde wsparcie dziękujemy!</p>
+      </div>
+      <v-btn :href="SUPPORT_URL" target="_blank" rel="noopener noreferrer" prepend-icon="favorite" class="support-btn">Postaw kawę</v-btn>
     </section>
 
-    <section aria-labelledby="sources-title">
-      <h2 id="sources-title" class="text-title-large section-title">Skąd dane</h2>
-      <ul class="items">
-        <li v-for="s in sources" :key="s.title">
-          <span class="item-ic"><v-icon :icon="s.icon" /></span>
-          <span class="d-grid ga-1">
-            <strong class="text-title-small">{{ s.title }}</strong>
-            <span class="text-body-medium muted">
-              <template v-for="(part, i) in s.parts" :key="i">
-                <a v-if="Array.isArray(part)" :href="part[1]" target="_blank" rel="noopener noreferrer" class="text-primary">{{ part[0] }}</a>
-                <template v-else>{{ part }}</template>
-              </template>
-            </span>
-          </span>
-        </li>
-      </ul>
-    </section>
+    <nav class="card list" aria-label="Skróty">
+      <router-link v-for="l in links" :key="l.title" :to="l.to" class="row">
+        <span class="row-ic"><v-icon :icon="l.icon" size="22" /></span>
+        <span class="row-title">{{ l.title }}</span>
+        <v-icon icon="chevron_right" class="muted" />
+      </router-link>
+    </nav>
 
-    <section aria-labelledby="privacy-title">
-      <h2 id="privacy-title" class="text-title-large section-title">Prywatność</h2>
-      <v-card color="surface-container-low">
-        <v-card-text>
+    <v-expansion-panels variant="accordion" bg-color="surface-container-low" class="details">
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <span class="row-ic mr-4"><v-icon icon="route" size="22" /></span><span class="row-title">Skąd dane</span>
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
+          <dl class="sources text-body-medium">
+            <template v-for="s in sources" :key="s.title">
+              <dt>{{ s.title }}</dt>
+              <dd class="muted">
+                <template v-for="(part, i) in s.parts" :key="i">
+                  <a v-if="Array.isArray(part)" :href="part[1]" target="_blank" rel="noopener noreferrer" class="text-primary">{{ part[0] }}</a>
+                  <template v-else>{{ part }}</template>
+                </template>
+              </dd>
+            </template>
+          </dl>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+      <v-expansion-panel>
+        <v-expansion-panel-title>
+          <span class="row-ic mr-4"><v-icon icon="shield" size="22" /></span><span class="row-title">Prywatność</span>
+        </v-expansion-panel-title>
+        <v-expansion-panel-text>
           <ul class="privacy text-body-medium">
             <li v-for="p in privacy" :key="p">{{ p }}</li>
           </ul>
-        </v-card-text>
-      </v-card>
-    </section>
+        </v-expansion-panel-text>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
-    <v-alert color="surface-container-high" icon="info">
-      Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami. Rozkład i opóźnienia mogą się różnić od rzeczywistości. W razie wątpliwości sprawdź
-      na <a href="https://koleje-wielkopolskie.com.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">stronie przewoźnika</a>,
-      a bilety kup na <a href="https://wielkopolskiebilety.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">wielkopolskiebilety.pl</a>.
-    </v-alert>
+    <p class="text-body-small muted disclaimer">
+      Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami. Rozkład i opóźnienia mogą się różnić od rzeczywistości.
+      Bilety kupisz na <a href="https://wielkopolskiebilety.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">wielkopolskiebilety.pl</a>.
+    </p>
   </div>
 </template>
 
 <style scoped>
-.about { display: grid; gap: 28px; }
-.d-grid { display: grid; align-content: start; }
-.hero { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 8px; }
-.logo-h { margin: 0; line-height: 0; }
-.logo { display: block; height: 88px; width: auto; max-width: 100%; }
-.motto { color: rgb(var(--v-theme-on-surface-variant)); }
-.lead { max-width: 68ch; }
-.section-title { margin-bottom: 12px; }
-.tiles { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-.tiles li { display: flex; gap: 14px; padding: 16px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-low)); }
-.items { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; }
-.items li { display: flex; gap: 14px; }
-.item-ic {
-  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
-  background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container));
+.hero { display: grid; justify-items: start; gap: 6px; padding: 8px 0 12px; }
+.logo-h { margin: 0 0 8px; line-height: 0; }
+.logo { display: block; height: 72px; width: auto; max-width: 100%; }
+.motto { font-size: 20px; line-height: 26px; font-weight: 800; }
+.intro { font-size: 15px; opacity: .85; }
+
+.about { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); padding-top: 0; }
+.support { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px; }
+.support-ic {
+  flex: none; display: grid; place-items: center; width: 48px; height: 48px; border-radius: var(--kw-r-m);
+  background: rgb(var(--v-theme-primary-container)); color: rgb(var(--v-theme-on-primary-container));
 }
+.support-text { flex: 1 1 220px; display: grid; gap: 2px; }
+.support-title { font-size: 17px; font-weight: 800; }
+
+/* lista jak w ustawieniach aplikacji: ikona, tytuł, strzałka */
+.list { overflow: hidden; }
+.row { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; color: inherit; text-decoration: none; }
+.row + .row { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
+.row:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 6%, transparent); }
+.row:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: -3px; }
+.row-ic {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--kw-r-s);
+  background: rgb(var(--v-theme-surface-container)); color: rgb(var(--v-theme-primary));
+}
+.row-title { flex: 1; font-size: 16px; font-weight: 600; }
+.details :deep(.v-expansion-panel-title) { min-height: 56px; padding: 8px 16px; }
+.sources { display: grid; gap: 2px; margin: 0; }
+.sources dt { font-weight: 700; margin-top: 10px; }
+.sources dt:first-child { margin-top: 0; }
+.sources dd { margin: 0; }
 .privacy { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.disclaimer { padding: 0 4px; max-width: 70ch; }
 @media (max-width: 599px) {
-  .hero { gap: 16px; }
-  .logo { height: 64px; }
+  .logo { height: 60px; }
+  .support-btn { width: 100%; }
 }
 </style>
