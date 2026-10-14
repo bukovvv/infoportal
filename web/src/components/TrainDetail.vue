@@ -130,7 +130,7 @@ defineExpose({ trip })
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else-if="trip.realtime.source === 'gps'">Opóźnienie według pozycji GPS.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
-        Rozkład: PKP PLK, GTFS mkuran.pl.
+        Rozkład: PKP PLK, GTFS mkuran.pl.<template v-if="trip.vehicle"> Pojazd: <a :href="trip.vehicle.url" target="_blank" rel="noopener noreferrer" class="text-primary">vagonWEB.cz</a>.</template>
       </p>
     </template>
   </div>
