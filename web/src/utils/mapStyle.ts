@@ -1,6 +1,7 @@
 import type { StyleSpecification } from 'maplibre-gl'
 
-// Podkład OpenFreeMap (Positron, bez klucza API) przemalowany na tokeny MD3 motywu jasnego i ciemnego.
+// Podkład OpenFreeMap (Positron, bez klucza API) przemalowany na ciepłe neutralne kolory motywu i odchudzony:
+// mapa ma tło dla pociągów, więc bez granic gmin, rzek, drobnych dróg i nazw wsi przy oddaleniu.
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 
 interface Palette {
@@ -24,14 +25,14 @@ interface Palette {
 
 const palettes: Record<'light' | 'dark', Palette> = {
   light: {
-    bg: '#FBF1F0', land: '#F5E8E7', wood: '#EEE6DD', water: '#D6E1E8', road: '#FFFFFF', roadCasing: '#E8D5D3',
-    rail: '#C9B3B1', boundary: '#B9A3A1', label: '#534342', labelMuted: '#857372', halo: '#FBF1F0',
-    network: '#B29C9A', ontime: '#1F8A4C', late: '#E08600', est: '#5E7CA8',
+    bg: '#F4F2F1', land: '#EFEBEA', wood: '#E7E8E0', water: '#D5DEE4', road: '#FFFFFF', roadCasing: '#E3DDDC',
+    rail: '#CBC3C2', boundary: '#ABA1A0', label: '#4A4142', labelMuted: '#7F7475', halo: '#F4F2F1',
+    network: '#8F8383', ontime: '#1F8A4C', late: '#E08600', est: '#5E7CA8',
   },
   dark: {
-    bg: '#1E1515', land: '#241A1A', wood: '#231D18', water: '#17232B', road: '#3A2F2E', roadCasing: '#2C2322',
-    rail: '#5A4948', boundary: '#6A5857', label: '#D8C2C0', labelMuted: '#A08C8B', halo: '#1E1515',
-    network: '#7A6665', ontime: '#6FCF8E', late: '#F5B83D', est: '#8FAEDB',
+    bg: '#151111', land: '#1A1515', wood: '#191915', water: '#111A20', road: '#2D2727', roadCasing: '#221D1D',
+    rail: '#463D3D', boundary: '#5A4F4F', label: '#D6CCCC', labelMuted: '#968A8A', halo: '#151111',
+    network: '#8F8383', ontime: '#6FCF8E', late: '#F5B83D', est: '#8FAEDB',
   },
 }
 
@@ -68,8 +69,15 @@ export async function loadMapStyle(mode: 'light' | 'dark'): Promise<StyleSpecifi
       }
     }
   }
-  // tarcze dróg i nazwy ścieżek tylko zaciemniają mapę kolejową
-  style.layers = style.layers.filter((l) => !/shield|highway-name-path|aeroway/.test(l.id))
+  // poza mapą kolejową: tarcze i nazwy dróg, lotniska, granice gmin i powiatów, rzeki, drogi lokalne i ścieżki, nazwa województwa
+  style.layers = style.layers.filter((l) => !/shield|highway-name|aeroway|airport|boundary_3|boundary_disputed|waterway|water_name_line|highway_path|highway_minor|road_pier|road_area_pier|label_state/.test(l.id))
+  for (const layer of style.layers) {
+    const layout = (layer as { layout?: Record<string, unknown> }).layout
+    // nazwy po polsku (podkład domyślnie bierze angielskie: „Poland”, „Greater Poland Voivodeship”)
+    if (layout?.['text-field'] && layer.id.startsWith('label_')) layout['text-field'] = ['coalesce', ['get', 'name:pl'], ['get', 'name']]
+    // wsie dopiero po przybliżeniu
+    if (layer.id === 'label_village') layer.minzoom = 11
+  }
   return style
 }
 

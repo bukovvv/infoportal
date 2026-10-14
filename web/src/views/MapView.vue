@@ -200,7 +200,7 @@ function addOverlays() {
   map.addSource('kw-route-stops', { type: 'geojson', data: routeStopsGeoJson() })
   map.addSource('kw-stations', { type: 'geojson', data: stationsGeoJson() })
   map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['!', ['get', 'bus']], layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 11, 3, 14, 5] } })
+    paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2, 11, 3.5, 14, 5] } })
   map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.halo, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 7, 12, 11] } })
   map.addLayer({ id: 'kw-route', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -473,7 +473,8 @@ const filters = [
   .panel.expanded { height: 72%; }
   .panel-head { padding-top: 0; }
   .controls { bottom: 148px; }
-  .legend { left: 16px; right: auto; top: 68px; }
+  .legend { left: 16px; right: auto; top: 68px; flex-wrap: nowrap; gap: 10px; padding: 5px 12px; font-size: 11px; }
+  .lg-dir { display: none !important; }
   .switch { left: 50%; }
   .stats strong { font-size: 18px; }
 }
