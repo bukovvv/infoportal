@@ -20,6 +20,7 @@ $router->get('/network', [$api, 'network']);
 $router->get('/live', [$api, 'live']);
 $router->get('/status', [$api, 'status']);
 $router->get('/notices', [$api, 'notices']);
+$router->get('/vehicles/img/{file}', [$api, 'vehicleImage']);
 
 $router->get('/admin/session', [$admin, 'session']);
 $router->post('/admin/login', [$admin, 'login']);

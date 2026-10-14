@@ -91,6 +91,11 @@ if [ -f public_html_v01/storage/infoportal.sqlite ] && [ ! -f server/storage/.le
   "$PHP" server/bin/import-legacy-notices.php public_html_v01/storage/infoportal.sqlite && touch server/storage/.legacy-imported
 fi
 "$PHP" server/bin/refresh-live.php || true
+# pojazdy z vagonWEB: pierwsze pobranie w tle (ok. 15 min), dalej CRON raz na dobę
+if [ ! -f server/storage/vehicles.json ]; then
+  nohup "$PHP" server/bin/fetch-vehicles.php >server/storage/fetch-vehicles.log 2>&1 &
+  echo "   Pojazdy: pierwsze pobranie z vagonWEB uruchomione w tle"
+fi
 echo "$PHP" > server/storage/.php-cli
 
 # CRON: brakujące wpisy (kopia bazy, alerty) dopisywane raz; istniejące zostają nietknięte.
@@ -106,6 +111,7 @@ if grep -q 'refresh-live.php' ~/kw-deploy/crontab.current; then
   }
   cron_add '15 3 * * *' backup-db.php
   cron_add '*/5 * * * *' check-health.php
+  cron_add '45 4 * * *' fetch-vehicles.php
   cmp -s ~/kw-deploy/crontab.current ~/kw-deploy/crontab.new || crontab ~/kw-deploy/crontab.new
 else
   echo "   CRON: brak wpisów Infoportalu — nowych zadań nie dopisano, dodaj ręcznie (DEPLOYMENT.md)"

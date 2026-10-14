@@ -12,9 +12,11 @@ use KwInfo\Gtfs\DayTimetable as D;
 use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Http\ApiException;
+use KwInfo\Http\FileResponse;
 use KwInfo\Http\Response;
 use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
+use KwInfo\Vehicles\VehicleRepository;
 
 final class PublicApi
 {
@@ -320,7 +322,16 @@ final class PublicApi
             'position' => $live,
             'otherLegs' => $legs,
             'notices' => array_map(static fn (array $n): int => $n['id'], $notices),
+            'vehicle' => $trip['isBus'] ? null : (new VehicleRepository())->forNumbers($trip['numbers'] ?: [$trip['number']]),
         ]);
+    }
+
+    /** Rysunek pojazdu z vagonWEB (zapisany przez bin/fetch-vehicles.php). */
+    public function vehicleImage(array $p): FileResponse
+    {
+        $path = VehicleRepository::imagePath($p['file']) ?? throw new ApiException('Nie znaleziono rysunku.', 404);
+
+        return new FileResponse($path, str_ends_with($path, '.png') ? 'image/png' : 'image/gif', 7 * 86400);
     }
 
     /** Sieć linii KW jako GeoJSON do mapy (cache na dysku). */

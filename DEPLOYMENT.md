@@ -84,8 +84,11 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 | `30 3 * * *` | `php /home/UŻYTKOWNIK/infoportal-kw/server/bin/import-gtfs.php > /dev/null 2>&1` |
 | `15 3 * * *` | `php /home/UŻYTKOWNIK/infoportal-kw/server/bin/backup-db.php > /dev/null 2>&1` |
 | `*/5 * * * *` | `php /home/UŻYTKOWNIK/infoportal-kw/server/bin/check-health.php > /dev/null 2>&1` |
+| `45 4 * * *` | `php /home/UŻYTKOWNIK/infoportal-kw/server/bin/fetch-vehicles.php > /dev/null 2>&1` |
 
-`deploy.sh` dopisuje dwa ostatnie wpisy sam, jeśli ich brakuje (pozostałe zostawia bez zmian).
+`deploy.sh` dopisuje trzy ostatnie wpisy sam, jeśli ich brakuje (pozostałe zostawia bez zmian).
+
+**Pojazdy (vagonWEB).** `fetch-vehicles.php` pobiera z vagonWEB.cz (za zgodą serwisu) zestawienia pociągów KW z bieżącego roku rozkładu i rysunki pojazdów: lista pociągów, potem strona każdego pociągu z przerwą 3 s (ok. 200 pociągów, kilkanaście minut). Wynik: `server/storage/vehicles.json` i rysunki w `server/storage/vehicles/` (serwowane przez `/api/vehicles/img/…`). Strona pociągu pokazuje ostatnie zestawienie, jeśli nie jest starsze niż 180 dni. Błąd pobrania listy zostawia poprzednie dane. Pierwsze pobranie `deploy.sh` uruchamia w tle, gdy pliku jeszcze nie ma.
 
 **Kopia bazy.** `backup-db.php` zapisuje spójną kopię `app.sqlite` (komunikaty, ustawienia) do `server/storage/backups/` i trzyma 14 ostatnich; `deploy.sh` pobiera najnowszą do lokalnego katalogu `backups/` (30 ostatnich, poza gitem). Rozkładu nie kopiujemy — odtwarza go import. Odtworzenie: podmienić `server/storage/app.sqlite` wybraną kopią.
 

@@ -31,7 +31,7 @@ final class Router
         $this->routes[] = ['DELETE', $pattern, $handler];
     }
 
-    public function dispatch(string $method, string $path): Response
+    public function dispatch(string $method, string $path): Response|FileResponse
     {
         $path = '/' . trim($path, '/');
         $allowed = false;
@@ -47,7 +47,7 @@ final class Router
                 }
                 $params = array_map('rawurldecode', array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY));
                 $result = $handler($params);
-                return $result instanceof Response ? $result : new Response($result);
+                return $result instanceof Response || $result instanceof FileResponse ? $result : new Response($result);
             }
             throw new ApiException($allowed ? 'Niedozwolona metoda.' : 'Nie znaleziono zasobu.', $allowed ? 405 : 404);
         } catch (ApiException $e) {

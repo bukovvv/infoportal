@@ -39,6 +39,9 @@ final class Config
             'rt_file' => $storage . '/rt.json',
             'rt_meta_file' => $storage . '/rt-meta.json',
             'cache_dir' => $storage . '/cache',
+            // pojazdy z vagonWEB (bin/fetch-vehicles.php)
+            'vehicles_file' => $storage . '/vehicles.json',
+            'vehicles_img_dir' => $storage . '/vehicles',
             'cacert' => $root . '/config/cacert.pem',
             'gtfs_url' => 'https://mkuran.pl/gtfs/polish_trains.zip',
             'gtfs_rt_url' => 'https://mkuran.pl/gtfs/polish_trains/updates.pb',

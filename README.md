@@ -11,6 +11,7 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 | Pozycje GPS | wyłączone (`gps_enabled`), bo Mapa BILKOM od dawna nie zwraca pozycji | — |
 | Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
 | Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
+| Pojazdy (zestawienia, rysunki) | [vagonWEB.cz](https://www.vagonweb.cz/razeni/razeni.php?zeme=KW) — za zgodą serwisu | codziennie (CRON) |
 
 Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
 
@@ -21,7 +22,8 @@ server/          PHP 8.1+ (bez frameworka)
   src/Gtfs/        import GTFS, rozkład dnia, wyszukiwarka połączeń, estymacja pozycji
   src/Live/        klienci GPS, dekoder GTFS-RT, budowa live.json
   src/Api/         publiczne i administracyjne JSON API
-  bin/             import-gtfs, refresh-live, selftest, preflight, import-legacy-notices
+  src/Vehicles/    zestawienia pociągów z vagonWEB (pojazd na stronie pociągu)
+  bin/             import-gtfs, refresh-live, fetch-vehicles, selftest, preflight, import-legacy-notices
   storage/         bazy i pliki generowane (poza gitem)
 public/          katalog dokumentów: zbudowany frontend + api/index.php
 web/             Vue 3 + Vite + TypeScript + Vuetify 4 (blueprint MD3) + Pinia + MapLibre
@@ -34,6 +36,7 @@ legacy/          poprzednia wersja 0.x (tylko wgląd)
 ```powershell
 php server/bin/import-gtfs.php                                   # rozkład
 php server/bin/refresh-live.php                                  # dane na żywo (ręcznie, zamiast CRON-a)
+php server/bin/fetch-vehicles.php --limit=10                     # pojazdy z vagonWEB (bez --limit: wszystkie, ok. 15 min)
 php -S localhost:8080 -t public server/dev-router.php            # API (+ zbudowany frontend)
 node web/node_modules/vite/bin/vite.js web                       # frontend z HMR na :5173 (proxy /api)
 ```

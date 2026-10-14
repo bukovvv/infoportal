@@ -17,6 +17,8 @@ use KwInfo\Gtfs\PositionEstimator;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\GtfsRtDecoder;
 use KwInfo\Live\Realtime;
+use KwInfo\Vehicles\Vagonweb;
+use KwInfo\Vehicles\VehicleRepository;
 
 $failed = 0;
 $passed = 0;
@@ -95,6 +97,28 @@ check('RT: opóźnienie przeniesione dalej', $exp['stops'][2]['arrDelay'] === 18
 check('RT: bieżące opóźnienie', $exp['delay'] === 180 && $exp['source'] === 'rt');
 $gps = (new Realtime([], ['T@20261001' => 4]))->apply($trip, 1700);
 check('GPS: opóźnienie tylko na przyszłych postojach', $gps['stops'][0]['depDelay'] === null && $gps['stops'][2]['arrDelay'] === 240);
+
+// --- vagonWEB: lista, zestawienie (fragment prawdziwej strony), numery i rok rozkładu
+$list = "<a href=\"vlak.php?zeme=KW&kategorie=&cislo=77674/5&nazev=PKM3&rok=2026\">x</a><a href='vlak.php?zeme=KW&amp;kategorie=&amp;cislo=67218&amp;nazev=&amp;rok=2026'>y</a>";
+check('vagonWEB: lista pociągów', Vagonweb::parseList($list, 2026) === [['number' => '77674/5', 'name' => 'PKM3'], ['number' => '67218', 'name' => '']]);
+$page = "<div id='skutecne_razeni'><div id='vlak_220078'><h4 id='2026-10-12' class='color-ex'>Rzeczywiste zestawienie pociągu z dnia: <b>Pn 12.10.2026</b> na odcinku: Wągrowiec - Stęszew</h4></div>"
+    . "<table class='vlacek' id='vlacek220078'><tr><td class='bunka_vozu'><table><tr><td class='vagonek'><img class='obrazek_vagonu' src='../popisy/img/KW/36WEh-a.gif'></td></tr></table>"
+    . "<div><span class=tab-radam>36WEh<sup></sup></span></div><div><span class='tab-pocmist'><img class='pikto' src='https://www.vagonweb.cz/popisy/ico/tr2.svg'> "
+    . "<img class='pikto' src='https://www.vagonweb.cz/popisy/ico/2sed.svg'> 160 <img class='pikto' src='https://www.vagonweb.cz/popisy/ico/inv.svg'> 2 "
+    . "<img class='pikto' src='https://www.vagonweb.cz/popisy/ico/klima.svg'> </span></div></td>"
+    . "<td class='bunka_vozu'><img class='obrazek_vagonu' src='../popisy/img/KW/48WE-a.gif'><span class='tab-radam'>48WE</span></td></tr></table></div>";
+$parsed = Vagonweb::parseTrain($page, 2026);
+$first = $parsed[0] ?? null;
+check('vagonWEB: zestawienie z dnia', $first !== null && $first['date'] === '2026-10-12' && $first['section'] === 'Wągrowiec - Stęszew'
+    && count($first['vehicles']) === 2 && $first['vehicles'][0]['series'] === '36WEh' && $first['vehicles'][0]['seats'] === 160
+    && in_array('klima', $first['vehicles'][0]['features'], true) && $first['vehicles'][1]['series'] === '48WE'
+    && str_ends_with($first['url'], 'id=220078&lang=pl'), json_encode($first, JSON_UNESCAPED_UNICODE));
+check('vagonWEB: strona bez składu', Vagonweb::parseTrain('<h2>pokaż</h2>', 2026) === []);
+check('vagonWEB: plik rysunku', Vagonweb::imageFile('../popisy/img/KW/36WEh-a.gif') === 'KW_36WEh-a.gif'
+    && Vagonweb::imageFile('../../etc/passwd') === null && VehicleRepository::imagePath('../app.sqlite') === null);
+check('vagonWEB: numery łamane', VehicleRepository::expandNumber('77674/5') === ['77674', '77675']
+    && VehicleRepository::expandNumber('17214/15') === ['17214', '17215'] && VehicleRepository::expandNumber('70200') === ['70200']);
+check('vagonWEB: rok rozkładu', Vagonweb::timetableYear(strtotime('2026-12-12 12:00')) === 2026 && Vagonweb::timetableYear(strtotime('2026-12-13 12:00')) === 2027);
 
 // --- integracja z prawdziwą bazą (jeśli zaimportowana)
 if (is_file(Config::path('gtfs_db'))) {

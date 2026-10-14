@@ -10,6 +10,7 @@ import NoticeItem from './NoticeItem.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
 import TrainTimeline from './TrainTimeline.vue'
+import VehicleCard from './VehicleCard.vue'
 
 const props = defineProps<{ tripKey?: string; number?: string; inSheet?: boolean }>()
 const emit = defineEmits<{ close: []; loaded: [trip: Trip] }>()
@@ -121,6 +122,7 @@ defineExpose({ trip })
       <div v-if="related.length" class="notices divider">
         <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
       </div>
+      <VehicleCard v-if="trip.vehicle" :vehicle="trip.vehicle" class="divider" />
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />
       </div>

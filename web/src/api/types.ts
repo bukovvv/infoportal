@@ -162,6 +162,26 @@ export interface Trip {
   position: LiveTrain | null
   otherLegs: { key: string; number: string; isBus: boolean; from: string; to: string }[]
   notices: number[]
+  /** ostatnio zaobserwowany skład (vagonWEB); brak danych lub autobus — null */
+  vehicle?: VehicleInfo | null
+}
+
+export interface VehicleInfo {
+  /** dzień obserwacji RRRR-MM-DD */
+  date: string
+  section: string | null
+  url: string
+  vehicles: {
+    series: string
+    name: string | null
+    image: string | null
+    width: number | null
+    height: number | null
+    seats: number | null
+    /** nazwy piktogramów vagonWEB, np. klima, wifi, kolo */
+    features: string[]
+  }[]
+  alsoSeen: string[]
 }
 
 export interface SourceState {
