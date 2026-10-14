@@ -51,7 +51,6 @@ $stops = [
 $shape = [[52.0, 16.0, 0.0], [52.0, 17.0, 10.0], [52.5, 17.0, 20.0]];
 $p = PositionEstimator::estimate($stops, 1300, $shape);
 check('pozycja w połowie odcinka', $p !== null && abs($p['lon'] - 16.5) < 0.001 && $p['prev'] === 0 && $p['next'] === 1 && !$p['dwelling']);
-check('prędkość z odległości', $p !== null && $p['speed'] === 60);
 $p = PositionEstimator::estimate($stops, 1630, $shape);
 check('postój na stacji', $p !== null && $p['dwelling'] && $p['prev'] === 1);
 check('poza kursem brak pozycji', PositionEstimator::estimate($stops, 5000, $shape) === null);

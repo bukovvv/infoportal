@@ -129,7 +129,8 @@ final class LiveBuilder
                 'lat' => $useGps ? round($gpsTrain->lat, 6) : $pos['lat'],
                 'lon' => $useGps ? round($gpsTrain->lon, 6) : $pos['lon'],
                 'bearing' => $useGps && $gpsTrain->heading !== null ? $gpsTrain->heading : ($pos['bearing'] ?? null),
-                'speed' => $useGps ? $gpsTrain->speed : ($pos['speed'] ?? null),
+                // prędkość znamy tylko z GPS; z rozkładu wyszłaby średnia z odcinka
+                'speed' => $useGps ? $gpsTrain->speed : null,
                 'source' => $useGps ? 'gps' : 'est',
                 'gpsProvider' => $useGps ? $gpsTrain->provider : null,
                 'observedAt' => $useGps ? date(DATE_ATOM, $gpsTrain->observedAt) : null,

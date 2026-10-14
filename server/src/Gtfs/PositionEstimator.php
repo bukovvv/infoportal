@@ -13,7 +13,7 @@ final class PositionEstimator
     /**
      * @param array<int, array{arr: int|null, dep: int|null, dist: float|null, lat: float|null, lon: float|null}> $stops
      * @param array<int, array{0: float, 1: float, 2: float|null}> $shape
-     * @return array{lat: float, lon: float, prev: int, next: int, progress: float, dwelling: bool, bearing: int|null, speed: int|null}|null
+     * @return array{lat: float, lon: float, prev: int, next: int, progress: float, dwelling: bool, bearing: int|null}|null
      */
     public static function estimate(array $stops, int $now, array $shape = []): ?array
     {
@@ -31,31 +31,27 @@ final class PositionEstimator
             $arr = $s['arr'] ?? $s['dep'];
             $dep = $s['dep'] ?? $s['arr'];
             if ($now <= $dep && ($i === 0 || $now >= $arr)) {
-                return self::point($stops, $i, $i, 0.0, true, $shape, null);
+                return self::point($stops, $i, $i, 0.0, true, $shape);
             }
             if ($i + 1 < $n) {
                 $next = $stops[$i + 1];
                 $nextArr = $next['arr'] ?? $next['dep'];
                 if ($now > $dep && $now < $nextArr) {
                     $f = ($now - $dep) / max(1, $nextArr - $dep);
-                    $speed = null;
-                    if ($s['dist'] !== null && $next['dist'] !== null) {
-                        $speed = (int) round(($next['dist'] - $s['dist']) / max(1, $nextArr - $dep) * 3600);
-                    }
-                    return self::point($stops, $i, $i + 1, $f, false, $shape, $speed);
+                    return self::point($stops, $i, $i + 1, $f, false, $shape);
                 }
             }
         }
 
-        return self::point($stops, $n - 1, $n - 1, 0.0, true, $shape, null);
+        return self::point($stops, $n - 1, $n - 1, 0.0, true, $shape);
     }
 
     /**
      * @param array<int, array<string, mixed>> $stops
      * @param array<int, array{0: float, 1: float, 2: float|null}> $shape
-     * @return array{lat: float, lon: float, prev: int, next: int, progress: float, dwelling: bool, bearing: int|null, speed: int|null}|null
+     * @return array{lat: float, lon: float, prev: int, next: int, progress: float, dwelling: bool, bearing: int|null}|null
      */
-    private static function point(array $stops, int $a, int $b, float $f, bool $dwelling, array $shape, ?int $speed): ?array
+    private static function point(array $stops, int $a, int $b, float $f, bool $dwelling, array $shape): ?array
     {
         $A = $stops[$a];
         $B = $stops[$b];
@@ -81,7 +77,6 @@ final class PositionEstimator
             'progress' => round($f, 3),
             'dwelling' => $dwelling,
             'bearing' => $bearing,
-            'speed' => $dwelling ? 0 : $speed,
         ];
     }
 
