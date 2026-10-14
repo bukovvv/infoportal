@@ -3,6 +3,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { api } from '@/api/client'
 import type { Live, LiveTrain, Notice, Station, Status } from '@/api/types'
 import { normalize } from '@/utils/format'
+import { stationByKurs90 } from '@/utils/kurs90'
 
 /** Uruchamia funkcję od razu, potem cyklicznie — kolejne odświeżenia wstrzymuje, gdy karta jest w tle. */
 function poll(fn: () => Promise<void>, everyMs: number) {
@@ -28,6 +29,9 @@ export const useStations = defineStore('stations', () => {
   }
 
   function search(query: string, limit = 8): Station[] {
+    // cicha funkcja: sam numer = kod stacji z KURS'90 (np. 159 → Poznań Główny)
+    const coded = /^\s*\d+\s*$/.test(query) ? byId.value.get(stationByKurs90(query) ?? '') : undefined
+    if (coded) return [coded]
     const q = normalize(query)
     const rank = (s: Station) => {
       const n = normalize(s.name)

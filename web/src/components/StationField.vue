@@ -18,7 +18,9 @@ const items = computed<Station[]>(() => {
   // bez wpisanego tekstu ulubione stacje na górze
   const fav = q ? [] : favorites.ids.flatMap((id) => stations.byId.get(id) ?? [])
   const list = [...fav, ...stations.search(q ?? '', 8).filter((s) => !fav.includes(s))]
-  return selected && !list.includes(selected) ? [selected, ...list] : list
+  // wybrana stacja musi być na liście (pole pokazuje jej nazwę), ale przy wpisanym tekście na końcu — Enter wybiera pierwszą podpowiedź
+  if (!selected || list.includes(selected)) return list
+  return q ? [...list, selected] : [selected, ...list]
 })
 </script>
 
