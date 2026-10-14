@@ -1,5 +1,10 @@
 <script setup lang="ts">
 // O nas: czym jest zanimwyjdziesz.pl, co w nim jest, skąd dane i prywatność.
+import { useTheme } from 'vuetify'
+import logoDark from '@/assets/logo-na-ciemne.svg'
+import logoLight from '@/assets/logo-na-jasne.svg'
+
+const theme = useTheme()
 
 const features = [
   { icon: 'search', title: 'Wyszukiwarka połączeń', text: 'Do dwóch przesiadek, „przyjazd do” wybranej godziny, połączenia po północy i wszystkie stacje po drodze.' },
@@ -38,11 +43,8 @@ const privacy = [
 <template>
   <div class="page-narrow about">
     <header class="hero">
-      <img src="/favicon.svg" width="88" height="88" alt="" class="logo">
-      <div class="d-grid ga-2">
-        <h1 class="text-headline-medium">zanimwyjdziesz.pl</h1>
-        <p class="motto text-title-large">Już wiesz, jak pojedziesz.</p>
-      </div>
+      <h1 class="logo-h"><img :src="theme.current.value.dark ? logoDark : logoLight" alt="zanimwyjdziesz.pl" class="logo"></h1>
+      <p class="motto text-title-large">Już wiesz, jak pojedziesz.</p>
     </header>
 
     <p class="text-body-large lead">
@@ -105,9 +107,10 @@ const privacy = [
 <style scoped>
 .about { display: grid; gap: 28px; }
 .d-grid { display: grid; align-content: start; }
-.hero { display: flex; align-items: center; gap: 20px; padding-top: 8px; }
-.logo { flex: none; border-radius: var(--kw-r-l); }
-.motto { color: rgb(var(--v-theme-primary)); }
+.hero { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 8px; }
+.logo-h { margin: 0; line-height: 0; }
+.logo { display: block; height: 88px; width: auto; max-width: 100%; }
+.motto { color: rgb(var(--v-theme-on-surface-variant)); }
 .lead { max-width: 68ch; }
 .section-title { margin-bottom: 12px; }
 .tiles { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
@@ -121,6 +124,6 @@ const privacy = [
 .privacy { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
 @media (max-width: 599px) {
   .hero { gap: 16px; }
-  .logo { width: 64px; height: 64px; border-radius: var(--kw-r-m); }
+  .logo { height: 64px; }
 }
 </style>

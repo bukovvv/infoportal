@@ -15,8 +15,8 @@
 
   html, body { font-family: var(--kw-font); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
-  /* nagłówki pogrubione — Figtree w grubości 400 wygląda w nich zbyt lekko */
-  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 700; letter-spacing: 0; }
+  /* nagłówki grube jak napis w logo (800) — Figtree w grubości 400 wygląda w nich zbyt lekko */
+  .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 800; letter-spacing: 0; }
 
   /* pola formularzy zaokrąglone jak przyciski */
   .v-field--variant-outlined, .v-field--variant-filled, .v-field--variant-solo { border-radius: var(--kw-r-m); }
@@ -81,9 +81,9 @@
     background: rgb(var(--v-theme-error)); color: rgb(var(--v-theme-surface)); font-size: 11px; font-weight: 500; line-height: 16px; text-align: center;
   }
 
-  /* logo serwisu (public/favicon.svg) */
-  .brand-mark { display: block; width: 40px; height: 40px; flex: none; border-radius: var(--kw-r-s); overflow: hidden; }
-  .brand-mark img { display: block; width: 100%; height: 100%; }
+  /* znak serwisu (BrandMark.vue) jako link do startu */
+  .brand-mark { display: block; flex: none; border-radius: var(--kw-r-s); }
+  .brand-mark:focus-visible, .brand-logo:focus-visible { outline: 3px solid rgb(var(--v-theme-brand-red)); outline-offset: 2px; }
 
   .live-dot { width: 8px; height: 8px; border-radius: 50%; background: rgb(var(--v-theme-success)); animation: kw-pulse 2s infinite; }
   .live-dot.warn { background: rgb(var(--v-theme-warning)); }

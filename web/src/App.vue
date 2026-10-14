@@ -2,12 +2,14 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
+import BrandMark from '@/components/BrandMark.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
 import TrainSheet from '@/components/TrainSheet.vue'
 import { shortTitles, titles } from '@/router'
 import { useLive, useNotices, useStatus } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { clock } from '@/utils/format'
+import logoOnBand from '@/assets/logo-na-ciemne.svg'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,8 +26,13 @@ onMounted(() => {
   notices.start()
 })
 watch(() => ui.theme, (mode) => theme.change(mode), { immediate: true })
+// pasek przeglądarki / systemu w kolorze górnego paska (według wybranego motywu, nie tylko systemowego)
+watch(() => theme.current.value.colors.band, (color) => {
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', String(color)))
+}, { immediate: true })
 
 const isAdmin = computed(() => route.path.startsWith('/admin'))
+const isStart = computed(() => route.name === 'start')
 const nav = computed(() => [
   { to: '/', name: 'start', label: 'Start', icon: 'home' },
   { to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' },
@@ -67,7 +74,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
   <v-app>
     <v-navigation-drawer v-if="mdAndUp && !isAdmin" permanent width="88" class="rail" floating aria-label="Nawigacja główna">
       <div class="rail-inner">
-        <router-link to="/" class="brand-mark" aria-label="zanimwyjdziesz.pl – start"><img src="/favicon.svg" width="40" height="40" alt=""></router-link>
+        <router-link to="/" class="brand-mark" aria-label="zanimwyjdziesz.pl – start"><BrandMark :size="44" /></router-link>
         <v-btn class="rail-fab" color="primary-container" icon="search" size="56" elevation="3" aria-label="Wyszukaj połączenie" @click="searchFab" />
         <nav class="rail-items">
           <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-current="current === item.name ? 'page' : undefined">
@@ -85,27 +92,28 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       </div>
     </v-navigation-drawer>
 
-    <v-app-bar :elevation="0" color="surface" height="64" scroll-behavior="elevate" :scroll-threshold="4">
+    <v-app-bar :elevation="0" color="band" height="64" scroll-behavior="elevate" :scroll-threshold="4" class="app-bar">
       <template #prepend>
-        <router-link v-if="!mdAndUp || isAdmin" to="/" class="brand-mark ml-2" aria-label="zanimwyjdziesz.pl – start"><img src="/favicon.svg" width="40" height="40" alt=""></router-link>
+        <router-link v-if="isStart && !isAdmin" to="/" class="brand-logo ml-3" aria-label="zanimwyjdziesz.pl – start"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" height="40"></router-link>
+        <router-link v-else-if="!mdAndUp || isAdmin" to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark on-band :size="36" /></router-link>
       </template>
-      <v-app-bar-title class="text-title-large app-title">{{ title }}</v-app-bar-title>
+      <v-app-bar-title v-if="!isStart || isAdmin" class="text-title-large app-title">{{ title }}</v-app-bar-title>
+      <v-spacer v-else />
       <template #append>
-        <v-chip v-if="!isAdmin" variant="flat" color="surface-container-high" class="live-chip mr-2 tnum" :title="liveState.title">
-          <span class="live-dot mr-2" :class="liveState.cls" aria-hidden="true" />
+        <span v-if="!isAdmin" class="live-chip mr-2 tnum" :title="liveState.title">
+          <span class="live-dot" :class="liveState.cls" aria-hidden="true" />
           <span class="live-text">{{ liveState.text }}</span>
-        </v-chip>
+        </span>
         <v-btn
           v-if="!isAdmin"
-          variant="flat"
-          color="secondary-container"
+          :variant="mdAndUp ? 'flat' : 'text'"
+          :class="['mr-1', { 'ticket-btn': mdAndUp }]"
           href="https://wielkopolskiebilety.pl/"
           target="_blank"
           rel="noopener noreferrer"
           :icon="!mdAndUp"
           :prepend-icon="mdAndUp ? 'confirmation_number' : undefined"
           aria-label="Kup bilet (otwiera stronę przewoźnika)"
-          class="mr-1"
         >
           <v-icon v-if="!mdAndUp" icon="confirmation_number" />
           <template v-else>Kup bilet</template>
@@ -165,14 +173,23 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 .navbar .nav-item { width: auto; }
 .navbar .nav-ind { width: 64px; }
 .app-title { font-size: 22px; }
-.live-chip { font-weight: 500; }
+.app-bar :deep(.v-toolbar__content) { padding-inline: 4px 8px; }
+.brand-logo { display: block; flex: none; }
+.brand-logo img { display: block; height: 40px; width: auto; }
+.live-chip {
+  display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 16px;
+  background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.live-dot { flex: none; }
+/* „Kup bilet” na grafitowym pasku: jasny przycisk z tekstem w kolorze paska */
+.ticket-btn { background: rgb(var(--v-theme-on-band)) !important; color: rgb(var(--v-theme-band)) !important; font-weight: 700; }
 @media (max-width: 839px) {
   :deep(.v-main) { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
   .kw-snack { margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 480px) {
   .live-text { display: none; }
-  .live-chip .live-dot { margin-right: 0 !important; }
+  .live-chip { padding: 0 12px; }
   .app-title { font-size: 20px; margin-inline-start: 12px; }
   .live-chip { margin-right: 4px !important; }
 }
