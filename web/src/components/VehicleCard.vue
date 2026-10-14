@@ -1,22 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { VehicleInfo } from '@/api/types'
+import { unitLabel as label, vehicleTitle } from '@/utils/vehicle'
 
 const props = defineProps<{ vehicle: VehicleInfo }>()
 
 const v = computed(() => props.vehicle)
 const units = computed(() => v.value.vehicles.filter((u) => u.image))
-const label = (u: VehicleInfo['vehicles'][number]) => (u.name ? `${u.name} (${u.series})` : u.series)
-const title = computed(() => {
-  const names = v.value.vehicles.map(label)
-  return names.every((n) => n === names[0]) && names.length > 1 ? `${names.length} × ${names[0]}` : names.join(' + ')
-})
+const title = computed(() => vehicleTitle(v.value))
 </script>
 
 <template>
   <section class="vehicle" aria-labelledby="vehicle-title">
     <h3 id="vehicle-title" class="text-title-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ title }}</h3>
-    <a v-if="units.length" :href="v.url" target="_blank" rel="noopener noreferrer" class="drawing" title="Zestawienie i rysunek: vagonWEB.cz">
+    <component
+      :is="v.url ? 'a' : 'div'"
+      v-if="units.length"
+      class="drawing"
+      v-bind="v.url ? { href: v.url, target: '_blank', rel: 'noopener noreferrer', title: 'Zestawienie i rysunek: vagonWEB.cz' } : {}"
+    >
       <img
         v-for="(u, i) in units"
         :key="i"
@@ -26,7 +28,7 @@ const title = computed(() => {
         :alt="`Rysunek pojazdu ${label(u)}`"
         loading="lazy"
       >
-    </a>
+    </component>
   </section>
 </template>
 

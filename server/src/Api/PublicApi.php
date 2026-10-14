@@ -167,6 +167,7 @@ final class PublicApi
         $finder = new ConnectionFinder($day, isCancelled: static fn (string $key): bool => $rt->cancelled($key));
         $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), ($_GET['direct'] ?? '0') === '1', $arriveBy);
 
+        $vehicles = new VehicleRepository();
         $connections = [];
         foreach ($found as $c) {
             $legs = [];
@@ -196,6 +197,7 @@ final class PublicApi
                     'arrivalPlatform' => $b[D::PLATFORM],
                     'stopsBetween' => $l['to'] - $l['from'] - 1,
                     'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
+                    'vehicle' => $trip['isBus'] ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
                 ];
             }
             $connections[] = [

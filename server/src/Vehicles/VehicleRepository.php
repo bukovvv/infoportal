@@ -22,6 +22,14 @@ final class VehicleRepository
         '36WEh' => 'Newag Impuls 2',
     ];
 
+    /**
+     * Ręczne przypisania (numer pociągu → seria), gdy vagonWEB nie ma zestawienia — mają pierwszeństwo.
+     * Rysunek bierzemy z dowolnego zestawienia tej serii.
+     */
+    private const MANUAL = [
+        '71202' => 'EN76',
+    ];
+
     /** Zestawienie starsze niż tyle dni nie jest już pokazywane. */
     private const MAX_AGE_DAYS = 180;
 
@@ -46,6 +54,16 @@ final class VehicleRepository
     public function forNumbers(array $numbers, ?int $now = null): ?array
     {
         $data = $this->data ??= Realtime::readJson(Config::path('vehicles_file'));
+        // w rozkładzie numer pociągu nazwanego zawiera nazwę („77318 Cytadela”), bywa też łamany („77122/3”)
+        $numbers = array_values(array_unique(array_merge(...array_map(
+            static fn (string $n): array => preg_match('#^\d+(?:/\d+)?#', trim($n), $m) === 1 ? self::expandNumber($m[0]) : [$n],
+            $numbers
+        ))));
+        foreach ($numbers as $number) {
+            if (isset(self::MANUAL[$number])) {
+                return $this->manual(self::MANUAL[$number], $data);
+            }
+        }
         $best = null;
         foreach ($data['trains'] ?? [] as $train) {
             if (array_intersect(self::expandNumber((string) $train['number']), $numbers) === []) {
@@ -78,20 +96,43 @@ final class VehicleRepository
             'date' => $best['sighting']['date'],
             'section' => $best['sighting']['section'],
             'url' => $best['sighting']['url'],
-            'vehicles' => array_map(static function (array $v) use ($images): array {
-                $file = Vagonweb::imageFile($v['image']);
-                $size = $file !== null ? ($images[$file] ?? null) : null;
-                return [
-                    'series' => $v['series'],
-                    'name' => self::NAMES[$v['series']] ?? null,
-                    'image' => $size !== null ? '/api/vehicles/img/' . $file : null,
-                    'width' => $size[0] ?? null,
-                    'height' => $size[1] ?? null,
-                    'seats' => $v['seats'],
-                    'features' => $v['features'],
-                ];
-            }, $best['sighting']['vehicles']),
+            'vehicles' => array_map(static fn (array $v): array => self::vehicle($v, $images), $best['sighting']['vehicles']),
             'alsoSeen' => $also,
+        ];
+    }
+
+    /** @param array<string, mixed> $data @return array<string, mixed> */
+    private function manual(string $series, array $data): array
+    {
+        $sample = ['series' => $series, 'image' => '', 'seats' => null, 'features' => []];
+        foreach ($data['trains'] ?? [] as $train) {
+            foreach ($train['sightings'] as $sighting) {
+                foreach ($sighting['vehicles'] as $v) {
+                    if ($v['series'] === $series) {
+                        $sample = $v;
+                        break 3;
+                    }
+                }
+            }
+        }
+
+        return ['date' => null, 'section' => null, 'url' => null, 'vehicles' => [self::vehicle($sample, $data['images'] ?? [])], 'alsoSeen' => []];
+    }
+
+    /** @param array<string, mixed> $v @param array<string, mixed> $images @return array<string, mixed> */
+    private static function vehicle(array $v, array $images): array
+    {
+        $file = Vagonweb::imageFile($v['image']);
+        $size = $file !== null ? ($images[$file] ?? null) : null;
+
+        return [
+            'series' => $v['series'],
+            'name' => self::NAMES[$v['series']] ?? null,
+            'image' => $size !== null ? '/api/vehicles/img/' . $file : null,
+            'width' => $size[0] ?? null,
+            'height' => $size[1] ?? null,
+            'seats' => $v['seats'],
+            'features' => $v['features'],
         ];
     }
 

@@ -4,6 +4,7 @@ import type { Connection } from '@/api/types'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { clock, duration, plural } from '@/utils/format'
+import { unitLabel, vehicleTitle } from '@/utils/vehicle'
 import RouteBadge from './RouteBadge.vue'
 import TrainChip from './TrainChip.vue'
 
@@ -76,6 +77,21 @@ function watchJourney() {
                 <RouteBadge :route="leg.route" :bus="leg.isBus" />
                 KW {{ leg.number }} w kierunku {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
               </div>
+              <div v-if="leg.vehicle" class="leg-vehicle">
+                <span class="text-body-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ vehicleTitle(leg.vehicle) }}</span>
+                <div class="leg-drawing">
+                  <template v-for="(u, j) in leg.vehicle.vehicles" :key="j">
+                    <img
+                      v-if="u.image"
+                      :src="u.image"
+                      :width="u.width ? Math.round(u.width / 2) : undefined"
+                      :height="u.height ? Math.round(u.height / 2) : undefined"
+                      :alt="`Rysunek pojazdu ${unitLabel(u)}`"
+                      loading="lazy"
+                    >
+                  </template>
+                </div>
+              </div>
               <v-btn
                 v-if="leg.stops?.length"
                 variant="text"
@@ -141,6 +157,9 @@ function watchJourney() {
 .leg-rail.end::before { display: none; }
 .leg-rail i { position: absolute; left: 4px; top: 14px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgb(var(--v-theme-primary)); background: rgb(var(--v-theme-surface-container-lowest)); }
 .leg-s { padding: 10px 0; min-width: 0; }
+.leg-vehicle { display: grid; gap: 4px; margin-top: 6px; }
+.leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; scrollbar-width: thin; }
+.leg-drawing img { flex: none; display: block; max-width: none; }
 .stops-btn { margin: 2px 0 -6px -12px; }
 .leg.mid .leg-t { font-weight: 400; padding-top: 6px; color: rgb(var(--v-theme-on-surface-variant)); }
 .leg.mid .leg-rail i { left: 6px; top: 12px; width: 8px; height: 8px; border-width: 0; background: rgb(var(--v-theme-primary)); }

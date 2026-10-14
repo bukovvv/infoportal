@@ -71,6 +71,8 @@ export interface Leg {
   stopsBetween: number
   /** stacje pośrednie (bez początkowej i końcowej); brak w podróżach zapisanych przed dodaniem pola */
   stops?: LegStop[]
+  /** spodziewany pojazd (vagonWEB); brak danych lub autobus — null */
+  vehicle?: VehicleInfo | null
 }
 
 export interface LegStop {
@@ -167,10 +169,11 @@ export interface Trip {
 }
 
 export interface VehicleInfo {
-  /** dzień obserwacji RRRR-MM-DD */
-  date: string
+  /** dzień obserwacji RRRR-MM-DD; null — przypisanie ręczne */
+  date: string | null
   section: string | null
-  url: string
+  /** zestawienie na vagonWEB; null — przypisanie ręczne */
+  url: string | null
   vehicles: {
     series: string
     name: string | null
