@@ -5,6 +5,8 @@ public/assets/
 public/index.html
 public/favicon.svg
 public/manifest.webmanifest
+public/icon-192.png
+public/icon-512.png
 
 # dane lokalne
 server/storage/*
