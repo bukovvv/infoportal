@@ -1,4 +1,4 @@
-# zanimwyjdziesz 1.0
+# zanimwyjdziesz.pl 1.0
 
 Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże, komunikaty oraz zakładka Bus-Tramwaj-Kolej (taryfa wspólnego biletu KW + POLREGIO + ZTM Poznań). Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite. Krój: Figtree (OFL), hostowany lokalnie.
 

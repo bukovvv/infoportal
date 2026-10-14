@@ -1,6 +1,6 @@
-## 🚆 zanimwyjdziesz — już wiesz, jak pojedziesz.
+## 🚆 zanimwyjdziesz.pl — już wiesz, jak pojedziesz.
 
-Hej! Chcemy pokazać Wam **zanimwyjdziesz**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
+Hej! Chcemy pokazać Wam **zanimwyjdziesz.pl**: nieoficjalny, niekomercyjny serwis dla pasażerów kolei w Wielkopolsce. Wszystko, czego szukasz przed podróżą, w jednym miejscu. Bez reklam i bez zakładania konta.
 
 Na start: pociągi **Kolei Wielkopolskich**. W przyszłości dołączy też **POLREGIO** na terenie Wielkopolski.
 

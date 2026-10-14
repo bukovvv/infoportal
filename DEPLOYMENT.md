@@ -1,4 +1,4 @@
-# Wdrożenie zanimwyjdziesz (`infoportal.abuczek.pl`)
+# Wdrożenie zanimwyjdziesz.pl (`infoportal.abuczek.pl`)
 
 ## Wymagania hostingu
 

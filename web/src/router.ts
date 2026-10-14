@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import StartView from '@/views/StartView.vue'
 
 const titles: Record<string, string> = {
-  start: 'zanimwyjdziesz',
+  start: 'zanimwyjdziesz.pl',
   map: 'Mapa pociągów',
   scheme: 'Schemat połączeń',
   board: 'Odjazdy i przyjazdy',
@@ -54,7 +54,7 @@ const router = createRouter({
 router.afterEach((to) => {
   const name = String(to.name ?? '')
   const base = name.startsWith('admin') ? titles.admin : titles[name] ?? titles.start
-  document.title = name === 'start' ? base : `${base} · zanimwyjdziesz`
+  document.title = name === 'start' ? `${base} | już wiesz, jak pojedziesz.` : `${base} | zanimwyjdziesz.pl`
 })
 
 export { shortTitles, titles }

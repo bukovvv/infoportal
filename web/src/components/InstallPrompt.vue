@@ -46,7 +46,7 @@ function onBeforeInstall(e: Event) {
 function onInstalled() {
   open.value = false
   deferred = null
-  ui.notify('Gotowe! zanimwyjdziesz jest na ekranie głównym.')
+  ui.notify('Gotowe! zanimwyjdziesz.pl jest na ekranie głównym.')
 }
 
 async function install() {
