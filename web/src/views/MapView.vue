@@ -14,6 +14,7 @@ import { useUi } from '@/stores/ui'
 import { clock, normalize } from '@/utils/format'
 import type { Trip } from '@/api/types'
 import { loadMapStyle, mapPalette } from '@/utils/mapStyle'
+import icons from 'virtual:material-symbols'
 
 // Worker MapLibre jest modułem ES — Vite pakuje go osobno i podaje jego adres.
 setWorkerUrl(maplibreWorker)
@@ -30,15 +31,14 @@ const container = ref<HTMLElement | null>(null)
 const selectedKey = ref<string | null>((route.query.kurs as string) || null)
 const filter = ref<'all' | 'late' | 'est'>('all')
 const query = ref('')
-const expanded = ref(false)
+/** lista pociągów z wyszukiwarką (domyślnie schowana — mapa na cały ekran) */
+const listOpen = ref(false)
 const mapError = ref<string | null>(null)
 const network = shallowRef<GeoJSON.FeatureCollection | null>(null)
 const routeTrip = shallowRef<Trip | null>(null)
 let map: MlMap | null = null
 
 const keyOf = (t: LiveTrain) => t.key ?? `gps:${t.number}`
-// kolor: opóźnienie znane (PLK lub GPS) → planowo/opóźniony; brak danych na żywo → tylko rozkład
-const stateOf = (t: LiveTrain) => (t.delay === null ? 'est' : t.delay >= 2 ? 'delay' : 'ontime')
 
 const visible = computed(() => {
   const q = normalize(query.value)
@@ -47,11 +47,6 @@ const visible = computed(() => {
     .filter((t) => !q || t.number.includes(q) || [t.origin, t.destination, t.next?.name, t.prev?.name].some((s) => s && normalize(s).includes(q)))
     .sort((a, b) => Number(keyOf(b) === selectedKey.value) - Number(keyOf(a) === selectedKey.value) || (b.delay ?? 0) - (a.delay ?? 0) || a.number.localeCompare(b.number, 'pl', { numeric: true }))
 })
-const stats = computed(() => ({
-  all: live.trains.length,
-  late: live.trains.filter((t) => (t.delay ?? 0) >= 2).length,
-  live: live.trains.filter((t) => t.delay !== null).length,
-}))
 
 function colors() {
   const c = theme.current.value.colors as Record<string, string>
@@ -101,19 +96,23 @@ function refreshRoute() {
 }
 
 /**
- * Pociągi jako pastylki HTML: kółko w kolorze stanu ze strzałką w kierunku jazdy i numer. Mapa się nie obraca,
- * więc obrót strzałki = kierunek względem północy. Bez kierunku (postój, brak kształtu trasy) — kropka zamiast strzałki.
+ * Pociągi jako pastylki HTML w kolorze linii (jak plakietka linii): strzałka w kierunku jazdy, ikona pociągu/autobusu
+ * i numer; opóźnienie jako żółta plakietka w rogu. Mapa się nie obraca, więc obrót strzałki = kierunek względem północy.
  */
 // marker: element pozycjonowany przez MapLibre (transform — bez animacji!), el: pastylka w środku (wygląd, powiększenie)
 const markers = new Map<string, { marker: Marker; el: HTMLButtonElement }>()
-const ARROW = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 20l-7-3.6L5 20z"/></svg>'
+const svg = (name: string, cls: string) => `<svg class="${cls}" viewBox="0 -960 960 960" aria-hidden="true"><path d="${icons[name] ?? ''}"/></svg>`
 const stateLabel = (t: LiveTrain) => (t.delay === null ? 'bez danych na żywo' : t.delay >= 2 ? `opóźnienie ${t.delay} min` : 'planowo')
+/** Kolory plakietki linii z rozkładu (autobus zastępczy i brak koloru — neutralnie). */
+const pillColor = (t: LiveTrain) => (t.isBus || !t.route?.color
+  ? { bg: 'rgb(var(--v-theme-inverse-surface))', fg: 'rgb(var(--v-theme-on-inverse-surface))' }
+  : { bg: t.route.color, fg: t.route.textColor ?? '#FFFFFF' })
 
-function pill(key: string): HTMLButtonElement {
+function pill(key: string, bus: boolean): HTMLButtonElement {
   const el = document.createElement('button')
   el.type = 'button'
   el.className = 'train-pill'
-  el.innerHTML = `<span class="dir">${ARROW}</span><span class="no"></span>`
+  el.innerHTML = `<span class="orbit"></span>${svg('arrow_upward', 'arr')}${svg(bus ? 'directions_bus' : 'train', 'veh')}<span class="no"></span><span class="late"></span>`
   el.addEventListener('click', (e) => {
     e.stopPropagation()
     void select(key)
@@ -135,7 +134,7 @@ function syncTrains() {
     if (!shown.has(key)) continue
     let m = markers.get(key)
     if (!m) {
-      const el = pill(key)
+      const el = pill(key, t.isBus)
       const holder = document.createElement('div')
       holder.className = 'train-marker'
       holder.appendChild(el)
@@ -145,22 +144,26 @@ function syncTrains() {
       m.marker.setLngLat([t.lon, t.lat])
     }
     const selected = key === selectedKey.value
+    const late = t.delay !== null && t.delay >= 2
     // sam numer (bez nazwy kursu i drugiego numeru po „/”)
     const number = t.number.match(/^\d+/)?.[0] ?? t.number.split('/')[0]
-    m.el.dataset.state = stateOf(t)
+    const color = pillColor(t)
+    m.el.style.setProperty('--c', color.bg)
+    m.el.style.setProperty('--on', color.fg)
+    m.el.style.setProperty('--bearing', `${t.bearing ?? 0}deg`)
     m.el.classList.toggle('selected', selected)
     m.el.classList.toggle('dim', !!selectedKey.value && !selected)
     m.el.classList.toggle('still', t.bearing === null || t.dwelling)
-    m.el.style.setProperty('--bearing', `${t.bearing ?? 0}deg`)
-    m.el.querySelector('.no')!.textContent = t.isBus ? `ZKA ${number}` : number
+    m.el.querySelector('.no')!.textContent = number
+    m.el.querySelector('.late')!.textContent = late ? `+${t.delay}` : ''
     m.el.setAttribute('aria-label', `KW ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
-    m.el.dataset.priority = selected ? '3' : t.delay !== null && t.delay >= 2 ? '2' : '1'
+    m.el.dataset.priority = selected ? '3' : late ? '2' : '1'
   }
   layoutPills()
 }
 
 /**
- * Jak etykiety na mapie: pastylka, która zasłoniłaby już ułożoną, chowa numer (zostaje kółko ze strzałką).
+ * Jak etykiety na mapie: pastylka, która zasłoniłaby już ułożoną, staje się kółkiem z ikoną i trójkątem kierunku.
  * Kolejność: wybrany pociąg, opóźnione, reszta. Liczone przy każdym ruchu mapy (raz na klatkę).
  */
 let layoutFrame = 0
@@ -174,8 +177,8 @@ function layoutPills() {
       .map((m) => ({ m, p: map!.project(m.marker.getLngLat()), priority: Number(m.el.dataset.priority ?? 1) }))
       .sort((a, b) => b.priority - a.priority)
     for (const { m, p } of items) {
-      const width = 36 + 8 * (m.el.querySelector('.no')?.textContent?.length ?? 5)
-      const box: [number, number, number, number] = [p.x - width / 2 - 2, p.y - 14, p.x + width / 2 + 2, p.y + 14]
+      const width = 48 + 7.5 * (m.el.querySelector('.no')?.textContent?.length ?? 5)
+      const box: [number, number, number, number] = [p.x - width / 2 - 2, p.y - 16, p.x + width / 2 + 6, p.y + 14]
       const hit = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])
       m.el.classList.toggle('compact', hit)
       // kółka pod pełnymi pastylkami, wybrany pociąg na wierzchu
@@ -228,8 +231,8 @@ function addOverlays() {
 /** Marginesy na panel listy i arkusz pociągu, zmniejszane proporcjonalnie w małych oknach. */
 function padding() {
   const p = mdAndUp.value
-    ? { left: 400, right: ui.sheet?.docked ? 460 : 60, top: 60, bottom: 40 }
-    : { left: 24, right: 24, top: 56, bottom: expanded.value ? 300 : 150 }
+    ? { left: listOpen.value ? 400 : 60, right: ui.sheet?.docked ? 460 : 80, top: 72, bottom: 40 }
+    : { left: 24, right: 72, top: 64, bottom: listOpen.value ? 360 : 40 }
   const w = container.value?.clientWidth ?? 800
   const h = container.value?.clientHeight ?? 600
   const kx = Math.min(1, (w * 0.7) / (p.left + p.right))
@@ -250,7 +253,7 @@ function fitNetwork() {
 
 async function select(key: string) {
   selectedKey.value = key
-  if (!mdAndUp.value) expanded.value = false
+  if (!mdAndUp.value) listOpen.value = false
   const train = live.trains.find((t) => keyOf(t) === key)
   if (key.startsWith('gps:')) {
     ui.openTrain({ number: key.slice(4).split('/')[0] }, true)
@@ -328,6 +331,8 @@ onMounted(async () => {
     m.on('style.load', addOverlays)
     m.on('move', layoutPills)
     m.once('load', () => {
+      // informacja o autorach mapy zwinięta do ikonki ⓘ (MapLibre rozwija ją na starcie)
+      container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
       syncTrains()
       if (selectedKey.value) void select(selectedKey.value)
       else fitNetwork()
@@ -349,11 +354,10 @@ const whereText = (t: LiveTrain) => {
   if (t.dwelling || !t.next || t.prev.seq === t.next.seq) return `Na stacji ${t.prev.name}`
   return `${t.prev.name} → ${t.next.name}`
 }
-const legend = computed(() => mapPalette(theme.global.name.value === 'dark' ? 'dark' : 'light'))
 const filters = [
-  { value: 'all', label: 'Wszystkie' },
-  { value: 'late', label: 'Opóźnione' },
-  { value: 'est', label: 'Tylko rozkład' },
+  { value: 'all', label: 'Wszystkie pociągi' },
+  { value: 'late', label: 'Tylko opóźnione' },
+  { value: 'est', label: 'Bez danych na żywo' },
 ] as const
 </script>
 
@@ -363,53 +367,57 @@ const filters = [
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
 
     <div class="switch"><MapSwitch /></div>
-    <div class="legend" aria-hidden="true">
-      <span><i class="lg" />Planowo</span><span><i class="lg d" />Opóźniony</span><span><i class="lg e" />Bez danych na żywo</span><span class="lg-dir"><svg viewBox="0 0 24 24"><path d="M12 3.5 19 20l-7-3.6L5 20z" /></svg>kierunek jazdy</span>
+
+    <div class="fabs top">
+      <v-btn icon="search" :color="listOpen ? 'primary-container' : 'surface-container-high'" size="48" elevation="3" :aria-pressed="listOpen" aria-label="Szukaj pociągu" @click="listOpen = !listOpen" />
+      <v-menu location="start top">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" :color="filter === 'all' ? 'surface-container-high' : 'primary-container'" size="48" elevation="3" icon aria-label="Filtruj pociągi">
+            <v-badge :model-value="filter !== 'all'" dot color="primary"><v-icon icon="filter_list" /></v-badge>
+          </v-btn>
+        </template>
+        <v-list density="compact" nav>
+          <v-list-subheader>Pokaż</v-list-subheader>
+          <v-list-item v-for="f in filters" :key="f.value" :title="f.label" :active="filter === f.value" :prepend-icon="filter === f.value ? 'check' : undefined" @click="filter = f.value" />
+        </v-list>
+      </v-menu>
     </div>
-    <div class="controls">
-      <v-btn icon="add" color="surface-container-high" size="40" elevation="2" aria-label="Przybliż" @click="zoom(1)" />
-      <v-btn icon="remove" color="surface-container-high" size="40" elevation="2" aria-label="Oddal" @click="zoom(-1)" />
-      <v-btn icon="fit_screen" color="surface-container-high" size="40" elevation="2" aria-label="Pokaż całą sieć" @click="fitNetwork" />
-      <v-btn icon="my_location" color="surface-container-high" size="40" elevation="2" aria-label="Moja lokalizacja" @click="locate" />
+    <div class="fabs bottom" :class="{ raised: listOpen && !mdAndUp }">
+      <template v-if="mdAndUp">
+        <v-btn icon="add" color="surface-container-high" size="44" elevation="3" aria-label="Przybliż" @click="zoom(1)" />
+        <v-btn icon="remove" color="surface-container-high" size="44" elevation="3" aria-label="Oddal" @click="zoom(-1)" />
+      </template>
+      <v-btn icon="fit_screen" color="surface-container-high" size="48" elevation="3" aria-label="Pokaż całą sieć" @click="fitNetwork" />
+      <v-btn icon="my_location" color="surface-container-high" size="48" elevation="3" aria-label="Moja lokalizacja" @click="locate" />
     </div>
 
-    <aside class="panel" :class="{ expanded }" aria-label="Pociągi w ruchu">
-      <button v-if="!mdAndUp" class="handle" type="button" :aria-expanded="expanded" aria-label="Rozwiń listę pociągów" @click="expanded = !expanded" />
+    <aside v-if="listOpen" class="panel" aria-label="Pociągi w ruchu">
       <div class="panel-head">
-        <div class="stats" aria-live="polite">
-          <div><strong class="tnum">{{ stats.all }}</strong><span class="text-label-medium muted">w ruchu</span></div>
-          <div><strong class="tnum">{{ stats.late }}</strong><span class="text-label-medium muted">opóźnione</span></div>
-          <div><strong class="tnum">{{ stats.live }}</strong><span class="text-label-medium muted">z danymi PLK</span></div>
-        </div>
-        <template v-if="mdAndUp || expanded">
-          <v-text-field v-model="query" label="Numer pociągu lub stacja" prepend-inner-icon="search" density="compact" hide-details clearable />
-          <v-chip-group v-model="filter" mandatory selected-class="chip-on">
-            <v-chip v-for="f in filters" :key="f.value" :value="f.value" variant="outlined" size="small" filter>{{ f.label }}</v-chip>
-          </v-chip-group>
-        </template>
+        <v-text-field v-model="query" placeholder="Numer pociągu albo stacja" prepend-inner-icon="search" variant="solo-filled" flat density="compact" hide-details clearable autofocus />
+        <v-btn icon="close" variant="text" aria-label="Zamknij listę" @click="listOpen = false" />
       </div>
-      <v-list v-if="mdAndUp || expanded" class="list" bg-color="transparent" lines="two" density="comfortable">
+      <v-list class="list" bg-color="transparent" lines="two" density="comfortable">
         <v-list-item
           v-for="t in visible"
           :key="keyOf(t)"
           :active="keyOf(t) === selectedKey"
-          color="secondary"
+          color="primary"
           @click="select(keyOf(t))"
         >
           <template #prepend>
-            <span class="lead" :class="stateOf(t)"><v-icon :icon="t.isBus ? 'directions_bus' : 'train'" /></span>
+            <span class="lead" :style="{ background: pillColor(t).bg, color: pillColor(t).fg }"><v-icon :icon="t.isBus ? 'directions_bus' : 'train'" size="20" /></span>
           </template>
           <v-list-item-title class="text-title-small">
             KW {{ t.number }} <span v-if="t.destination" class="muted font-weight-regular">→ {{ t.destination }}</span>
           </v-list-item-title>
           <v-list-item-subtitle class="text-body-small">
-            {{ whereText(t) }}<template v-if="t.speed"> · {{ t.speed }} km/h</template><template v-if="t.next?.expected && !t.dwelling"> · {{ clock(t.next.expected) }}</template>
+            {{ whereText(t) }}<template v-if="t.next?.expected && !t.dwelling"> · {{ clock(t.next.expected) }}</template>
           </v-list-item-subtitle>
           <template #append>
             <StatusTag :delay="t.delay" :source="t.delaySource" :estimated="t.source === 'est'" />
           </template>
         </v-list-item>
-        <v-list-item v-if="!visible.length" :title="live.data ? 'Żaden pociąg nie pasuje do filtrów' : 'Wczytywanie pozycji…'" />
+        <v-list-item v-if="!visible.length" :title="live.data ? 'Żaden pociąg nie pasuje do wyszukiwania' : 'Wczytywanie pozycji…'" />
       </v-list>
     </aside>
   </div>
@@ -418,64 +426,64 @@ const filters = [
 <style scoped>
 .map-screen { position: relative; height: calc(100dvh - 64px); overflow: hidden; background: rgb(var(--v-theme-surface-container-low)); }
 .map { position: absolute; inset: 0; }
-.map-error { position: absolute; z-index: 3; top: 16px; left: 50%; transform: translateX(-50%); }
+.map-error { position: absolute; z-index: 3; top: 72px; left: 50%; transform: translateX(-50%); }
+.switch { position: absolute; z-index: 2; top: 16px; left: 50%; transform: translateX(-50%); }
+/* przyciski w rogach jak w aplikacjach z mapą na żywo */
+.fabs { position: absolute; z-index: 2; right: 16px; display: grid; gap: 12px; justify-items: end; }
+.fabs.top { top: 16px; }
+.fabs.bottom { bottom: 24px; transition: bottom .25s cubic-bezier(.2, 0, 0, 1); }
 .panel {
-  position: absolute; z-index: 2; left: 16px; top: 16px; bottom: 16px; width: 360px; display: flex; flex-direction: column;
-  border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); box-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
+  position: absolute; z-index: 3; left: 16px; top: 16px; bottom: 16px; width: 360px; display: flex; flex-direction: column;
+  border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface)); box-shadow: 0 2px 6px rgb(0 0 0 / .2), 0 8px 24px rgb(0 0 0 / .15);
 }
-.panel-head { display: grid; gap: 12px; padding: 12px 16px; }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stats div { display: grid; padding: 8px 12px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container-lowest)); }
-.stats strong { font-size: 22px; line-height: 28px; font-weight: 400; }
+.panel-head { display: flex; align-items: center; gap: 4px; padding: 12px 8px 8px 12px; }
+.panel-head :deep(.v-field) { border-radius: 999px; background: rgb(var(--v-theme-surface-container)); }
 .list { flex: 1; min-height: 0; overflow: auto; }
-.lead { display: grid; place-items: center; width: 40px; height: 40px; margin-right: 12px; border-radius: 50%; background: rgb(var(--v-theme-success-container)); color: rgb(var(--v-theme-on-success-container)); }
-.lead.delay { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
-.lead.est { background: rgb(var(--v-theme-info-container)); color: rgb(var(--v-theme-on-info-container)); }
-.controls { position: absolute; z-index: 2; right: 16px; bottom: 32px; display: grid; gap: 12px; }
-.switch { position: absolute; z-index: 2; top: 16px; left: calc(50% + 196px); transform: translateX(-50%); }
-.legend { position: absolute; z-index: 2; right: 16px; top: 16px; display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 14px; border-radius: 999px; background: rgb(var(--v-theme-surface-container-high)); font-size: 12px; font-weight: 500; box-shadow: 0 1px 2px rgb(0 0 0 / .3); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.lg { width: 10px; height: 10px; border-radius: 50%; background: v-bind('legend.ontime'); }
-.lg.d { background: v-bind('legend.late'); }
-.lg.e { background: v-bind('legend.est'); }
-:deep(.chip-on) { background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); border-color: transparent; }
-:deep(.maplibregl-ctrl-attrib) { font-size: 11px; }
-.lg-dir svg { width: 12px; height: 12px; fill: currentColor; transform: rotate(45deg); }
+.lead { display: grid; place-items: center; width: 36px; height: 36px; margin-right: 12px; border-radius: 50%; }
+:deep(.maplibregl-ctrl-attrib) { font-size: 11px; background: color-mix(in srgb, rgb(var(--v-theme-surface)) 85%, transparent) !important; color: rgb(var(--v-theme-on-surface-variant)); }
+:deep(.maplibregl-ctrl-attrib a) { color: inherit; }
 
-/* pastylki pociągów (znaczniki HTML MapLibre, tworzone w syncTrains) */
+/* pastylki pociągów (znaczniki HTML MapLibre, tworzone w syncTrains): kolor linii, kierunek, ikona, numer */
 .map :deep(.train-pill) {
-  --c: v-bind('legend.ontime');
-  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 3px; border: 0; border-radius: 12px; cursor: pointer;
-  background: rgb(var(--v-theme-surface)); color: rgb(var(--v-theme-on-surface)); font: 800 12px/1 var(--kw-font); font-variant-numeric: tabular-nums;
-  box-shadow: 0 0 0 1.5px var(--c), 0 1px 3px rgb(0 0 0 / .35); transition: opacity .15s, transform .15s;
+  position: relative; display: inline-flex; align-items: center; gap: 3px; height: 24px; padding: 0 8px 0 5px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--c); color: var(--on); font: 800 12px/1 var(--kw-font); font-variant-numeric: tabular-nums; white-space: nowrap;
+  box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface)), 0 1px 4px rgb(0 0 0 / .35); transition: opacity .15s, transform .15s;
 }
-.map :deep(.train-pill[data-state='delay']) { --c: v-bind('legend.late'); }
-.map :deep(.train-pill[data-state='est']) { --c: v-bind('legend.est'); }
-.map :deep(.train-pill .dir) { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--c); }
-.map :deep(.train-pill .dir svg) { width: 13px; height: 13px; fill: #fff; transform: rotate(var(--bearing)); }
-.map :deep(.train-pill.still .dir svg) { display: none; }
-.map :deep(.train-pill.still .dir::after) { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.map :deep(.train-pill svg) { width: 14px; height: 14px; fill: currentColor; flex: none; }
+.map :deep(.train-pill .arr) { transform: rotate(var(--bearing)); }
+.map :deep(.train-pill.still .arr) { display: none; }
+/* opóźnienie: żółta plakietka w rogu */
+.map :deep(.train-pill .late) {
+  position: absolute; top: -9px; right: -8px; height: 16px; padding: 0 5px; border-radius: 8px; font-size: 10px; line-height: 16px;
+  background: #F5B83D; color: #2E1A00; box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface));
+}
+.map :deep(.train-pill .late:empty) { display: none; }
+/* kierunek przy kółku: trójkąt na obwodzie (tylko w trybie compact) */
+.map :deep(.train-pill .orbit) { display: none; position: absolute; inset: -1px; transform: rotate(var(--bearing)); pointer-events: none; }
+.map :deep(.train-pill .orbit::before) {
+  content: ''; position: absolute; left: 50%; top: -7px; margin-left: -5px;
+  border: 5px solid transparent; border-top: 0; border-bottom: 6px solid var(--c);
+}
 .map :deep(.train-pill:hover) { transform: scale(1.08); }
 .map :deep(.train-pill:focus-visible) { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
-.map :deep(.train-pill.selected) { transform: scale(1.15); box-shadow: 0 0 0 2.5px rgb(var(--v-theme-primary)), 0 2px 8px rgb(0 0 0 / .4); }
-.map :deep(.train-pill.dim) { opacity: .4; }
-/* zasłonięta przez inną (layoutPills): samo kółko ze strzałką, numer po najechaniu */
+.map :deep(.train-pill.selected) { transform: scale(1.15); box-shadow: 0 0 0 2px rgb(var(--v-theme-surface)), 0 0 0 4.5px rgb(var(--v-theme-primary)), 0 2px 8px rgb(0 0 0 / .4); }
+.map :deep(.train-pill.dim) { opacity: .35; }
 .map :deep(.train-marker:hover), .map :deep(.train-marker:focus-within) { z-index: 10 !important; }
-.map :deep(.train-pill.compact) { padding: 0; gap: 0; height: 18px; border-radius: 9px; box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface)), 0 1px 3px rgb(0 0 0 / .35); }
-.map :deep(.train-pill.compact .no) { display: none; }
-.map :deep(.train-pill.compact:hover), .map :deep(.train-pill.compact:focus-visible) { height: 24px; padding-right: 8px; gap: 4px; border-radius: 12px; }
-.map :deep(.train-pill.compact:hover .no), .map :deep(.train-pill.compact:focus-visible .no) { display: inline; }
-.handle { display: grid; place-items: center; width: 100%; height: 24px; border: 0; background: none; cursor: pointer; }
-.handle::before { content: ''; width: 32px; height: 4px; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-surface-variant)) 40%, transparent); }
+/* zasłonięta przez inną (layoutPills): kółko z ikoną i trójkątem kierunku, numer po najechaniu */
+.map :deep(.train-pill.compact) { width: 22px; height: 22px; padding: 0; justify-content: center; border-radius: 50%; }
+.map :deep(.train-pill.compact .arr), .map :deep(.train-pill.compact .no), .map :deep(.train-pill.compact .late) { display: none; }
+.map :deep(.train-pill.compact .orbit) { display: block; }
+.map :deep(.train-pill.compact.still .orbit) { display: none; }
+.map :deep(.train-pill.compact:hover), .map :deep(.train-pill.compact:focus-visible) { width: auto; padding: 0 8px 0 5px; border-radius: 12px; }
+.map :deep(.train-pill.compact:hover .no), .map :deep(.train-pill.compact:hover .arr) { display: inline; }
+.map :deep(.train-pill.compact:hover .orbit) { display: none; }
+
 @media (max-width: 839px) {
   .map-screen { height: calc(100dvh - 64px - 80px - env(safe-area-inset-bottom, 0px)); }
-  .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 132px; border-radius: var(--kw-r-xl) var(--kw-r-xl) 0 0; transition: height .3s cubic-bezier(.2, 0, 0, 1); }
-  .panel.expanded { height: 72%; }
-  .panel-head { padding-top: 0; }
-  .controls { bottom: 148px; }
-  .legend { left: 16px; right: auto; top: 68px; flex-wrap: nowrap; gap: 10px; padding: 5px 12px; font-size: 11px; }
-  .lg-dir { display: none !important; }
-  .switch { left: 50%; }
-  .stats strong { font-size: 18px; }
+  .switch { top: 12px; }
+  .fabs.top { top: 12px; right: 12px; }
+  .fabs.bottom { right: 12px; bottom: 16px; }
+  .fabs.bottom.raised { bottom: calc(65% + 12px); }
+  .panel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: 65%; border-radius: var(--kw-r-xl) var(--kw-r-xl) 0 0; }
 }
 </style>
