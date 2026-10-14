@@ -17,6 +17,8 @@ final class VehicleRepository
         'EN76' => 'Pesa Elf',
         '22WE' => 'Pesa Elf',
         '48WE' => 'Pesa Elf 2',
+        '48WEb' => 'Pesa Elf 2',
+        '48WEd' => 'Pesa Elf 2',
         '36WEh' => 'Newag Impuls 2',
     ];
 
