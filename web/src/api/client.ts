@@ -42,8 +42,7 @@ export const api = {
     request<Board>('GET', `/stations/${encodeURIComponent(stationId)}/board?${q({ mode, limit, date: at?.date, time: at?.time })}`),
   connections: (p: { from: string; to: string; date: string; time: string; direct?: boolean; arriveBy?: boolean }) =>
     request<ConnectionsResult>('GET', `/connections?${q({ from: p.from, to: p.to, date: p.date, time: p.time, direct: p.direct ? 1 : undefined, arrive: p.arriveBy ? 1 : undefined })}`),
-  /** partner: także kurs POLREGIO (dane do obserwowanej podróży; strona pociągu jest tylko dla KW) */
-  trip: (key: string, partner = false) => request<Trip>('GET', `/trips/${encodeURIComponent(key)}${partner ? '?partner=1' : ''}`),
+  trip: (key: string) => request<Trip>('GET', `/trips/${encodeURIComponent(key)}`),
   train: (number: string) => request<Trip>('GET', `/trains/${encodeURIComponent(number)}`),
   searchTrains: (query: string) => request<{ query: string; trains: TrainMatch[] }>('GET', `/trains?${q({ q: query })}`),
   network: () => request<GeoJSON.FeatureCollection>('GET', '/network'),

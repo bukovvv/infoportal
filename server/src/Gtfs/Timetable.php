@@ -208,21 +208,19 @@ final class Timetable
     /** @return array<int, string> trip_id kursów z danym numerem */
     public function tripIdsForNumber(string $number): array
     {
-        $only = $this->agencyFilter(false);
-        $stmt = $this->pdo->prepare('SELECT tn.trip_id FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id WHERE tn.number = ?' . $only
-            . ' UNION SELECT t.trip_id FROM trips t WHERE t.short_name = ?' . $only);
+        $stmt = $this->pdo->prepare('SELECT trip_id FROM trip_numbers WHERE number = ? UNION SELECT trip_id FROM trips WHERE short_name = ?');
         $stmt->execute([$number, $number]);
 
         return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
 
-    /** @return array<int, string> trip_id kursów KW z numerem zaczynającym się od $prefix (same cyfry) */
+    /** @return array<int, string> trip_id kursów (KW i POLREGIO) z numerem zaczynającym się od $prefix (same cyfry) */
     public function tripIdsForNumberPrefix(string $prefix): array
     {
         if (preg_match('/^\d+$/', $prefix) !== 1) {
             return [];
         }
-        $stmt = $this->pdo->prepare('SELECT tn.trip_id FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id WHERE tn.number GLOB ?' . $this->agencyFilter(false));
+        $stmt = $this->pdo->prepare('SELECT trip_id FROM trip_numbers WHERE number GLOB ?');
         $stmt->execute([$prefix . '*']);
 
         return array_values(array_unique(array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
@@ -259,6 +257,9 @@ final class Timetable
             'block' => (string) $row['block_id'],
             'isBus' => (int) $row['is_bus'] === 1,
             'agency' => (string) ($row['agency'] ?? $this->agency()),
+            // kurs partnera obcięty do Wielkopolski: prawdziwa stacja początkowa i końcowa
+            'originName' => $row['origin_name'] ?? null,
+            'destinationName' => $row['destination_name'] ?? null,
             'numbers' => [],
             'stops' => [],
         ];

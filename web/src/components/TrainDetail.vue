@@ -5,6 +5,7 @@ import { api } from '@/api/client'
 import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
+import { agencyCode, agencyName, isPartner, trainLabel } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
@@ -47,9 +48,12 @@ const category = computed(() => {
   const t = trip.value
   if (!t) return ''
   if (t.isBus) return 'Zastępcza komunikacja autobusowa'
-  return t.route?.id === 'KW_P' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
+  if (t.route?.id === 'PR_IR') return 'interREGIO'
+  return t.route?.id === 'KW_P' || t.route?.id === 'PR_RP' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
 })
-const related = computed(() => (trip.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
+/** pociąg POLREGIO: bez mapy, pojazdu i komunikatów (dotyczą KW) */
+const partner = computed(() => isPartner(trip.value?.agency))
+const related = computed(() => (trip.value && !partner.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
 const progress = computed(() => {
   const t = trip.value
   if (!t?.position) return null
@@ -76,7 +80,7 @@ function fullView() {
 function share() {
   if (!trip.value) return
   const t = trip.value
-  void shareLink({ title: `KW ${t.number}`, text: `KW ${t.number} ${t.origin} → ${t.destination}`, url: `${location.origin}/pociag/${t.number.split('/')[0]}` })
+  void shareLink({ title: trainLabel(t), text: `${trainLabel(t)} ${t.origin} → ${t.destination}`, url: `${location.origin}/pociag/${t.number.split('/')[0]}` })
 }
 defineExpose({ trip })
 </script>
@@ -97,7 +101,7 @@ defineExpose({ trip })
           </span>
           <v-btn v-if="inSheet" icon="close" variant="text" color="on-band" aria-label="Zamknij" @click="emit('close')" />
         </div>
-        <h2 class="head-title">KW {{ trip.number }}<span v-if="trip.name && !trip.name.startsWith('PKM')" class="head-name"> „{{ trip.name }}”</span></h2>
+        <h2 class="head-title">{{ agencyCode(trip.agency) }} {{ trip.number }}<span v-if="trip.name && !trip.name.startsWith('PKM')" class="head-name"> „{{ trip.name }}”</span></h2>
         <p class="head-route">{{ trip.origin }} → {{ trip.destination }}</p>
         <div class="d-flex flex-wrap ga-2">
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
@@ -116,13 +120,20 @@ defineExpose({ trip })
         </div>
       </header>
       <div class="actions">
-        <v-btn variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
+        <v-btn v-if="!partner" variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
         <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
         <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>
       <div v-if="related.length" class="notices divider">
         <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
       </div>
+      <p v-if="partner" class="partner-note text-body-medium divider">
+        <v-icon icon="info" size="20" />
+        <span>
+          Pociąg {{ agencyName(trip.agency) }}. Bilety KW są honorowane na odcinkach, na których jeżdżą też pociągi KW.
+          <template v-if="trip.trimmed"> Pokazujemy stacje w Wielkopolsce.</template>
+        </span>
+      </p>
       <VehicleCard v-if="trip.vehicle" :vehicle="trip.vehicle" class="divider" />
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />
@@ -155,4 +166,5 @@ defineExpose({ trip })
 .head-legs a { color: inherit; font-weight: 700; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 6px 24px; }
 .notices { background: rgb(var(--v-theme-surface-container-low)); }
+.partner-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px 12px 24px; color: rgb(var(--v-theme-on-surface-variant)); }
 </style>

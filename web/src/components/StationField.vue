@@ -4,12 +4,12 @@ import { api } from '@/api/client'
 import type { Station, TrainMatch } from '@/api/types'
 import { useStations } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
+import { agencyCode } from '@/utils/agency'
 import { clock, warsawNow, weekdayShort } from '@/utils/format'
 
 const model = defineModel<string | null>({ default: null })
-// partners: także stacje, na których staje tylko POLREGIO (wyszukiwarka połączeń)
-// trains: numer pociągu (np. „77600”, „KW 77600”) podpowiada pociągi — wybór emituje „train”, pole zostaje bez zmian
-const props = defineProps<{ label: string; icon?: string; hideDetails?: boolean; density?: 'default' | 'comfortable' | 'compact'; partners?: boolean; trains?: boolean }>()
+// trains: numer pociągu (np. „77600”, „KW 77600”, „PR 85724”) podpowiada pociągi — wybór emituje „train”, pole zostaje bez zmian
+const props = defineProps<{ label: string; icon?: string; hideDetails?: boolean; density?: 'default' | 'comfortable' | 'compact'; trains?: boolean }>()
 const emit = defineEmits<{ train: [train: TrainMatch] }>()
 const stations = useStations()
 const favorites = useFavorites()
@@ -17,8 +17,8 @@ const query = ref('')
 
 onMounted(() => { void stations.load() })
 
-/** Numer pociągu w polu: co najmniej 3 cyfry, opcjonalnie „KW” przed. */
-const TRAIN_QUERY = /^\s*(kw\s*)?\d{3,6}(\s*\/\s*\d{1,3})?\s*$/i
+/** Numer pociągu w polu: co najmniej 3 cyfry, opcjonalnie „KW” albo „PR” przed. */
+const TRAIN_QUERY = /^\s*((kw|pr)\s*)?\d{3,6}(\s*\/\s*\d{1,3})?\s*$/i
 const trainResults = ref<TrainMatch[]>([])
 const trainError = ref<string | null>(null)
 let seq = 0
@@ -38,14 +38,14 @@ watch(query, (q) => {
 })
 
 type Item = Station | (TrainMatch & { id: string; name: string; train: true })
-const trainItems = computed<Item[]>(() => trainResults.value.map((t) => ({ ...t, id: `train:${t.key}`, name: `KW ${t.number}`, train: true })))
+const trainItems = computed<Item[]>(() => trainResults.value.map((t) => ({ ...t, id: `train:${t.key}`, name: `${agencyCode(t.agency)} ${t.number}`, train: true })))
 
 const items = computed<Item[]>(() => {
   const selected = model.value ? stations.byId.get(model.value) : undefined
   const q = selected && query.value === selected.name ? '' : query.value
   // bez wpisanego tekstu ulubione stacje na górze
   const fav = q ? [] : favorites.ids.flatMap((id) => stations.byId.get(id) ?? [])
-  const found: Item[] = [...fav, ...stations.search(q ?? '', 8, props.partners).filter((s) => !fav.includes(s))]
+  const found: Item[] = [...fav, ...stations.search(q ?? '', 8).filter((s) => !fav.includes(s))]
   // numer: najpierw pociągi (cicha funkcja KURS'90 może dodać stację o tym kodzie)
   const list = trainItems.value.length ? [...trainItems.value, ...found] : found
   // wybrana stacja musi być na liście (pole pokazuje jej nazwę), ale przy wpisanym tekście na końcu — Enter wybiera pierwszą podpowiedź
@@ -75,8 +75,8 @@ function trainWhen(t: TrainMatch) {
   return `${day}${clock(t.departure)}`
 }
 const noData = computed(() => {
-  if (props.trains && TRAIN_QUERY.test(query.value ?? '')) return trainError.value ?? 'Brak pociągu KW o takim numerze dziś ani jutro.'
-  return props.partners ? 'Brak takiej stacji w Wielkopolsce. Sprawdź pisownię.' : 'Brak takiej stacji w rozkładzie KW. Sprawdź pisownię.'
+  if (props.trains && TRAIN_QUERY.test(query.value ?? '')) return trainError.value ?? 'Brak pociągu o takim numerze dziś ani jutro.'
+  return 'Brak takiej stacji w rozkładzie. Sprawdź pisownię.'
 })
 </script>
 

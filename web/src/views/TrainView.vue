@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Trip } from '@/api/types'
 import TrainDetail from '@/components/TrainDetail.vue'
+import { trainLabel } from '@/utils/agency'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,7 +12,7 @@ const number = computed(() => route.params.number as string)
 const trip = ref<Trip | null>(null)
 function loaded(t: Trip) {
   trip.value = t
-  document.title = `KW ${t.number} ${t.origin} – ${t.destination} | zanimwyjdziesz.pl`
+  document.title = `${trainLabel(t)} ${t.origin} – ${t.destination} | zanimwyjdziesz.pl`
 }
 </script>
 

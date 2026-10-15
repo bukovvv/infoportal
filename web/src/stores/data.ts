@@ -18,9 +18,9 @@ function poll(fn: () => Promise<void>, everyMs: number) {
 }
 
 export const useStations = defineStore('stations', () => {
-  /** wszystkie stacje, także te, na których staje tylko POLREGIO (wyszukiwarka połączeń) */
+  /** wszystkie stacje, także te, na których staje tylko POLREGIO */
   const all = shallowRef<Station[]>([])
-  /** stacje KW: tablica odjazdów, mapa, schemat */
+  /** stacje KW: mapa i schemat (POLREGIO nie ma na mapie) */
   const list = computed(() => all.value.filter((s) => s.kw !== false))
   const byId = computed(() => new Map(all.value.map((s) => [s.id, s])))
   const loaded = ref(false)
@@ -31,19 +31,18 @@ export const useStations = defineStore('stations', () => {
     return pending
   }
 
-  /** partners: także stacje tylko POLREGIO (wyszukiwarka połączeń) */
-  function search(query: string, limit = 8, partners = false): Station[] {
+  function search(query: string, limit = 8): Station[] {
     // cicha funkcja: sam numer = kod stacji z KURS'90 (np. 159 → Poznań Główny)
     const coded = /^\s*\d+\s*$/.test(query) ? byId.value.get(stationByKurs90(query) ?? '') : undefined
     if (coded) return [coded]
     // sam numer bez kodu stacji — to nie nazwa (np. numer pociągu na tablicy odjazdów)
-    if (/^\s*(kw\s*)?\d+/i.test(query)) return []
+    if (/^\s*((kw|pr)\s*)?\d+/i.test(query)) return []
     const q = normalize(query)
     const rank = (s: Station) => {
       const n = normalize(s.name)
       return n.startsWith(q) ? 0 : n.split(/[\s-]+/).some((p) => p.startsWith(q)) ? 1 : 2
     }
-    return (partners ? all.value : list.value)
+    return all.value
       .filter((s) => !q || normalize(s.name).includes(q))
       .sort((a, b) => (q ? rank(a) - rank(b) : 0) || b.daily - a.daily)
       .slice(0, limit)

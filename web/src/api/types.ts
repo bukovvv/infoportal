@@ -16,7 +16,7 @@ export interface Station {
   lon: number
   daily: number
   lines: string[]
-  /** staje tu KW; false — stacja tylko innego przewoźnika (POLREGIO), dostępna wyłącznie w wyszukiwarce połączeń */
+  /** staje tu KW; false — stacja tylko POLREGIO (bez mapy) */
   kw?: boolean
 }
 
@@ -30,6 +30,8 @@ export type DelaySource = 'rt' | 'gps' | null
 export interface BoardRow {
   key: string
   number: string
+  /** KW albo PR (POLREGIO) */
+  agency?: string
   route: Route | null
   isBus: boolean
   headsign: string
@@ -77,6 +79,8 @@ export interface Leg {
   stops?: LegStop[]
   /** spodziewany pojazd (vagonWEB); brak danych lub autobus — null */
   vehicle?: VehicleInfo | null
+  /** POLREGIO na odcinku wspólnym z KW — bilety KW honorowane; brak w starszych zapisanych podróżach */
+  kwTickets?: boolean
 }
 
 export interface LegStop {
@@ -154,6 +158,8 @@ export interface Trip {
   tripId: string
   serviceDate: string
   agency?: string
+  /** kurs POLREGIO jedzie dalej poza Wielkopolskę (origin/destination to prawdziwe końce, stops — tylko tutejsze) */
+  trimmed?: boolean
   number: string
   numbers: string[]
   name: string | null
@@ -177,6 +183,7 @@ export interface Trip {
 export interface TrainMatch {
   key: string
   number: string
+  agency?: string
   exact: boolean
   route: Route | null
   origin: string

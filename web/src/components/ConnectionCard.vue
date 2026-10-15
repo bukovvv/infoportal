@@ -41,6 +41,13 @@ const nextDay = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) !=
 
 /** Kolor odcinka: linia z rozkładu, autobus zastępczy neutralnie, bez koloru — kolor akcji. */
 const legColor = (leg: Leg) => (leg.isBus ? 'rgb(var(--v-theme-outline))' : leg.route?.color ?? 'rgb(var(--v-theme-primary))')
+/** Bilety na odcinku POLREGIO: KW honorowane na odcinkach wspólnych z KW (zasady POLREGIO). */
+function partnerTickets(leg: Leg) {
+  const name = agencyName(leg.agency)
+  if (leg.kwTickets === true) return `Pociąg ${name}: bilety KW są tu honorowane`
+  if (leg.kwTickets === false) return `Pociąg ${name}: na tym odcinku nie jeżdżą pociągi KW, potrzebny bilet ${name}`
+  return `Pociąg ${name}`
+}
 const legMinutes = (leg: Leg) => Math.max(1, (new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) / 60_000)
 /** Odliczanie do odjazdu (z opóźnieniem) w ciągu najbliższej godziny. */
 const countdown = computed(() => {
@@ -124,7 +131,7 @@ function watchJourney() {
                 <strong class="leg-no">{{ agencyCode(leg.agency) }} {{ leg.number }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
               </div>
               <div v-if="isPartner(leg.agency)" class="partner-note text-body-small">
-                <v-icon icon="info" size="16" />Pociąg {{ agencyName(leg.agency) }}: bilet tego przewoźnika, opóźnienia z PKP PLK
+                <v-icon icon="info" size="16" />{{ partnerTickets(leg) }}
               </div>
               <div v-if="leg.vehicle" class="leg-vehicle">
                 <span class="text-body-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ vehicleTitle(leg.vehicle) }}</span>

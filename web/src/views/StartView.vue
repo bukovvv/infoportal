@@ -116,9 +116,9 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 
   <div class="page start">
     <form id="szukaj" class="search card band-lift" aria-labelledby="search-title" @submit.prevent="search()">
-      <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat partners class="f-from" />
+      <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat class="f-from" />
       <v-btn icon="swap_vert" variant="flat" color="surface-container" class="f-swap" aria-label="Zamień stacje" @click="swap" />
-      <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat partners class="f-to" />
+      <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat class="f-to" />
       <DateField v-model="date" label="Data" :min="range.min" :max="range.max" variant="solo-filled" flat class="f-date" />
       <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" variant="solo-filled" flat class="f-time" />
       <div class="f-opts">

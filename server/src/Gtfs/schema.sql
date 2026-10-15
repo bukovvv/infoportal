@@ -18,7 +18,9 @@ CREATE TABLE trips (
     name TEXT,
     block_id TEXT,
     is_bus INTEGER NOT NULL DEFAULT 0,
-    agency TEXT NOT NULL DEFAULT 'KW'
+    agency TEXT NOT NULL DEFAULT 'KW',
+    origin_name TEXT,
+    destination_name TEXT
 );
 CREATE TABLE trip_numbers (number TEXT NOT NULL, trip_id TEXT NOT NULL, PRIMARY KEY (number, trip_id));
 CREATE TABLE stop_times (

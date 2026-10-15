@@ -13,6 +13,7 @@ import TimeField from '@/components/TimeField.vue'
 import { useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
+import { agencyCode } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 
 const route = useRoute()
@@ -106,13 +107,13 @@ function nearest() {
   navigator.geolocation.getCurrentPosition((p) => {
     locating.value = false
     const kx = Math.cos((p.coords.latitude * Math.PI) / 180)
-    const best = stations.list.reduce<{ id: string; name: string; d: number } | null>((acc, s) => {
+    const best = stations.all.reduce<{ id: string; name: string; d: number } | null>((acc, s) => {
       const d = (s.lat - p.coords.latitude) ** 2 + ((s.lon - p.coords.longitude) * kx) ** 2
       return !acc || d < acc.d ? { id: s.id, name: s.name, d } : acc
     }, null)
     if (best) {
       stationId.value = best.id
-      ui.notify(`Najbliższa stacja KW: ${best.name}`)
+      ui.notify(`Najbliższa stacja: ${best.name}`)
     }
   }, (err) => {
     locating.value = false
@@ -203,7 +204,7 @@ const when = (iso: string) => {
             <span v-if="row.via.length" class="text-body-small muted ellipsis">przez {{ row.via.join(', ') }}</span>
             <span class="d-flex align-center flex-wrap ga-2">
               <RouteBadge :route="row.route" :bus="row.isBus" />
-              <span class="text-label-medium number">KW {{ row.number }}</span>
+              <span class="text-label-medium number">{{ agencyCode(row.agency) }} {{ row.number }}</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
             </span>
           </span>
@@ -211,7 +212,7 @@ const when = (iso: string) => {
             <strong>{{ row.platform || '–' }}</strong><small>peron<template v-if="row.track"> · tor {{ row.track }}</template></small>
           </span>
         </button>
-        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" :text="pinned ? 'W ciągu 24 godzin od wybranego czasu nie ma tu żadnego kursu KW.' : 'W ciągu najbliższych 24 godzin nie ma tu żadnego kursu KW.'" />
+        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów" :text="pinned ? 'W ciągu 24 godzin od wybranego czasu nie ma tu żadnego pociągu.' : 'W ciągu najbliższych 24 godzin nie ma tu żadnego pociągu.'" />
       </template>
     </div>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>

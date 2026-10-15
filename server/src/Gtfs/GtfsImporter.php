@@ -18,7 +18,7 @@ use RuntimeException;
 final class GtfsImporter
 {
     /** Wersja układu bazy — starsza baza jest przebudowywana nawet bez zmian w rozkładzie. */
-    public const SCHEMA = 2;
+    public const SCHEMA = 3;
 
     /** @var callable(string): void */
     private $log;
@@ -137,7 +137,7 @@ final class GtfsImporter
         $trips = [];
         $services = [];
         $shapesNeeded = [];
-        $insTrip = $pdo->prepare('INSERT INTO trips VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+        $insTrip = $pdo->prepare('INSERT INTO trips (trip_id, route_id, service_id, shape_id, short_name, headsign, category, name, block_id, is_bus, agency) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
         $insNumber = $pdo->prepare('INSERT OR IGNORE INTO trip_numbers VALUES (?,?)');
         $busRoutes = [];
         foreach ($pdo->query('SELECT route_id, type FROM routes') as $row) {
@@ -185,6 +185,8 @@ final class GtfsImporter
         // stop_times (największy plik — strumieniowo)
         $insStop = $pdo->prepare('INSERT INTO stop_times VALUES (?,?,?,?,?,?,?,?,?,?,?)');
         $rows = 0;
+        /** @var array<string, array{0: int, 1: string, 2: int, 3: string}> $ends */
+        $ends = [];
         foreach ($src->rows('stop_times.txt') as $s) {
             if (!isset($trips[$s['trip_id']])) {
                 continue;
@@ -194,8 +196,20 @@ final class GtfsImporter
             $arr ??= $dep;
             $dep ??= $arr;
             $stationId = $stationOf($s['stop_id']);
-            if ($trips[$s['trip_id']] && !$isInRegion($stationId)) {
-                continue;
+            if ($trips[$s['trip_id']]) {
+                // prawdziwy początek i koniec kursu partnera (przed obcięciem) — do „z:” i „do” na tablicy
+                $seq = (int) $s['stop_sequence'];
+                $e = &$ends[$s['trip_id']];
+                if ($e === null || $seq < $e[0]) {
+                    [$e[0], $e[1]] = [$seq, $stationId];
+                }
+                if ($seq > ($e[2] ?? -1)) {
+                    [$e[2], $e[3]] = [$seq, $stationId];
+                }
+                unset($e);
+                if (!$isInRegion($stationId)) {
+                    continue;
+                }
             }
             $insStop->execute([$s['trip_id'], (int) $s['stop_sequence'], $stationId, $s['stop_id'], $arr, $dep,
                 $s['shape_dist_traveled'] !== '' ? (float) $s['shape_dist_traveled'] : null,
@@ -208,6 +222,11 @@ final class GtfsImporter
         foreach (['stop_times', 'trip_numbers', 'trips'] as $table) {
             $pdo->exec("DELETE FROM $table WHERE trip_id IN (SELECT trip_id FROM short_trips)");
         }
+        $updEnds = $pdo->prepare('UPDATE trips SET origin_name = ?, destination_name = ? WHERE trip_id = ?');
+        foreach ($ends as $tripId => $e) {
+            $updEnds->execute([$stops[$e[1]]['stop_name'] ?? null, $stops[$e[3]]['stop_name'] ?? null, $tripId]);
+        }
+        unset($ends);
         $rows = (int) $pdo->query('SELECT COUNT(*) FROM stop_times')->fetchColumn();
         ($this->log)('Postoje: ' . $rows);
 

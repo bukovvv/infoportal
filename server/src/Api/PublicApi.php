@@ -37,8 +37,8 @@ final class PublicApi
         return $this->rt ??= Realtime::fromStorage();
     }
 
-    /** $partners — z kursami POLREGIO (tylko wyszukiwarka połączeń). */
-    private function day(int $date, bool $partners = false): DayTimetable
+    /** Dzień rozkładu z kursami POLREGIO (w Wielkopolsce) — wszędzie poza mapą (LiveBuilder bierze same KW). */
+    private function day(int $date, bool $partners = true): DayTimetable
     {
         return $this->days[$date . ($partners ? 'p' : '')] ??= DayTimetable::load($this->tt(), $date, $partners);
     }
@@ -62,9 +62,6 @@ final class PublicApi
     public function board(array $p): Response
     {
         $station = $this->tt()->station($p['id']) ?? throw new ApiException('Nie znaleziono stacji.', 404);
-        if (!$station['kw']) {
-            throw new ApiException('Na tej stacji nie zatrzymują się pociągi KW.', 404);
-        }
         $mode = ($_GET['mode'] ?? 'dep') === 'arr' ? 'arr' : 'dep';
         $limit = max(1, min(40, (int) ($_GET['limit'] ?? 16)));
         $today = Clock::today();
@@ -95,7 +92,7 @@ final class PublicApi
                 if ($planned === null || $planned + $shift + 3600 < $from || $planned + $shift >= $until) {
                     continue;
                 }
-                $same = ($trip['isBus'] ? 'ZKA ' : '') . $trip['number'];
+                $same = $trip['agency'] . ($trip['isBus'] ? ' ZKA ' : ' ') . $trip['number'];
                 if ($shift !== 0 && isset($seen[$same])) {
                     continue;
                 }
@@ -111,11 +108,12 @@ final class PublicApi
                     'sort' => $planned + $shift,
                     'key' => $key,
                     'number' => $trip['number'],
+                    'agency' => $trip['agency'],
                     'route' => $this->route($trip['routeId']),
                     'isBus' => $trip['isBus'],
                     'headsign' => $trip['headsign'],
-                    'origin' => $this->name($trip['stops'][0][D::STATION]),
-                    'destination' => $this->name($trip['stops'][$last][D::STATION]),
+                    'origin' => $this->origin($trip),
+                    'destination' => $this->destination($trip),
                     'via' => $this->via($rest),
                     'scheduled' => Clock::iso($date, $planned),
                     'expected' => $delay !== null ? Clock::iso($date, $expected) : null,
@@ -214,6 +212,8 @@ final class PublicApi
                     'stopsBetween' => $l['to'] - $l['from'] - 1,
                     'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
                     'vehicle' => $trip['isBus'] || $partner ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
+                    // bilety KW są honorowane w POLREGIO na odcinkach wspólnych z KW: każda stacja odcinka obsługiwana też przez KW
+                    'kwTickets' => !$partner || $this->kwSection($trip, $l['from'], $l['to']),
                 ];
             }
             $connections[] = [
@@ -243,7 +243,7 @@ final class PublicApi
         $number = self::trainQuery($p['number']) ?? throw new ApiException('Podaj prawidłowy numer pociągu.', 422);
         $runs = $this->runsForNumbers($this->tt()->tripIdsForNumber($number));
         if ($runs === []) {
-            throw new ApiException('Pociąg KW ' . $number . ' nie kursuje dziś ani jutro według rozkładu.', 404);
+            throw new ApiException('Pociąg ' . $number . ' nie kursuje dziś ani jutro według rozkładu.', 404);
         }
 
         return $this->trip(['key' => array_key_first($runs)]);
@@ -274,10 +274,11 @@ final class PublicApi
             $trains[] = [
                 'key' => $key,
                 'number' => $trip['number'],
+                'agency' => $trip['agency'],
                 'exact' => in_array($query, $numbers, true),
                 'route' => $this->route($trip['routeId']),
-                'origin' => $this->name($first[D::STATION]),
-                'destination' => $this->name($last[D::STATION]),
+                'origin' => $this->origin($trip),
+                'destination' => $this->destination($trip),
                 'departure' => Clock::iso($date, $first[D::DEP]),
                 'arrival' => Clock::iso($date, $last[D::ARR] ?? $last[D::DEP]),
                 'running' => $score === 0 && Clock::at($date, (int) $first[D::DEP])->getTimestamp() <= time()
@@ -290,10 +291,10 @@ final class PublicApi
         return new Response(['query' => $query, 'trains' => array_slice($trains, 0, 8)]);
     }
 
-    /** „KW 77600”, „77610/1” → „77600”, „77610”; null — to nie numer pociągu. */
+    /** „KW 77600”, „PR 85724”, „77610/1” → „77600”, „85724”, „77610”; null — to nie numer pociągu. */
     public static function trainQuery(string $value): ?string
     {
-        if (preg_match('/^\s*(?:kw\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
+        if (preg_match('/^\s*(?:(?:kw|pr)\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
             return null;
         }
 
@@ -301,7 +302,7 @@ final class PublicApi
     }
 
     /**
-     * Kursy KW (bez odcinków autobusowych) spośród podanych trip_id dziś i jutro, od najlepszego:
+     * Kursy KW i POLREGIO (bez odcinków autobusowych) spośród podanych trip_id dziś i jutro, od najlepszego:
      * 0 — w drodze teraz (±30 min), potem najbliższy odjazd, na końcu już zakończone.
      * @param array<int, string> $tripIds @return array<string, int> klucz kursu => wynik
      */
@@ -333,13 +334,9 @@ final class PublicApi
         }
         $date = (int) $m[2];
         $day = $this->day($date);
-        // kurs POLREGIO: tylko dane do obserwowanej podróży (?partner=1), bez strony pociągu
-        $partner = !isset($day->trips[$p['key']]) && isset($this->day($date, true)->trips[$p['key']]);
-        if ($partner && ($_GET['partner'] ?? '') !== '1') {
-            throw new ApiException('Szczegóły pokazujemy tylko dla pociągów KW. Ten kurs prowadzi inny przewoźnik.', 404);
-        }
-        $day = $partner ? $this->day($date, true) : $day;
         $trip = $day->trips[$p['key']] ?? throw new ApiException('Ten kurs nie jedzie w wybranym dniu.', 404);
+        // kurs POLREGIO: bez mapy, komunikatów (dotyczą KW) i pojazdu; postoje tylko w Wielkopolsce
+        $partner = $trip['agency'] !== $this->tt()->agency();
         $nowSec = Clock::secondsSince($date);
         $exp = $this->applied($trip, $nowSec);
         $live = null;
@@ -394,8 +391,10 @@ final class PublicApi
             'isBus' => $trip['isBus'],
             'headsign' => $trip['headsign'],
             'route' => $this->route($trip['routeId']),
-            'origin' => $stops[0]['station']['name'],
-            'destination' => end($stops)['station']['name'],
+            'origin' => $this->origin($trip),
+            'destination' => $this->destination($trip),
+            // kurs partnera jedzie dalej poza Wielkopolskę — pokazujemy tylko tutejsze stacje
+            'trimmed' => $partner && ($this->origin($trip) !== $stops[0]['station']['name'] || $this->destination($trip) !== end($stops)['station']['name']),
             'stops' => $stops,
             'shape' => array_map(static fn (array $pt): array => [$pt[0], $pt[1]], $this->tt()->shape($trip['shapeId'])),
             'realtime' => ['source' => $exp['source'], 'delay' => Realtime::minutes($exp['delay']), 'cancelled' => $exp['cancelled']],
@@ -495,6 +494,30 @@ final class PublicApi
             ];
         }
         return $stops;
+    }
+
+    /** Stacja początkowa kursu (dla POLREGIO prawdziwa, sprzed obcięcia do Wielkopolski). @param array<string, mixed> $trip */
+    private function origin(array $trip): string
+    {
+        return $trip['originName'] ?? $this->name($trip['stops'][0][D::STATION]);
+    }
+
+    /** @param array<string, mixed> $trip */
+    private function destination(array $trip): string
+    {
+        return $trip['destinationName'] ?? $this->name(end($trip['stops'])[D::STATION]);
+    }
+
+    /** Czy wszystkie stacje odcinka obsługuje też KW (odcinek wspólny — bilety KW honorowane). @param array<string, mixed> $trip */
+    private function kwSection(array $trip, int $from, int $to): bool
+    {
+        for ($i = $from; $i <= $to; $i++) {
+            if (!($this->tt()->station($trip['stops'][$i][D::STATION])['kw'] ?? false)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @return array<string, mixed>|null */
