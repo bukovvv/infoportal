@@ -115,7 +115,6 @@ const noData = computed(() => {
     clearable
     persistent-clear
     clear-icon="close"
-    menu-icon=""
     @click:clear="cleared"
     :items="items"
     item-title="name"
