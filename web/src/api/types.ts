@@ -16,6 +16,8 @@ export interface Station {
   lon: number
   daily: number
   lines: string[]
+  /** staje tu KW; false — stacja tylko innego przewoźnika (POLREGIO), dostępna wyłącznie w wyszukiwarce połączeń */
+  kw?: boolean
 }
 
 export interface StationRef {
@@ -54,6 +56,8 @@ export interface Board {
 export interface Leg {
   key: string
   number: string
+  /** przewoźnik: KW albo PR (POLREGIO); brak w podróżach zapisanych przed dodaniem pola = KW */
+  agency?: string
   route: Route | null
   isBus: boolean
   headsign: string
@@ -149,6 +153,7 @@ export interface Trip {
   key: string
   tripId: string
   serviceDate: string
+  agency?: string
   number: string
   numbers: string[]
   name: string | null
@@ -166,6 +171,19 @@ export interface Trip {
   notices: number[]
   /** ostatnio zaobserwowany skład (vagonWEB); brak danych lub autobus — null */
   vehicle?: VehicleInfo | null
+}
+
+/** Pociąg znaleziony po numerze (GET /trains?q=…): bieżący albo najbliższy kurs. */
+export interface TrainMatch {
+  key: string
+  number: string
+  exact: boolean
+  route: Route | null
+  origin: string
+  destination: string
+  departure: string
+  arrival: string
+  running: boolean
 }
 
 export interface VehicleInfo {

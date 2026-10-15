@@ -65,7 +65,7 @@ function remove() {
     <v-progress-linear v-if="state.progress !== null" :model-value="state.progress" rounded height="4" aria-label="Postęp podróży" />
     <div v-for="(leg, i) in legs" :key="leg.key" class="d-flex align-center justify-space-between ga-2 flex-wrap">
       <span class="d-flex align-center ga-2">
-        <TrainChip :number="leg.number" :trip-key="leg.key" :bus="journey.connection.legs[i].isBus" />
+        <TrainChip :number="leg.number" :trip-key="leg.key" :bus="journey.connection.legs[i].isBus" :agency="journey.connection.legs[i].agency" />
         <span v-if="leg.platform" class="text-body-small">peron {{ leg.platform }}</span>
       </span>
       <StatusTag :delay="leg.delay" :cancelled="leg.cancelled" />

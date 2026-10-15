@@ -16,6 +16,7 @@ $router->get('/stations', [$api, 'stations']);
 $router->get('/stations/{id}', [$api, 'station']);
 $router->get('/stations/{id}/board', [$api, 'board']);
 $router->get('/connections', [$api, 'connections']);
+$router->get('/trains', [$api, 'searchTrains']);
 $router->get('/trains/{number}', [$api, 'trainByNumber']);
 $router->get('/trips/{key}', [$api, 'trip']);
 $router->get('/network', [$api, 'network']);

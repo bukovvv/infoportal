@@ -18,8 +18,9 @@ final class GtfsRtDecoder
     /**
      * @return array{timestamp: int|null, trips: array<int, array{tripId: string, startDate: int|null, cancelled: bool, stops: array<int, array{seq: int|null, stopId: string|null, arrTime: int|null, arrDelay: int|null, depTime: int|null, depDelay: int|null, skipped: bool}>}>}
      */
-    public static function decode(string $buf, ?string $tripPrefix = null): array
+    public static function decode(string $buf, string|array|null $tripPrefix = null): array
     {
+        $prefixes = $tripPrefix === null ? null : (array) $tripPrefix;
         $timestamp = null;
         $trips = [];
         $pos = 0;
@@ -35,15 +36,30 @@ final class GtfsRtDecoder
             $pos += $size;
             if ($field === 1) {
                 $timestamp = self::header($chunk);
-            } elseif ($field === 2 && ($tripPrefix === null || str_contains($chunk, $tripPrefix))) {
+            } elseif ($field === 2 && self::matches($chunk, $prefixes, false)) {
                 $trip = self::entity($chunk);
-                if ($trip !== null && ($tripPrefix === null || str_starts_with($trip['tripId'], $tripPrefix))) {
+                if ($trip !== null && self::matches($trip['tripId'], $prefixes, true)) {
                     $trips[] = $trip;
                 }
             }
         }
 
         return ['timestamp' => $timestamp, 'trips' => $trips];
+    }
+
+    /** @param array<int, string>|null $prefixes */
+    private static function matches(string $value, ?array $prefixes, bool $atStart): bool
+    {
+        if ($prefixes === null) {
+            return true;
+        }
+        foreach ($prefixes as $prefix) {
+            if ($atStart ? str_starts_with($value, $prefix) : str_contains($value, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function header(string $buf): ?int

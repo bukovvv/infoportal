@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import type { Board } from '@/api/types'
+import type { Board, TrainMatch } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import DateField from '@/components/DateField.vue'
@@ -13,7 +13,7 @@ import TimeField from '@/components/TimeField.vue'
 import { useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
-import { clock, dayLabel, minutesUntil, relative, warsawNow, weekdayShort } from '@/utils/format'
+import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -95,6 +95,11 @@ onMounted(() => {
 })
 onBeforeUnmount(() => window.clearInterval(timer))
 
+/** Numer pociągu wpisany w pole stacji: strona wybranego kursu. */
+function openTrain(t: TrainMatch) {
+  void router.push({ name: 'train', params: { number: splitNumbers(t.number)[0] ?? t.number }, query: { kurs: t.key } })
+}
+
 function nearest() {
   if (!navigator.geolocation) { ui.notify('Przeglądarka nie udostępnia lokalizacji. Wybierz stację z listy.'); return }
   locating.value = true
@@ -127,7 +132,7 @@ const when = (iso: string) => {
 <template>
   <BandHero narrow>
     <div class="station-pick">
-      <StationField v-model="stationId" label="Stacja" icon="search" hide-details variant="solo" flat class="station-field" />
+      <StationField v-model="stationId" label="Stacja lub numer pociągu" icon="search" hide-details variant="solo" flat trains class="station-field" @train="openTrain" />
       <button
         type="button"
         class="star-btn"
@@ -206,7 +211,7 @@ const when = (iso: string) => {
             <strong>{{ row.platform || '–' }}</strong><small>peron<template v-if="row.track"> · tor {{ row.track }}</template></small>
           </span>
         </button>
-        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" :text="pinned ? 'W wybranym czasie i do rana następnego dnia nie ma tu żadnego kursu KW.' : 'Z tej stacji nie odjeżdża dziś ani jutro rano żaden pociąg KW.'" />
+        <v-empty-state v-if="!board.rows.length" icon="departure_board" title="Brak kolejnych kursów KW" :text="pinned ? 'W ciągu 24 godzin od wybranego czasu nie ma tu żadnego kursu KW.' : 'W ciągu najbliższych 24 godzin nie ma tu żadnego kursu KW.'" />
       </template>
     </div>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>

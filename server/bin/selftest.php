@@ -5,6 +5,8 @@ declare(strict_types=1);
 // Testy logiki backendu bez zewnętrznych zależności: php server/bin/selftest.php
 
 require dirname(__DIR__) . '/bootstrap.php';
+// testy trzymają w pamięci kilka dni rozkładu naraz (z kursami POLREGIO i bez); zapytanie API potrzebuje ok. 40 MB
+ini_set('memory_limit', '512M');
 
 use KwInfo\Http\ApiException;
 use KwInfo\Api\PublicApi;
@@ -14,6 +16,7 @@ use KwInfo\Gtfs\ConnectionFinder;
 use KwInfo\Gtfs\DayTimetable;
 use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Gtfs\PositionEstimator;
+use KwInfo\Gtfs\Region;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\GtfsRtDecoder;
 use KwInfo\Live\Realtime;
@@ -34,6 +37,15 @@ function check(string $name, bool $ok, string $detail = ''): void
 // --- numery pociągów
 check('splitNumbers 77610/1', GtfsImporter::splitNumbers('77610/1') === ['77610', '77611']);
 check('splitNumbers pojedynczy', GtfsImporter::splitNumbers('77345') === ['77345']);
+check('splitNumbers z nazwą pociągu', GtfsImporter::splitNumbers('77684/5 Rzepicha') === ['77684', '77685'] && GtfsImporter::splitNumbers('77375 Sokół') === ['77375']);
+check('numer pociągu z wyszukiwarki', PublicApi::trainQuery('77600') === '77600' && PublicApi::trainQuery(' KW 77600 ') === '77600' && PublicApi::trainQuery('kw77610/1') === '77610'
+    && PublicApi::trainQuery('77375 Sokół') === '77375' && PublicApi::trainQuery('12') === null && PublicApi::trainQuery('Poznań') === null);
+
+// --- granica Wielkopolski (kursy POLREGIO obcinane do województwa)
+$region = new Region();
+check('region: Poznań, Piła, Kalisz w środku', $region->contains(52.4019, 16.9113) && $region->contains(53.1458, 16.7417) && $region->contains(51.7536, 18.0753));
+check('region: Łódź, Zbąszynek, Głogów poza', !$region->contains(51.7570, 19.4310) && !$region->contains(52.2433, 15.8183) && !$region->contains(51.6573, 16.0866));
+check('region: wyjątki przy granicy', $region->contains(52.5900, 17.9000, 'Wydartowo'));
 
 // --- upraszczanie kształtu zachowuje końce i odległości
 $line = [[52.0, 16.0, 0.0], [52.00001, 16.5, 5.0], [52.0, 17.0, 10.0], [52.5, 17.0, 20.0]];
@@ -89,6 +101,9 @@ $t = $decoded['trips'][0];
 check('RT: postój i czasy', $t['tripId'] === 'PLK_KW_2026_1' && $t['startDate'] === 20261001 && $t['stops'][0]['seq'] === 3 && $t['stops'][0]['depTime'] === 1790000180);
 check('RT: pominięty postój', $t['stops'][1]['skipped'] === true);
 check('RT: odwołany kurs', $decoded['trips'][1]['cancelled'] === true);
+$entityPr = field(1, 'U_4') . field(3, field(1, field(1, 'PLK_PR_2026_7') . field(3, '20261001') . field(4, 0)));
+$both = GtfsRtDecoder::decode($feed . field(2, $entityPr), ['PLK_KW_', 'PLK_PR_']);
+check('RT: kilku przewoźników (KW + POLREGIO)', array_column($both['trips'], 'tripId') === ['PLK_KW_2026_1', 'PLK_KW_2026_2', 'PLK_PR_2026_7']);
 
 // --- propagacja opóźnień
 $trip = ['key' => 'T@20261001', 'stops' => [[0, 'A', 1000, 1000], [1, 'B', 1600, 1660], [2, 'C', 2200, 2200], [3, 'D', 2800, 2800]]];
@@ -219,6 +234,108 @@ if (is_file(Config::path('gtfs_db'))) {
         }
     }
     check('API: tablica bez powtórzonych kursów nocnych', $keys !== [] && count($keys) === count(array_unique($keys)));
+
+    // tablica: najbliższe 24 h, każdy pociąg raz (Łódź Kaliska: jeden odjazd i jeden przyjazd dziennie, nie dziś + jutro)
+    $repeated = [];
+    $outside = [];
+    foreach (['Łódź Kaliska', 'Wolsztyn', 'Poznań Główny', 'Kępno', 'Głogów'] as $name) {
+        if (!isset($byName[$name])) {
+            continue;
+        }
+        foreach ([['mode' => 'dep'], ['mode' => 'arr'], ['mode' => 'dep', 'date' => $isoDay, 'time' => '18:00'], ['mode' => 'arr', 'date' => $isoDay]] as $params) {
+            $_GET = $params + ['limit' => '40'];
+            $rows = $api->board(['id' => $byName[$name]])->data['rows'];
+            $numbers = array_map(static fn (array $r): string => ($r['isBus'] ? 'ZKA ' : '') . $r['number'], $rows);
+            if (count($numbers) !== count(array_unique($numbers))) {
+                $repeated[] = $name . ' ' . json_encode($params);
+            }
+            $start = isset($params['date']) ? strtotime($isoDay . ' ' . ($params['time'] ?? '00:00')) : time() - 3600;
+            foreach ($rows as $r) {
+                if (strtotime($r['scheduled']) >= $start + 86400 + 3600) {
+                    $outside[] = $name . ' ' . $r['scheduled'];
+                }
+            }
+        }
+    }
+    check('API: tablica bez tego samego pociągu dwa razy', $repeated === [], implode('; ', $repeated));
+    check('API: tablica sięga najwyżej 24 h naprzód', $outside === [], implode('; ', array_slice($outside, 0, 3)));
+    if (isset($byName['Łódź Kaliska'])) {
+        $_GET = ['mode' => 'dep', 'date' => $isoDay, 'time' => '00:00', 'limit' => '40'];
+        $lodz = $api->board(['id' => $byName['Łódź Kaliska']])->data['rows'];
+        check('API: Łódź Kaliska — odjazdy tylko z wybranego dnia', $lodz !== [] && count(array_filter($lodz, static fn (array $r): bool => substr($r['scheduled'], 0, 10) !== $isoDay)) === 0, (string) count($lodz));
+    }
+
+    // POLREGIO: tylko w wyszukiwarce połączeń, obcięte do Wielkopolski
+    $agency = $tt->agency();
+    $partnerDay = DayTimetable::load($tt, $day->date, true);
+    $partnerTrips = array_filter($partnerDay->trips, static fn (array $t): bool => $t['agency'] !== $agency);
+    check('POLREGIO: kursy w bazie', $partnerTrips !== [], 'uruchom import-gtfs.php --force');
+    check('POLREGIO: poza tablicą, mapą i stroną pociągu', array_filter($day->trips, static fn (array $t): bool => $t['agency'] !== $agency) === []);
+    $stations = $tt->stations();
+    $outsideRegion = [];
+    foreach ($partnerTrips as $t) {
+        foreach ($t['stops'] as $s) {
+            $st = $stations[$s[DayTimetable::STATION]];
+            if (!$region->contains($st['lat'], $st['lon'], $st['name'])) {
+                $outsideRegion[$st['name']] = true;
+            }
+        }
+    }
+    check('POLREGIO: tylko stacje w Wielkopolsce', $outsideRegion === [], implode(', ', array_keys($outsideRegion)));
+    $prOnly = array_values(array_filter($stations, static fn (array $s): bool => !$s['kw']));
+    if ($prOnly !== []) {
+        try {
+            $_GET = [];
+            $api->board(['id' => $prOnly[0]['id']]);
+            check('POLREGIO: stacja bez KW nie ma tablicy', false);
+        } catch (ApiException) {
+            check('POLREGIO: stacja bez KW nie ma tablicy', true);
+        }
+    }
+    // przesiadka KW ↔ POLREGIO: Poznań → Złotów (POLREGIO z Piły) albo dowolna trasa z odcinkiem innego przewoźnika
+    $mixed = false;
+    $partnerLeg = null;
+    foreach ([['Poznań Główny', 'Złotów'], ['Gniezno', 'Piła Główna'], ['Leszno', 'Kępno']] as [$a, $b]) {
+        if (!isset($byName[$a], $byName[$b])) {
+            continue;
+        }
+        $_GET = ['from' => $byName[$a], 'to' => $byName[$b], 'date' => $isoDay, 'time' => '06:00', 'limit' => '10'];
+        foreach ($api->connections()->data['connections'] as $c) {
+            $agencies = array_unique(array_column($c['legs'], 'agency'));
+            $mixed = $mixed || count($agencies) > 1;
+            foreach ($c['legs'] as $l) {
+                $partnerLeg ??= $l['agency'] !== $agency ? $l : null;
+            }
+        }
+    }
+    check('POLREGIO: połączenia z przesiadką KW ↔ POLREGIO', $mixed);
+    if ($partnerLeg !== null) {
+        try {
+            $_GET = [];
+            $api->trip(['key' => $partnerLeg['key']]);
+            check('POLREGIO: bez strony pociągu', false);
+        } catch (ApiException) {
+            $_GET = ['partner' => '1'];
+            check('POLREGIO: bez strony pociągu, dane do obserwowanej podróży', $api->trip(['key' => $partnerLeg['key']])->data['agency'] !== $agency && $partnerLeg['vehicle'] === null);
+        }
+    }
+
+    // wyszukiwanie pociągów po numerze
+    $someTrip = null;
+    foreach ($day->trips as $t) {
+        if (!$t['isBus'] && preg_match('/^\d{5}$/', $t['number']) === 1) {
+            $someTrip = $t;
+            break;
+        }
+    }
+    if ($someTrip !== null) {
+        $_GET = ['q' => 'KW ' . $someTrip['number']];
+        $found = $api->searchTrains()->data['trains'];
+        $_GET = ['q' => substr($someTrip['number'], 0, 3)];
+        $prefix = $api->searchTrains()->data['trains'];
+        check('API: pociąg po numerze', $found !== [] && $found[0]['exact'] && $found[0]['number'] === $someTrip['number']
+            && $prefix !== [] && count($prefix) <= 8 && count(array_unique(array_column($prefix, 'number'))) === count($prefix), $someTrip['number']);
+    }
     $_GET = [];
 } else {
     echo "[POMINIĘTO] testy na bazie — uruchom najpierw import-gtfs.php\n";

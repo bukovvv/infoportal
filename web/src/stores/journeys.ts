@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Connection, Trip } from '@/api/types'
+import { isPartner } from '@/utils/agency'
 import { pushSupport, unwatchJourney, watchJourney } from '@/utils/push'
 import { read, useUi, write } from './ui'
 
@@ -101,14 +102,15 @@ export const useJourneys = defineStore('journeys', () => {
   /** Aktualne dane kursów dla podróży dzisiejszych i przyszłych (maks. co minutę). */
   async function refresh() {
     const now = Date.now()
-    const keys = new Set<string>()
+    // klucz kursu => czy to kurs POLREGIO (bez strony pociągu, dane tylko do podróży)
+    const keys = new Map<string, boolean>()
     for (const j of list.value) {
       if (new Date(j.connection.arrival).getTime() < now - 3600_000) continue
       if (new Date(j.connection.departure).getTime() > now + 12 * 3600_000) continue
-      j.connection.legs.forEach((l) => keys.add(l.key))
+      j.connection.legs.forEach((l) => keys.set(l.key, isPartner(l.agency)))
     }
-    await Promise.all([...keys].map(async (key) => {
-      try { trips.value[key] = await api.trip(key) } catch { /* kurs mógł zniknąć z rozkładu */ }
+    await Promise.all([...keys].map(async ([key, partner]) => {
+      try { trips.value[key] = await api.trip(key, partner) } catch { /* kurs mógł zniknąć z rozkładu */ }
     }))
   }
 

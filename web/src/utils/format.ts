@@ -58,9 +58,9 @@ export function normalize(value: string) {
   return value.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').toLowerCase().trim()
 }
 
-/** „77610/1” → ['77610', '77611'] (jak GtfsImporter::splitNumbers). */
+/** „77610/1” → ['77610', '77611'] (jak GtfsImporter::splitNumbers); nazwa po numerze („77375 Sokół”) jest pomijana. */
 export function splitNumbers(value: string): string[] {
-  const parts = value.split('/').map((p) => p.trim()).filter(Boolean)
+  const parts = (/^\s*\d+(?:\s*\/\s*\d+)*/.exec(value)?.[0] ?? value).split('/').map((p) => p.trim()).filter(Boolean)
   if (!parts.length) return []
   const base = parts[0]
   return [...new Set([base, ...parts.slice(1).map((p) => (p.length < base.length ? base.slice(0, base.length - p.length) + p : p))])]

@@ -1,5 +1,6 @@
 // Plik kalendarza (.ics, RFC 5545) dla połączenia: jedno wydarzenie od odjazdu do przyjazdu z opisem odcinków.
 import type { Connection } from '@/api/types'
+import { trainLabel } from './agency'
 import { clock } from './format'
 
 /** Czas UTC w formacie iCalendar: 20261014T145400Z. */
@@ -30,7 +31,7 @@ export function connectionIcs(c: Connection, url: string, now = new Date()) {
   const description = c.legs.map((l, i) => {
     const platform = l.platform ? `, peron ${l.platform}` : ''
     const wait = i < c.legs.length - 1 ? `\nPrzesiadka w ${l.to.name}: ${c.waits[i]} min` : ''
-    return `${clock(l.departure)} ${l.from.name} → ${clock(l.arrival)} ${l.to.name}: ${l.isBus ? 'autobus' : 'pociąg'} KW ${l.number}${platform}${wait}`
+    return `${clock(l.departure)} ${l.from.name} → ${clock(l.arrival)} ${l.to.name}: ${l.isBus ? 'autobus' : 'pociąg'} ${trainLabel(l)}${platform}${wait}`
   }).join('\n') + `\n\nSprawdź opóźnienia: ${url}`
   const lines = [
     'BEGIN:VCALENDAR',

@@ -52,17 +52,32 @@ final class Timetable
         return $this->meta;
     }
 
+    /** Przewoźnik główny (KW); kursy partnerów (POLREGIO) są tylko w wyszukiwarce połączeń. */
+    public function agency(): string
+    {
+        return (string) Config::get('agency_id');
+    }
+
+    /** Warunek SQL na kursy przewoźnika głównego (pusty, gdy bierzemy też partnerów albo baza sprzed ich dodania). */
+    private function agencyFilter(bool $partners, string $alias = 't'): string
+    {
+        return $partners || (int) ($this->meta()['schema'] ?? 0) < 2 ? '' : ' AND ' . $alias . '.agency = ' . $this->pdo->quote($this->agency());
+    }
+
     public function version(): string
     {
         return substr(hash('sha1', ($this->meta()['feedVersion'] ?? '') . ($this->meta()['importedAt'] ?? '')), 0, 12);
     }
 
-    /** @return array<string, array{id: string, name: string, lat: float, lon: float, daily: int, lines: array<int, string>}> */
+    /**
+     * Wszystkie stacje; kw = false — staje tu tylko przewoźnik partnerski (stacja tylko dla wyszukiwarki połączeń).
+     * @return array<string, array{id: string, name: string, lat: float, lon: float, daily: int, lines: array<int, string>, kw: bool}>
+     */
     public function stations(): array
     {
         if ($this->stations === null) {
             $this->stations = [];
-            foreach ($this->pdo->query('SELECT id, name, lat, lon, daily, lines FROM stations ORDER BY name') as $row) {
+            foreach ($this->pdo->query('SELECT * FROM stations ORDER BY name') as $row) {
                 $this->stations[$row['id']] = [
                     'id' => (string) $row['id'],
                     'name' => (string) $row['name'],
@@ -70,6 +85,7 @@ final class Timetable
                     'lon' => round((float) $row['lon'], 6),
                     'daily' => (int) $row['daily'],
                     'lines' => $row['lines'] ? explode(',', (string) $row['lines']) : [],
+                    'kw' => (int) ($row['kw'] ?? 1) === 1,
                 ];
             }
         }
@@ -77,7 +93,7 @@ final class Timetable
         return $this->stations;
     }
 
-    /** @return array{id: string, name: string, lat: float, lon: float, daily: int, lines: array<int, string>}|null */
+    /** @return array{id: string, name: string, lat: float, lon: float, daily: int, lines: array<int, string>, kw: bool}|null */
     public function station(string $id): ?array
     {
         return $this->stations()[$id] ?? null;
@@ -126,13 +142,14 @@ final class Timetable
     }
 
     /**
-     * Kursy aktywne w danym dniu kursowania wraz z postojami.
+     * Kursy aktywne w danym dniu kursowania wraz z postojami; $partners — także kursy przewoźników partnerskich.
      * @return array<string, array<string, mixed>> trip_id => kurs
      */
-    public function tripsOn(int $date): array
+    public function tripsOn(int $date, bool $partners = false): array
     {
+        $only = $this->agencyFilter($partners);
         $stmt = $this->pdo->prepare(
-            'SELECT t.* FROM trips t JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?'
+            'SELECT t.* FROM trips t JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?' . $only
         );
         $stmt->execute([$date]);
         $trips = [];
@@ -143,7 +160,7 @@ final class Timetable
             return [];
         }
         $numbers = $this->pdo->prepare(
-            'SELECT tn.trip_id, tn.number FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?'
+            'SELECT tn.trip_id, tn.number FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?' . $only
         );
         $numbers->execute([$date]);
         foreach ($numbers->fetchAll(PDO::FETCH_NUM) as [$tripId, $number]) {
@@ -151,7 +168,7 @@ final class Timetable
         }
         $stops = $this->pdo->prepare(
             'SELECT st.trip_id, st.seq, st.station_id, st.arr, st.dep, st.dist, st.platform, st.track, st.pickup, st.dropoff
-             FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?
+             FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ?' . $only . '
              ORDER BY st.trip_id, st.seq'
         );
         $stops->execute([$date]);
@@ -191,10 +208,24 @@ final class Timetable
     /** @return array<int, string> trip_id kursów z danym numerem */
     public function tripIdsForNumber(string $number): array
     {
-        $stmt = $this->pdo->prepare('SELECT trip_id FROM trip_numbers WHERE number = ? UNION SELECT trip_id FROM trips WHERE short_name = ?');
+        $only = $this->agencyFilter(false);
+        $stmt = $this->pdo->prepare('SELECT tn.trip_id FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id WHERE tn.number = ?' . $only
+            . ' UNION SELECT t.trip_id FROM trips t WHERE t.short_name = ?' . $only);
         $stmt->execute([$number, $number]);
 
         return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @return array<int, string> trip_id kursów KW z numerem zaczynającym się od $prefix (same cyfry) */
+    public function tripIdsForNumberPrefix(string $prefix): array
+    {
+        if (preg_match('/^\d+$/', $prefix) !== 1) {
+            return [];
+        }
+        $stmt = $this->pdo->prepare('SELECT tn.trip_id FROM trip_numbers tn JOIN trips t ON t.trip_id = tn.trip_id WHERE tn.number GLOB ?' . $this->agencyFilter(false));
+        $stmt->execute([$prefix . '*']);
+
+        return array_values(array_unique(array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN))));
     }
 
     public function runsOn(string $tripId, int $date): bool
@@ -227,6 +258,7 @@ final class Timetable
             'name' => $row['name'],
             'block' => (string) $row['block_id'],
             'isBus' => (int) $row['is_bus'] === 1,
+            'agency' => (string) ($row['agency'] ?? $this->agency()),
             'numbers' => [],
             'stops' => [],
         ];

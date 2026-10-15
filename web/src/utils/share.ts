@@ -1,6 +1,7 @@
 // Udostępnianie: systemowe okno (telefon) albo skopiowanie linku do schowka (komputer).
 import type { Connection } from '@/api/types'
 import { useUi } from '@/stores/ui'
+import { trainLabel } from './agency'
 import { clock } from './format'
 
 export async function shareLink(data: { title: string; text: string; url: string }) {
@@ -33,7 +34,7 @@ export function connectionUrl(c: Connection) {
 export function shareConnection(c: Connection) {
   const first = c.legs[0]
   const last = c.legs[c.legs.length - 1]
-  const trains = c.legs.map((l) => `KW ${l.number}`).join(', ')
+  const trains = c.legs.map(trainLabel).join(', ')
   return shareLink({
     title: `${first.from.name} → ${last.to.name}`,
     text: `${first.from.name} → ${last.to.name}, ${clock(c.departure)}–${clock(c.arrival)} (${trains})`,

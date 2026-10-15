@@ -22,7 +22,7 @@ final class PublicApi
 {
     private ?Timetable $tt = null;
     private ?Realtime $rt = null;
-    /** @var array<int, DayTimetable> */
+    /** @var array<string, DayTimetable> */
     private array $days = [];
     /** @var array<string, array<string, mixed>> */
     private array $applied = [];
@@ -37,9 +37,10 @@ final class PublicApi
         return $this->rt ??= Realtime::fromStorage();
     }
 
-    private function day(int $date): DayTimetable
+    /** $partners — z kursami POLREGIO (tylko wyszukiwarka połączeń). */
+    private function day(int $date, bool $partners = false): DayTimetable
     {
-        return $this->days[$date] ??= DayTimetable::load($this->tt(), $date);
+        return $this->days[$date . ($partners ? 'p' : '')] ??= DayTimetable::load($this->tt(), $date, $partners);
     }
 
     public function stations(): Response
@@ -54,10 +55,16 @@ final class PublicApi
         return new Response($station, maxAge: 3600);
     }
 
-    /** Tablica odjazdów lub przyjazdów. */
+    /**
+     * Tablica odjazdów lub przyjazdów: najbliższe 24 godziny od wybranej chwili (z ?date= bez godziny — ten dzień).
+     * Kursy następnego dnia, których numer już jest na tablicy (np. ten sam codzienny pociąg), są pomijane.
+     */
     public function board(array $p): Response
     {
         $station = $this->tt()->station($p['id']) ?? throw new ApiException('Nie znaleziono stacji.', 404);
+        if (!$station['kw']) {
+            throw new ApiException('Na tej stacji nie zatrzymują się pociągi KW.', 404);
+        }
         $mode = ($_GET['mode'] ?? 'dep') === 'arr' ? 'arr' : 'dep';
         $limit = max(1, min(40, (int) ($_GET['limit'] ?? 16)));
         $today = Clock::today();
@@ -69,7 +76,9 @@ final class PublicApi
             $from = (int) $m[1] * 3600 + (int) $m[2] * 60;
         }
 
+        $until = $from + 86400;
         $rows = [];
+        $seen = [];
         foreach ([[$base, 0], [Clock::addDays($base, 1), 86400]] as [$date, $shift]) {
             $day = $this->day($date);
             foreach ($day->byStation[$station['id']] ?? [] as [$key, $idx]) {
@@ -83,7 +92,11 @@ final class PublicApi
                     continue;
                 }
                 $planned = $mode === 'dep' ? $stop[D::DEP] : $stop[D::ARR];
-                if ($planned === null || $planned + $shift + 3600 < $from) {
+                if ($planned === null || $planned + $shift + 3600 < $from || $planned + $shift >= $until) {
+                    continue;
+                }
+                $same = ($trip['isBus'] ? 'ZKA ' : '') . $trip['number'];
+                if ($shift !== 0 && isset($seen[$same])) {
                     continue;
                 }
                 $exp = $date === $today ? $this->applied($trip, $nowSec) : null;
@@ -93,6 +106,7 @@ final class PublicApi
                 }
                 $delay = $exp ? ($mode === 'dep' ? $exp['stops'][$idx]['depDelay'] : $exp['stops'][$idx]['arrDelay']) : null;
                 $rest = $mode === 'dep' ? array_slice($trip['stops'], $idx + 1, -1) : array_slice($trip['stops'], 1, $idx - 1);
+                $seen[$same] = true;
                 $rows[] = [
                     'sort' => $planned + $shift,
                     'key' => $key,
@@ -160,7 +174,7 @@ final class PublicApi
         $time = (int) $tm[1] * 3600 + (int) $tm[2] * 60;
         // okno wyszukiwania (12 h) sięga wieczorem następnego dnia, a przy „przyjeździe do” rano poprzedniego
         $arriveBy = ($_GET['arrive'] ?? '0') === '1';
-        $day = $this->day($date)->withDay($this->day(Clock::addDays($date, $arriveBy ? -1 : 1)));
+        $day = $this->day($date, true)->withDay($this->day(Clock::addDays($date, $arriveBy ? -1 : 1), true));
         $isToday = $date === Clock::today();
         $nowSec = Clock::secondsSince($date);
         $rt = $this->rt();
@@ -178,9 +192,11 @@ final class PublicApi
                 $exp = $isToday ? $this->applied($trip, $nowSec) : null;
                 $depDelay = $exp['stops'][$l['from']]['depDelay'] ?? null;
                 $arrDelay = $exp['stops'][$l['to']]['arrDelay'] ?? null;
+                $partner = $trip['agency'] !== $this->tt()->agency();
                 $legs[] = [
                     'key' => $l['key'],
                     'number' => $trip['number'],
+                    'agency' => $trip['agency'],
                     'route' => $this->route($trip['routeId']),
                     'isBus' => $trip['isBus'],
                     'headsign' => $trip['headsign'],
@@ -197,7 +213,7 @@ final class PublicApi
                     'arrivalPlatform' => $b[D::PLATFORM],
                     'stopsBetween' => $l['to'] - $l['from'] - 1,
                     'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
-                    'vehicle' => $trip['isBus'] ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
+                    'vehicle' => $trip['isBus'] || $partner ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
                 ];
             }
             $connections[] = [
@@ -224,35 +240,90 @@ final class PublicApi
     /** Kurs po numerze pociągu: bieżący, a gdy nie jedzie — najbliższy. */
     public function trainByNumber(array $p): Response
     {
-        $number = trim($p['number']);
-        if (preg_match('/^\d{3,6}(\/\d{1,3})?$/', $number) !== 1) {
-            throw new ApiException('Podaj prawidłowy numer pociągu.', 422);
+        $number = self::trainQuery($p['number']) ?? throw new ApiException('Podaj prawidłowy numer pociągu.', 422);
+        $runs = $this->runsForNumbers($this->tt()->tripIdsForNumber($number));
+        if ($runs === []) {
+            throw new ApiException('Pociąg KW ' . $number . ' nie kursuje dziś ani jutro według rozkładu.', 404);
         }
-        $numbers = GtfsImporter::splitNumbers($number);
-        $ids = array_flip($this->tt()->tripIdsForNumber($numbers[0]));
+
+        return $this->trip(['key' => array_key_first($runs)]);
+    }
+
+    /**
+     * Wyszukiwanie pociągów po numerze (pełnym albo początku, np. „776”, „KW 77600”, „77610/1”):
+     * dla każdego pociągu bieżący albo najbliższy kurs dziś lub jutro, najpierw pełne dopasowanie.
+     */
+    public function searchTrains(): Response
+    {
+        $query = self::trainQuery((string) ($_GET['q'] ?? '')) ?? throw new ApiException('Podaj numer pociągu, np. 77600.', 422);
+        $runs = $this->runsForNumbers($this->tt()->tripIdsForNumberPrefix($query));
+        $today = Clock::today();
+        $trains = [];
+        $labels = [];
+        foreach ($runs as $key => $score) {
+            $date = (int) substr($key, -8);
+            $trip = $this->day($date)->trips[$key];
+            $numbers = $trip['numbers'] ?: GtfsImporter::splitNumbers($trip['number']);
+            $label = implode('/', $numbers);
+            if (isset($labels[$label])) {
+                continue; // ten sam pociąg innego dnia — zostaje bieżący albo najbliższy kurs
+            }
+            $labels[$label] = true;
+            $first = $trip['stops'][0];
+            $last = end($trip['stops']);
+            $trains[] = [
+                'key' => $key,
+                'number' => $trip['number'],
+                'exact' => in_array($query, $numbers, true),
+                'route' => $this->route($trip['routeId']),
+                'origin' => $this->name($first[D::STATION]),
+                'destination' => $this->name($last[D::STATION]),
+                'departure' => Clock::iso($date, $first[D::DEP]),
+                'arrival' => Clock::iso($date, $last[D::ARR] ?? $last[D::DEP]),
+                'running' => $score === 0 && Clock::at($date, (int) $first[D::DEP])->getTimestamp() <= time()
+                    && time() <= Clock::at($date, (int) ($last[D::ARR] ?? $last[D::DEP]))->getTimestamp(),
+            ];
+        }
+        // stabilne: pełne dopasowanie na górze, dalej kolejność z runsForNumbers (w drodze, najbliższe)
+        usort($trains, static fn (array $a, array $b): int => $b['exact'] <=> $a['exact']);
+
+        return new Response(['query' => $query, 'trains' => array_slice($trains, 0, 8)]);
+    }
+
+    /** „KW 77600”, „77610/1” → „77600”, „77610”; null — to nie numer pociągu. */
+    public static function trainQuery(string $value): ?string
+    {
+        if (preg_match('/^\s*(?:kw\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
+            return null;
+        }
+
+        return $m[1];
+    }
+
+    /**
+     * Kursy KW (bez odcinków autobusowych) spośród podanych trip_id dziś i jutro, od najlepszego:
+     * 0 — w drodze teraz (±30 min), potem najbliższy odjazd, na końcu już zakończone.
+     * @param array<int, string> $tripIds @return array<string, int> klucz kursu => wynik
+     */
+    private function runsForNumbers(array $tripIds): array
+    {
+        $ids = array_flip($tripIds);
         $today = Clock::today();
         $nowSec = Clock::secondsSince($today);
-        $best = null;
-        $bestScore = PHP_INT_MAX;
+        $scores = [];
         foreach ([$today, Clock::addDays($today, 1)] as $n => $date) {
             foreach ($this->day($date)->trips as $key => $trip) {
-                if (!isset($ids[$trip['tripId']]) || $trip['isBus']) {
+                if (!isset($ids[$trip['tripId']]) || $trip['isBus'] || $trip['serviceDate'] !== $date) {
                     continue;
                 }
                 $first = $trip['stops'][0][D::DEP] + $n * 86400;
                 $last = (end($trip['stops'])[D::ARR]) + $n * 86400;
-                $score = $nowSec >= $first - 1800 && $nowSec <= $last + 1800 ? 0 : ($first > $nowSec ? $first - $nowSec : 100000 + $nowSec - $last);
-                if ($score < $bestScore) {
-                    $bestScore = $score;
-                    $best = $key;
-                }
+                $scores[$key] = $nowSec >= $first - 1800 && $nowSec <= $last + 1800 ? 0 : ($first > $nowSec ? $first - $nowSec : 100000 + $nowSec - $last);
             }
         }
-        if ($best === null) {
-            throw new ApiException('Pociąg KW ' . $number . ' nie kursuje dziś ani jutro według rozkładu.', 404);
-        }
+        asort($scores);
 
-        return $this->trip(['key' => $best]);
+        return $scores;
     }
 
     public function trip(array $p): Response
@@ -262,6 +333,12 @@ final class PublicApi
         }
         $date = (int) $m[2];
         $day = $this->day($date);
+        // kurs POLREGIO: tylko dane do obserwowanej podróży (?partner=1), bez strony pociągu
+        $partner = !isset($day->trips[$p['key']]) && isset($this->day($date, true)->trips[$p['key']]);
+        if ($partner && ($_GET['partner'] ?? '') !== '1') {
+            throw new ApiException('Szczegóły pokazujemy tylko dla pociągów KW. Ten kurs prowadzi inny przewoźnik.', 404);
+        }
+        $day = $partner ? $this->day($date, true) : $day;
         $trip = $day->trips[$p['key']] ?? throw new ApiException('Ten kurs nie jedzie w wybranym dniu.', 404);
         $nowSec = Clock::secondsSince($date);
         $exp = $this->applied($trip, $nowSec);
@@ -300,7 +377,7 @@ final class PublicApi
                     'from' => $this->name($other['stops'][0][D::STATION]), 'to' => $this->name(end($other['stops'])[D::STATION])];
             }
         }
-        $notices = array_values(array_filter(
+        $notices = $partner ? [] : array_values(array_filter(
             (new NoticeRepository())->published(),
             static fn (array $n): bool => array_intersect($n['trains'], $trip['numbers'] ?: [$trip['number']]) !== []
         ));
@@ -309,6 +386,7 @@ final class PublicApi
             'key' => $p['key'],
             'tripId' => $trip['tripId'],
             'serviceDate' => Clock::isoDate($trip['serviceDate']),
+            'agency' => $trip['agency'],
             'number' => $trip['number'],
             'numbers' => $trip['numbers'],
             'name' => $trip['name'],
@@ -324,7 +402,7 @@ final class PublicApi
             'position' => $live,
             'otherLegs' => $legs,
             'notices' => array_map(static fn (array $n): int => $n['id'], $notices),
-            'vehicle' => $trip['isBus'] ? null : (new VehicleRepository())->forNumbers($trip['numbers'] ?: [$trip['number']]),
+            'vehicle' => $trip['isBus'] || $partner ? null : (new VehicleRepository())->forNumbers($trip['numbers'] ?: [$trip['number']]),
         ]);
     }
 

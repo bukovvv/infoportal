@@ -26,10 +26,11 @@ final class DayTimetable
     {
     }
 
-    public static function load(Timetable $tt, int $date): self
+    /** $partners — także kursy przewoźników partnerskich (tylko wyszukiwarka połączeń i obserwowane podróże). */
+    public static function load(Timetable $tt, int $date, bool $partners = false): self
     {
         $dir = Config::path('cache_dir');
-        $file = $dir . '/day-' . $date . '-' . $tt->version() . '.ser';
+        $file = $dir . '/day-' . $date . '-' . $tt->version() . ($partners ? '-p' : '') . '.ser';
         if (is_file($file)) {
             $cached = @unserialize((string) file_get_contents($file), ['allowed_classes' => [self::class]]);
             if ($cached instanceof self) {
@@ -37,11 +38,11 @@ final class DayTimetable
             }
         }
         $day = new self($date);
-        foreach ($tt->tripsOn($date) as $trip) {
+        foreach ($tt->tripsOn($date, $partners) as $trip) {
             $day->add($trip, $date, 0);
         }
         $previous = Clock::addDays($date, -1);
-        foreach ($tt->tripsOn($previous) as $trip) {
+        foreach ($tt->tripsOn($previous, $partners) as $trip) {
             $last = end($trip['stops']);
             if (($last[self::ARR] ?? 0) >= 86400) {
                 $day->add($trip, $previous, -86400);

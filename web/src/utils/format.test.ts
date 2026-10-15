@@ -7,6 +7,8 @@ describe('format', () => {
     expect(splitNumbers('17206/7')).toEqual(['17206', '17207'])
     expect(splitNumbers('77345')).toEqual(['77345'])
     expect(splitNumbers('')).toEqual([])
+    expect(splitNumbers('77684/5 Rzepicha')).toEqual(['77684', '77685'])
+    expect(splitNumbers('77375 Sokół')).toEqual(['77375'])
   })
 
   it('odmienia liczebniki po polsku', () => {

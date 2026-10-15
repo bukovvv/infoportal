@@ -17,7 +17,8 @@ CREATE TABLE trips (
     category TEXT,
     name TEXT,
     block_id TEXT,
-    is_bus INTEGER NOT NULL DEFAULT 0
+    is_bus INTEGER NOT NULL DEFAULT 0,
+    agency TEXT NOT NULL DEFAULT 'KW'
 );
 CREATE TABLE trip_numbers (number TEXT NOT NULL, trip_id TEXT NOT NULL, PRIMARY KEY (number, trip_id));
 CREATE TABLE stop_times (
@@ -40,7 +41,8 @@ CREATE TABLE stations (
     lat REAL,
     lon REAL,
     daily INTEGER NOT NULL DEFAULT 0,
-    lines TEXT
+    lines TEXT,
+    kw INTEGER NOT NULL DEFAULT 1
 );
 CREATE TABLE service_dates (service_id TEXT NOT NULL, date INTEGER NOT NULL, PRIMARY KEY (service_id, date));
 CREATE TABLE shapes (shape_id TEXT PRIMARY KEY, points TEXT NOT NULL);

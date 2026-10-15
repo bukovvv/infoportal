@@ -18,32 +18,38 @@ function poll(fn: () => Promise<void>, everyMs: number) {
 }
 
 export const useStations = defineStore('stations', () => {
-  const list = shallowRef<Station[]>([])
-  const byId = computed(() => new Map(list.value.map((s) => [s.id, s])))
+  /** wszystkie stacje, także te, na których staje tylko POLREGIO (wyszukiwarka połączeń) */
+  const all = shallowRef<Station[]>([])
+  /** stacje KW: tablica odjazdów, mapa, schemat */
+  const list = computed(() => all.value.filter((s) => s.kw !== false))
+  const byId = computed(() => new Map(all.value.map((s) => [s.id, s])))
   const loaded = ref(false)
   let pending: Promise<void> | null = null
 
   function load() {
-    pending ??= api.stations().then((data) => { list.value = data; loaded.value = true }).catch((e) => { pending = null; throw e })
+    pending ??= api.stations().then((data) => { all.value = data; loaded.value = true }).catch((e) => { pending = null; throw e })
     return pending
   }
 
-  function search(query: string, limit = 8): Station[] {
+  /** partners: także stacje tylko POLREGIO (wyszukiwarka połączeń) */
+  function search(query: string, limit = 8, partners = false): Station[] {
     // cicha funkcja: sam numer = kod stacji z KURS'90 (np. 159 → Poznań Główny)
     const coded = /^\s*\d+\s*$/.test(query) ? byId.value.get(stationByKurs90(query) ?? '') : undefined
     if (coded) return [coded]
+    // sam numer bez kodu stacji — to nie nazwa (np. numer pociągu na tablicy odjazdów)
+    if (/^\s*(kw\s*)?\d+/i.test(query)) return []
     const q = normalize(query)
     const rank = (s: Station) => {
       const n = normalize(s.name)
       return n.startsWith(q) ? 0 : n.split(/[\s-]+/).some((p) => p.startsWith(q)) ? 1 : 2
     }
-    return list.value
+    return (partners ? all.value : list.value)
       .filter((s) => !q || normalize(s.name).includes(q))
       .sort((a, b) => (q ? rank(a) - rank(b) : 0) || b.daily - a.daily)
       .slice(0, limit)
   }
 
-  return { list, byId, loaded, load, search }
+  return { all, list, byId, loaded, load, search }
 })
 
 export const useLive = defineStore('live', () => {

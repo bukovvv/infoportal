@@ -4,6 +4,7 @@ import type { Connection, Leg } from '@/api/types'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
+import { agencyCode, agencyName, isPartner } from '@/utils/agency'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
 import { unitLabel, vehicleTitle } from '@/utils/vehicle'
@@ -84,7 +85,7 @@ function watchJourney() {
           <span v-if="i" class="wait text-body-small muted"><v-icon icon="transfer_within_a_station" size="18" />{{ c.via[i - 1].name }} · {{ c.waits[i - 1] }} min</span>
           <span class="d-inline-flex align-center ga-1">
             <RouteBadge :route="leg.route" :bus="leg.isBus" />
-            <TrainChip :number="leg.number" :trip-key="leg.key" :bus="leg.isBus" />
+            <TrainChip :number="leg.number" :trip-key="leg.key" :bus="leg.isBus" :agency="leg.agency" />
             <span v-if="leg.platform" class="text-body-small muted ml-1">peron {{ leg.platform }}</span>
           </span>
         </template>
@@ -120,7 +121,10 @@ function watchJourney() {
               <div class="leg-name">{{ leg.from.name }}</div>
               <div class="text-body-small muted d-flex flex-wrap align-center ga-1">
                 <RouteBadge :route="leg.route" :bus="leg.isBus" />
-                <strong class="leg-no">KW {{ leg.number }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
+                <strong class="leg-no">{{ agencyCode(leg.agency) }} {{ leg.number }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
+              </div>
+              <div v-if="isPartner(leg.agency)" class="partner-note text-body-small">
+                <v-icon icon="info" size="16" />Pociąg {{ agencyName(leg.agency) }}: bilet tego przewoźnika, opóźnienia z PKP PLK
               </div>
               <div v-if="leg.vehicle" class="leg-vehicle">
                 <span class="text-body-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ vehicleTitle(leg.vehicle) }}</span>
@@ -227,6 +231,7 @@ function watchJourney() {
 .leg-name { font-size: 16px; font-weight: 800; }
 .leg-no { color: rgb(var(--v-theme-on-surface)); }
 .leg-vehicle { display: grid; gap: 4px; margin-top: 6px; }
+.partner-note { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: rgb(var(--v-theme-on-surface-variant)); }
 .leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; scrollbar-width: thin; }
 .leg-drawing img { flex: none; display: block; max-width: none; }
 .stops-btn { margin: 2px 0 -6px -12px; }

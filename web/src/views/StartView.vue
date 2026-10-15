@@ -61,6 +61,9 @@ async function search(scroll = true) {
   }
 }
 
+/** BTK obowiązuje w pociągach regionalnych KW i POLREGIO — nie w interREGIO. */
+const btkFits = computed(() => !!result.value?.connections.length && result.value.connections[0].legs.every((l) => l.route?.short !== 'IR'))
+
 /** Nagłówek dnia nad połączeniem, które odjeżdża innego dnia niż poprzednie (lub niż data wyszukiwania). */
 function newDay(i: number) {
   const list = result.value!.connections
@@ -113,9 +116,9 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 
   <div class="page start">
     <form id="szukaj" class="search card band-lift" aria-labelledby="search-title" @submit.prevent="search()">
-      <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat class="f-from" />
+      <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat partners class="f-from" />
       <v-btn icon="swap_vert" variant="flat" color="surface-container" class="f-swap" aria-label="Zamień stacje" @click="swap" />
-      <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat class="f-to" />
+      <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat partners class="f-to" />
       <DateField v-model="date" label="Data" :min="range.min" :max="range.max" variant="solo-filled" flat class="f-date" />
       <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" variant="solo-filled" flat class="f-time" />
       <div class="f-opts">
@@ -146,15 +149,15 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
         <v-empty-state
           v-if="!result.connections.length"
           icon="search_off"
-          title="Brak połączeń KW w ciągu 12 godzin"
-          :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę albo sprawdź, czy obie stacje obsługują pociągi KW.'"
+          title="Brak połączeń w ciągu 12 godzin"
+          :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW i POLREGIO w Wielkopolsce.'"
           class="card"
         />
         <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="more" @click="more">
           {{ result.arriveBy ? 'Wcześniejsze połączenia' : 'Późniejsze połączenia' }}
         </v-btn>
         <BtkHint
-          v-if="result.connections.length"
+          v-if="btkFits"
           :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
           context="trip"
         />

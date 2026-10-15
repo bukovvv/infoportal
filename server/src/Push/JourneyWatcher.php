@@ -86,7 +86,8 @@ final class JourneyWatcher
                 return null;
             }
             $date = (int) $m[1];
-            $day = $this->days[$date] ??= D::load($this->tt, $date);
+            // z kursami POLREGIO — podróż z wyszukiwarki może mieć odcinek innego przewoźnika
+            $day = $this->days[$date] ??= D::load($this->tt, $date, true);
             $trip = $day->trips[$leg['key']] ?? null;
             $from = $trip ? D::indexOf($trip, (string) $leg['from']) : null;
             $to = $trip && $from !== null ? D::indexOf($trip, (string) $leg['to'], $from) : null;

@@ -11,11 +11,15 @@ use PDO;
 use RuntimeException;
 
 /**
- * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy jednego przewoźnika i buduje gtfs.sqlite.
+ * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy przewoźnika (KW) i buduje gtfs.sqlite.
+ * Kursy przewoźników partnerskich (POLREGIO) trafiają do bazy obcięte do stacji w Wielkopolsce — tylko dla wyszukiwarki połączeń.
  * Nowa baza zastępuje starą dopiero po pozytywnej walidacji.
  */
 final class GtfsImporter
 {
+    /** Wersja układu bazy — starsza baza jest przebudowywana nawet bez zmian w rozkładzie. */
+    public const SCHEMA = 2;
+
     /** @var callable(string): void */
     private $log;
 
@@ -36,7 +40,7 @@ final class GtfsImporter
         $download = null;
         if ($localFile === null) {
             $download = $this->download($zipPath, $force);
-            if ($download === null && !$force && is_file(Config::path('gtfs_db'))) {
+            if ($download === null && !$force && is_file(Config::path('gtfs_db')) && self::schemaOf(Config::path('gtfs_db')) === self::SCHEMA) {
                 ($this->log)('Rozkład bez zmian od ostatniego importu.');
                 return ['skipped' => true];
             }
@@ -54,11 +58,21 @@ final class GtfsImporter
         }
         $stats['seconds'] = round(microtime(true) - $started, 1);
         ($this->log)(sprintf(
-            'Zaimportowano: %d kursów, %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
-            $stats['trips'], $stats['stations'], $stats['shapes'], $stats['validFrom'], $stats['validUntil'], $stats['seconds']
+            'Zaimportowano: %d kursów KW (+ %d partnerów w Wielkopolsce), %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
+            $stats['trips'], $stats['partnerTrips'], $stats['stations'], $stats['shapes'], $stats['validFrom'], $stats['validUntil'], $stats['seconds']
         ));
 
         return $stats;
+    }
+
+    private static function schemaOf(string $path): int
+    {
+        try {
+            $pdo = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            return (int) $pdo->query("SELECT value FROM meta WHERE key = 'schema'")->fetchColumn();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     private function downloadMetaFile(): string
@@ -99,6 +113,8 @@ final class GtfsImporter
     private function build(GtfsSource $src, string $path): array
     {
         $agency = (string) Config::get('agency_id');
+        $partners = array_keys((array) Config::get('partner_agencies'));
+        $region = new Region();
         $pdo = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $pdo->exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;');
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
@@ -108,10 +124,10 @@ final class GtfsImporter
         $routes = [];
         $insRoute = $pdo->prepare('INSERT INTO routes VALUES (?,?,?,?,?,?)');
         foreach ($src->rows('routes.txt') as $r) {
-            if ($r['agency_id'] !== $agency) {
+            if ($r['agency_id'] !== $agency && !in_array($r['agency_id'], $partners, true)) {
                 continue;
             }
-            $routes[$r['route_id']] = true;
+            $routes[$r['route_id']] = $r['agency_id'];
             $insRoute->execute([$r['route_id'], $r['route_short_name'], $r['route_long_name'], (int) $r['route_type'],
                 $r['route_color'] !== '' ? '#' . $r['route_color'] : null, $r['route_text_color'] !== '' ? '#' . $r['route_text_color'] : null]);
         }
@@ -121,7 +137,7 @@ final class GtfsImporter
         $trips = [];
         $services = [];
         $shapesNeeded = [];
-        $insTrip = $pdo->prepare('INSERT INTO trips VALUES (?,?,?,?,?,?,?,?,?,?)');
+        $insTrip = $pdo->prepare('INSERT INTO trips VALUES (?,?,?,?,?,?,?,?,?,?,?)');
         $insNumber = $pdo->prepare('INSERT OR IGNORE INTO trip_numbers VALUES (?,?)');
         $busRoutes = [];
         foreach ($pdo->query('SELECT route_id, type FROM routes') as $row) {
@@ -132,20 +148,23 @@ final class GtfsImporter
                 continue;
             }
             $id = $t['trip_id'];
-            $trips[$id] = true;
+            $tripAgency = $routes[$t['route_id']];
+            // kursy partnerów: true = obcinane do Wielkopolski, bez kształtu (nie ma ich na mapie)
+            $trips[$id] = $tripAgency !== $agency;
             $services[$t['service_id']] = true;
-            if ($t['shape_id'] !== '') {
-                $shapesNeeded[$t['shape_id']] = true;
+            $shape = $tripAgency === $agency ? ($t['shape_id'] ?: null) : null;
+            if ($shape !== null) {
+                $shapesNeeded[$shape] = true;
             }
             $short = $t['trip_short_name'] !== '' ? $t['trip_short_name'] : ($t['plk_train_number'] ?? '');
-            $insTrip->execute([$id, $t['route_id'], $t['service_id'], $t['shape_id'] ?: null, $short, $t['trip_headsign'],
+            $insTrip->execute([$id, $t['route_id'], $t['service_id'], $shape, $short, $t['trip_headsign'],
                 $t['plk_category_code'] ?? null, ($t['plk_train_name'] ?? '') ?: null,
-                preg_replace('/_LEG\d+$/', '', $id), $busRoutes[$t['route_id']] ? 1 : 0]);
-            foreach (self::splitNumbers($short) as $number) {
+                preg_replace('/_LEG\d+$/', '', $id), $busRoutes[$t['route_id']] ? 1 : 0, $tripAgency]);
+            foreach (self::splitNumbers(($t['plk_train_number'] ?? '') ?: $short) as $number) {
                 $insNumber->execute([$number, $id]);
             }
         }
-        ($this->log)('Kursy: ' . count($trips));
+        ($this->log)('Kursy: ' . count($trips) . ' (przed obcięciem partnerów do Wielkopolski)');
 
         // stops → stacje (poziom stacji nadrzędnej)
         $stops = [];
@@ -157,8 +176,13 @@ final class GtfsImporter
             return $parent !== '' && isset($stops[$parent]) ? $parent : $stopId;
         };
 
+        $inRegion = [];
+        $isInRegion = static function (string $stationId) use ($stops, $region, &$inRegion): bool {
+            $s = $stops[$stationId] ?? null;
+            return $inRegion[$stationId] ??= $s !== null && $region->contains((float) $s['stop_lat'], (float) $s['stop_lon'], $s['stop_name']);
+        };
+
         // stop_times (największy plik — strumieniowo)
-        $stations = [];
         $insStop = $pdo->prepare('INSERT INTO stop_times VALUES (?,?,?,?,?,?,?,?,?,?,?)');
         $rows = 0;
         foreach ($src->rows('stop_times.txt') as $s) {
@@ -170,20 +194,32 @@ final class GtfsImporter
             $arr ??= $dep;
             $dep ??= $arr;
             $stationId = $stationOf($s['stop_id']);
-            if (isset($stops[$stationId])) {
-                $stations[$stationId] = $stops[$stationId];
+            if ($trips[$s['trip_id']] && !$isInRegion($stationId)) {
+                continue;
             }
             $insStop->execute([$s['trip_id'], (int) $s['stop_sequence'], $stationId, $s['stop_id'], $arr, $dep,
                 $s['shape_dist_traveled'] !== '' ? (float) $s['shape_dist_traveled'] : null,
                 ($s['platform'] ?? '') ?: null, ($s['track'] ?? '') ?: null, (int) ($s['pickup_type'] ?: 0), (int) ($s['drop_off_type'] ?: 0)]);
             $rows++;
         }
+        // kursy partnerów, z których w Wielkopolsce został najwyżej jeden postój, nie przydadzą się
+        $pdo->exec('CREATE TEMP TABLE short_trips AS SELECT t.trip_id FROM trips t LEFT JOIN stop_times st ON st.trip_id = t.trip_id
+            WHERE t.agency <> ' . $pdo->quote($agency) . ' GROUP BY t.trip_id HAVING COUNT(st.seq) < 2');
+        foreach (['stop_times', 'trip_numbers', 'trips'] as $table) {
+            $pdo->exec("DELETE FROM $table WHERE trip_id IN (SELECT trip_id FROM short_trips)");
+        }
+        $rows = (int) $pdo->query('SELECT COUNT(*) FROM stop_times')->fetchColumn();
         ($this->log)('Postoje: ' . $rows);
 
         $insStation = $pdo->prepare('INSERT INTO stations (id, name, lat, lon) VALUES (?,?,?,?)');
-        foreach ($stations as $st) {
-            $insStation->execute([$st['stop_id'], $st['stop_name'], (float) $st['stop_lat'], (float) $st['stop_lon']]);
+        foreach ($pdo->query('SELECT DISTINCT station_id FROM stop_times')->fetchAll(PDO::FETCH_COLUMN) as $stationId) {
+            if (isset($stops[$stationId])) {
+                $st = $stops[$stationId];
+                $insStation->execute([$st['stop_id'], $st['stop_name'], (float) $st['stop_lat'], (float) $st['stop_lon']]);
+            }
         }
+        // stacje, na których staje KW (tablica odjazdów, mapa); pozostałe tylko w wyszukiwarce połączeń
+        $pdo->prepare('UPDATE stations SET kw = EXISTS (SELECT 1 FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id WHERE st.station_id = stations.id AND t.agency = ?)')->execute([$agency]);
         unset($stops);
 
         // kalendarz
@@ -244,7 +280,9 @@ final class GtfsImporter
 
         // meta i statystyki
         $feed = iterator_to_array($src->rows('feed_info.txt'))[0] ?? [];
-        $range = $pdo->query('SELECT MIN(date), MAX(date) FROM service_dates')->fetch(PDO::FETCH_NUM);
+        $pdo->exec('DELETE FROM service_dates WHERE service_id NOT IN (SELECT service_id FROM trips)');
+        // ważność rozkładu według kursów KW (partnerzy mogą mieć inny zakres)
+        $range = $pdo->query('SELECT MIN(date), MAX(date) FROM service_dates WHERE service_id IN (SELECT service_id FROM trips WHERE agency = ' . $pdo->quote($agency) . ')')->fetch(PDO::FETCH_NUM);
         $otherAgencies = [];
         foreach ($src->rows('agency.txt') as $a) {
             if ($a['agency_id'] !== $agency) {
@@ -264,7 +302,9 @@ final class GtfsImporter
         $busiest = (int) $pdo->query('SELECT sd.date FROM service_dates sd JOIN trips t ON t.service_id = sd.service_id GROUP BY sd.date ORDER BY COUNT(*) DESC LIMIT 1')->fetchColumn();
         $pdo->prepare('UPDATE stations SET daily = (SELECT COUNT(*) FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN service_dates sd ON sd.service_id = t.service_id AND sd.date = ? WHERE st.station_id = stations.id)')->execute([$busiest]);
         $lines = [];
-        foreach ($pdo->query('SELECT DISTINCT st.station_id, r.short_name FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN routes r ON r.route_id = t.route_id WHERE r.type = 2 ORDER BY r.short_name', PDO::FETCH_NUM) as [$stationId, $line]) {
+        $kwLines = $pdo->prepare('SELECT DISTINCT st.station_id, r.short_name FROM stop_times st JOIN trips t ON t.trip_id = st.trip_id JOIN routes r ON r.route_id = t.route_id WHERE r.type = 2 AND t.agency = ? ORDER BY r.short_name');
+        $kwLines->execute([$agency]);
+        foreach ($kwLines->fetchAll(PDO::FETCH_NUM) as [$stationId, $line]) {
             $lines[$stationId][] = $line;
         }
         $updLines = $pdo->prepare('UPDATE stations SET lines = ? WHERE id = ?');
@@ -277,11 +317,13 @@ final class GtfsImporter
             'validFrom' => Clock::isoDate((int) ($range[0] ?? 0)),
             'validUntil' => Clock::isoDate((int) ($range[1] ?? 0)),
             'importedAt' => Clock::now()->format(DATE_ATOM),
+            'schema' => self::SCHEMA,
             'agency' => $agency,
             'routes' => (int) $pdo->query('SELECT COUNT(*) FROM routes')->fetchColumn(),
-            'trips' => (int) $pdo->query('SELECT COUNT(*) FROM trips')->fetchColumn(),
+            'trips' => (int) $pdo->query('SELECT COUNT(*) FROM trips WHERE agency = ' . $pdo->quote($agency))->fetchColumn(),
+            'partnerTrips' => (int) $pdo->query('SELECT COUNT(*) FROM trips WHERE agency <> ' . $pdo->quote($agency))->fetchColumn(),
             'stopTimes' => (int) $pdo->query('SELECT COUNT(*) FROM stop_times')->fetchColumn(),
-            'stations' => (int) $pdo->query('SELECT COUNT(*) FROM stations')->fetchColumn(),
+            'stations' => (int) $pdo->query('SELECT COUNT(*) FROM stations WHERE kw = 1')->fetchColumn(),
             'shapes' => (int) $pdo->query('SELECT COUNT(*) FROM shapes')->fetchColumn(),
             'attribution' => $attribution,
             'source' => Config::get('gtfs_url'),
@@ -324,9 +366,10 @@ final class GtfsImporter
         throw new RuntimeException('Nie udało się podmienić pliku bazy rozkładu.');
     }
 
-    /** „77610/1” → ['77610', '77611'] */
+    /** „77610/1” → ['77610', '77611']; nazwa pociągu po numerze („77375 Sokół”) jest pomijana */
     public static function splitNumbers(string $value): array
     {
+        $value = preg_match('/^\s*\d+(?:\s*\/\s*\d+)*/', $value, $m) === 1 ? $m[0] : $value;
         $parts = array_values(array_filter(array_map('trim', explode('/', $value)), static fn (string $p): bool => $p !== ''));
         if ($parts === []) {
             return [];

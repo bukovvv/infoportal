@@ -160,7 +160,7 @@ final class LiveBuilder
 
         $cancelledToday = 0;
         foreach ($rtTrips as $key => $trip) {
-            if (!empty($trip['c']) && str_ends_with($key, '@' . $today)) {
+            if (!empty($trip['c']) && str_ends_with($key, '@' . $today) && str_starts_with($key, (string) Config::get('rt_trip_prefix'))) {
                 $cancelledToday++;
             }
         }
@@ -273,7 +273,9 @@ final class LiveBuilder
             if ($response['status'] !== 200) {
                 throw new \RuntimeException('HTTP ' . $response['status']);
             }
-            $decoded = GtfsRtDecoder::decode($response['body'], (string) Config::get('rt_trip_prefix'));
+            // KW i partnerzy (POLREGIO); convertRt zostawia tylko kursy z naszej bazy (partnerzy obcięci do Wielkopolski)
+            $prefixes = [(string) Config::get('rt_trip_prefix'), ...array_values((array) Config::get('partner_agencies'))];
+            $decoded = GtfsRtDecoder::decode($response['body'], $prefixes);
             $trips = $this->convertRt($decoded['trips']);
             $existing = [
                 'fetchedAt' => Clock::now()->format(DATE_ATOM),
