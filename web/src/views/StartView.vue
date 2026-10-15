@@ -5,14 +5,13 @@ import { api } from '@/api/client'
 import type { ConnectionsResult } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import ConnectionCard from '@/components/ConnectionCard.vue'
-import DateField from '@/components/DateField.vue'
 import FavoriteStations from '@/components/FavoriteStations.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
-import TimeField from '@/components/TimeField.vue'
+import WhenChip from '@/components/WhenChip.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
@@ -78,7 +77,10 @@ function toggleDirect() {
   direct.value = !direct.value
   if (result.value) void search(false)
 }
-watch(arriveBy, () => { if (result.value) void search(false) })
+/** Po zamknięciu okna dnia i godziny — nowe wyniki dla zmienionych ustawień. */
+function whenChanged() {
+  if (result.value) void search(false)
+}
 
 /** Następna strona wyników: późniejsze odjazdy albo, przy „przyjeździe do”, wcześniejsze przyjazdy. */
 function more() {
@@ -119,15 +121,10 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
       <StationField id="skad" v-model="from" label="Skąd" icon="trip_origin" hide-details variant="solo-filled" flat class="f-from" />
       <v-btn icon="swap_vert" variant="flat" color="surface-container" class="f-swap" aria-label="Zamień stacje" @click="swap" />
       <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat class="f-to" />
-      <DateField v-model="date" label="Data" :min="range.min" :max="range.max" variant="solo-filled" flat class="f-date" />
-      <TimeField v-model="time" :label="arriveBy ? 'Przyjazd do' : 'Odjazd od'" variant="solo-filled" flat class="f-time" />
       <div class="f-opts">
-        <v-btn-toggle v-model="timeMode" mandatory variant="outlined" divided density="comfortable" aria-label="Godzina oznacza">
-          <v-btn value="dep" :prepend-icon="arriveBy ? undefined : 'check'">Odjazd</v-btn>
-          <v-btn value="arr" :prepend-icon="arriveBy ? 'check' : undefined">Przyjazd</v-btn>
-        </v-btn-toggle>
-        <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter @click="toggleDirect">
-          Tylko bezpośrednie
+        <WhenChip v-model:date="date" v-model:time="time" v-model:mode="timeMode" :min="range.min" :max="range.max" @done="whenChanged" />
+        <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter class="opt-chip" @click="toggleDirect">
+          Bez przesiadek
         </v-chip>
       </div>
       <v-btn type="submit" size="x-large" prepend-icon="search" :loading="searching" class="f-btn">Szukaj połączeń</v-btn>
@@ -150,7 +147,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           v-if="!result.connections.length"
           icon="search_off"
           title="Brak połączeń w ciągu 12 godzin"
-          :text="direct ? 'Wyłącz filtr „Tylko bezpośrednie” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW i POLREGIO w Wielkopolsce.'"
+          :text="direct ? 'Wyłącz filtr „Bez przesiadek” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW i POLREGIO w Wielkopolsce.'"
           class="card"
         />
         <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="more" @click="more">
@@ -226,30 +223,29 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .hero-sub { font-size: 16px; opacity: .85; }
 .start { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); padding-top: 0; }
 
-/* wyszukiwarka: na telefonie pola jedno pod drugim, na komputerze w jednym rzędzie */
+/* wyszukiwarka: Skąd i Dokąd (z zamianą), pod nimi dzień i godzina jako chip, przycisk; na komputerze stacje i przycisk w jednym rzędzie */
 .search {
-  display: grid; gap: 12px; padding: 16px; align-items: center;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 48px;
-  grid-template-areas: 'from from swap' 'to to swap' 'date time time' 'opts opts opts' 'btn btn btn' 'err err err';
+  display: grid; gap: 10px; padding: 16px; align-items: center;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  grid-template-areas: 'from swap' 'to swap' 'opts opts' 'btn btn' 'err err';
 }
 .f-from { grid-area: from; }
 .f-to { grid-area: to; }
 .f-swap { grid-area: swap; justify-self: center; }
-/* DateField i TimeField mają okno jako korzeń: klasa trafia na pole, ale bez atrybutu tego widoku, stąd :deep */
-.search :deep(.f-date) { grid-area: date; }
-.search :deep(.f-time) { grid-area: time; }
-.f-opts { grid-area: opts; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.f-btn { grid-area: btn; }
+.f-opts { grid-area: opts; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+/* oba chipy w jednym rzędzie także na wąskim telefonie (360 px) */
+.opt-chip { font-size: 13px; padding: 0 10px; }
+.f-btn { grid-area: btn; margin-top: 2px; }
 .f-error { grid-area: err; }
 .search :deep(.v-field--variant-solo-filled) { background: rgb(var(--v-theme-surface-container)); }
 @media (min-width: 960px) {
   .search {
     padding: 20px; gap: 12px 8px;
-    grid-template-columns: minmax(0, 3fr) 48px minmax(0, 3fr) minmax(0, 2fr) minmax(0, 1.4fr) auto;
-    grid-template-areas: 'from swap to date time btn' 'opts opts opts opts opts opts' 'err err err err err err';
+    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr) auto;
+    grid-template-areas: 'from swap to btn' 'opts opts opts opts' 'err err err err';
   }
   .f-swap :deep(.v-icon) { transform: rotate(90deg); }
-  .f-btn { height: 56px !important; margin-left: 4px; }
+  .f-btn { height: 56px !important; margin: 0 0 0 4px; }
 }
 
 .cols { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }

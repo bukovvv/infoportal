@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Station, TrainMatch } from '@/api/types'
 import { useStations } from '@/stores/data'
@@ -74,6 +74,33 @@ function trainWhen(t: TrainMatch) {
   const day = t.departure.slice(0, 10) !== warsawNow().date ? `${weekdayShort(t.departure)} ` : ''
   return `${day}${clock(t.departure)}`
 }
+/** Podwójne kliknięcie albo tapnięcie zaznacza całą nazwę stacji (przeglądarka zaznaczyłaby jedno słowo). */
+const root = ref<{ $el: HTMLElement } | null>(null)
+let lastTap = 0
+function selectAll() {
+  const input = root.value?.$el.querySelector<HTMLInputElement>('input:not([type=hidden])')
+  // po własnej obsłudze kliknięcia przez pole (menu, tekst wyszukiwania)
+  if (input) window.setTimeout(() => input.select(), 0)
+}
+function onPointerUp(e: PointerEvent) {
+  if (e.pointerType !== 'touch' || !(e.target instanceof HTMLInputElement)) return
+  const now = e.timeStamp
+  if (now - lastTap < 350) selectAll()
+  lastTap = now
+}
+// zdarzenia natywne na elemencie pola — v-autocomplete nie przekazuje dblclick ani pointerup
+onMounted(() => {
+  root.value?.$el.addEventListener('dblclick', selectAll)
+  root.value?.$el.addEventListener('pointerup', onPointerUp)
+})
+onBeforeUnmount(() => {
+  root.value?.$el.removeEventListener('dblclick', selectAll)
+  root.value?.$el.removeEventListener('pointerup', onPointerUp)
+})
+function cleared() {
+  query.value = ''
+}
+
 const noData = computed(() => {
   if (props.trains && TRAIN_QUERY.test(query.value ?? '')) return trainError.value ?? 'Brak pociągu o takim numerze dziś ani jutro.'
   return 'Brak takiej stacji w rozkładzie. Sprawdź pisownię.'
@@ -82,8 +109,14 @@ const noData = computed(() => {
 
 <template>
   <v-autocomplete
+    ref="root"
     v-model="value"
     v-model:search="query"
+    clearable
+    persistent-clear
+    clear-icon="close"
+    menu-icon=""
+    @click:clear="cleared"
     :items="items"
     item-title="name"
     item-value="id"
