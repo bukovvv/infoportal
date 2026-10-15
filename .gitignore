@@ -9,6 +9,8 @@ public/app-icon-192.png
 public/app-icon-512.png
 public/og-image.png
 public/sw.js
+public/przenosiny.html
+public/przenosiny.js
 
 # dane lokalne
 server/storage/*
