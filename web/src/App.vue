@@ -162,7 +162,11 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 </template>
 
 <style scoped>
-.rail { background: rgb(var(--v-theme-surface)) !important; }
+/* menu boczne w kolorze górnego paska: razem tworzą jedną grafitową ramkę */
+.rail { background: rgb(var(--v-theme-band)) !important; color: rgb(var(--v-theme-on-band)); }
+.rail .nav-item { color: color-mix(in srgb, rgb(var(--v-theme-on-band)) 72%, transparent); }
+.rail .nav-item[aria-current='page'] { color: rgb(var(--v-theme-on-band)); }
+.rail .nav-item:hover .nav-ind { background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 10%, transparent); }
 .rail-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0 24px; min-height: 100%; }
 .rail-about { margin-top: auto; }
 .rail-fab { margin: 4px 0 20px; }
