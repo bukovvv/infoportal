@@ -1,4 +1,4 @@
-# Wdrożenie zanimwyjdziesz.pl (`infoportal.abuczek.pl`)
+# Wdrożenie zanimwyjdziesz.pl
 
 ## Wymagania hostingu
 
@@ -23,8 +23,11 @@ Stan na serwerze `h89.seohost.pl` (DirectAdmin):
 ```text
 ~/domains/infoportal.abuczek.pl/public_html/   ← public/
 ~/domains/infoportal.abuczek.pl/server/        ← backend (poza WWW)
+~/domains/zanimwyjdziesz.pl/public_html       → dowiązanie do public_html powyżej (także private_html, server)
 ~/kw-deploy/                                   ← ostatnie paczki
 ```
+
+Adres publiczny to **zanimwyjdziesz.pl** (`KW_PUBLIC_DOMAIN` w `deploy.env`): osobna domena w DirectAdmin, której katalogi `deploy.sh` zamienia na dowiązania do `infoportal.abuczek.pl` (domyślna strona Seohost zostaje jako `public_html_domyslna_*`). Kod i dane (`server/storage`, CRON) zostają w katalogu `infoportal.abuczek.pl`. `public/.htaccess` przekierowuje `www.zanimwyjdziesz.pl` i stary adres `infoportal.abuczek.pl`: API i pliki kodem 301, strony przez `przenosiny.html`, które przenosi ustawienia z pamięci przeglądarki (ulubione stacje, motyw) w części `#` adresu. `sw.js` na starym adresie zostaje, by działały powiadomienia włączone przed przenosinami. Zainstalowaną aplikację (PWA) ze starego adresu trzeba dodać do ekranu początkowego ponownie.
 
 CRON ustawiony w crontab użytkownika (DirectAdmin `direct_crons`), PHP CLI: `/usr/local/bin/php` (8.3).
 
@@ -98,7 +101,7 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 
 ## Kontrola po wdrożeniu
 
-- `https://infoportal.abuczek.pl/api/status` → `"level": "ok"` (lub `degraded` z opisem w `messages`).
+- `https://zanimwyjdziesz.pl/api/status` → `"level": "ok"` (lub `degraded` z opisem w `messages`).
 - Strona główna, `/mapa`, `/odjazdy`, `/pociag/77642`, `/admin`.
 - W panelu admina: zakładka „Stan źródeł”.
 

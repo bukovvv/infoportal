@@ -14,6 +14,8 @@ cd "$(dirname "$0")"
 source deploy.env
 : "${KW_SSH_HOST:?}" "${KW_SSH_USER:?}" "${KW_DOMAIN:?}"
 KW_SSH_PORT="${KW_SSH_PORT:-22}"
+# adres publiczny: osobna domena w DirectAdmin, której public_html wskazuje na public_html z KW_DOMAIN
+KW_PUBLIC_DOMAIN="${KW_PUBLIC_DOMAIN:-$KW_DOMAIN}"
 KEY="${KW_SSH_KEY:-$HOME/.ssh/infoportal_kw_deploy}"
 SSH_OPTS=(-i "$KEY" -p "$KW_SSH_PORT" -o StrictHostKeyChecking=accept-new -o BatchMode=yes)
 TARGET="$KW_SSH_USER@$KW_SSH_HOST"
@@ -36,7 +38,7 @@ if [ -f server/config/admin-password.php ]; then
 fi
 
 echo "→ Instalacja na serwerze"
-ssh "${SSH_OPTS[@]}" "$TARGET" "KW_DOMAIN='$KW_DOMAIN' ARCHIVE='$ARCHIVE' KW_PHP='${KW_PHP:-}' KW_ALERT_EMAIL='${KW_ALERT_EMAIL:-}' bash -s" <<'REMOTE'
+ssh "${SSH_OPTS[@]}" "$TARGET" "KW_DOMAIN='$KW_DOMAIN' KW_PUBLIC_DOMAIN='$KW_PUBLIC_DOMAIN' ARCHIVE='$ARCHIVE' KW_PHP='${KW_PHP:-}' KW_ALERT_EMAIL='${KW_ALERT_EMAIL:-}' bash -s" <<'REMOTE'
 set -euo pipefail
 D="$HOME/domains/$KW_DOMAIN"
 cd ~/kw-deploy
@@ -51,6 +53,21 @@ if [ -z "$PHP" ]; then
 fi
 [ -n "$PHP" ] || { echo "Nie znaleziono PHP 8.1+ w CLI"; exit 1; }
 echo "   PHP: $PHP ($($PHP -r 'echo PHP_VERSION;'))"
+
+# adres publiczny (np. zanimwyjdziesz.pl): jego public_html i server/ to dowiązania do katalogów KW_DOMAIN,
+# a .htaccess przekierowuje stary adres. Sprawdzane przed zmianami, by nie przekierować na pustą domenę.
+if [ "$KW_PUBLIC_DOMAIN" != "$KW_DOMAIN" ]; then
+  P="$HOME/domains/$KW_PUBLIC_DOMAIN"
+  [ -d "$P" ] || { echo "Brak ~/domains/$KW_PUBLIC_DOMAIN — dodaj domenę w DirectAdmin"; exit 1; }
+  for dir in public_html private_html; do
+    if [ -e "$P/$dir" ] && [ ! -L "$P/$dir" ]; then
+      mv "$P/$dir" "$P/${dir}_domyslna_$(date +%Y%m%d-%H%M)"
+      echo "   $KW_PUBLIC_DOMAIN: domyślna zawartość $dir przeniesiona"
+    fi
+    [ -L "$P/$dir" ] || ln -s "$D/public_html" "$P/$dir"
+  done
+  [ -e "$P/server" ] || ln -s "$D/server" "$P/server"
+fi
 
 # pierwsza instalacja: kopia poprzedniej wersji
 if [ ! -f "$D/server/bootstrap.php" ] && [ -d "$D/public_html" ] && [ -n "$(ls -A "$D/public_html")" ]; then
@@ -133,5 +150,5 @@ if [ -n "$LATEST" ]; then
 fi
 
 echo
-echo "→ Kontrola: https://$KW_DOMAIN/api/status"
-curl -s "https://$KW_DOMAIN/api/status" | head -c 400; echo
+echo "→ Kontrola: https://$KW_PUBLIC_DOMAIN/api/status"
+curl -s "https://$KW_PUBLIC_DOMAIN/api/status" | head -c 400; echo

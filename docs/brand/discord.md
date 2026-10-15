@@ -12,7 +12,7 @@ Na start: pociągi **Kolei Wielkopolskich**. W przyszłości dołączy też **PO
 🎫 **Bus-Tramwaj-Kolej**: kalkulator wspólnego biletu KW + POLREGIO + ZTM Poznań
 ⭐ Ulubione stacje, ciemny motyw, działa na telefonie
 
-👉 **https://infoportal.abuczek.pl**
+👉 **https://zanimwyjdziesz.pl**
 
 Rozkład: GTFS mkuran.pl (PKP PLK) · opóźnienia: PKP PLK.
 Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami.

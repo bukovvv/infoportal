@@ -7,6 +7,25 @@ Options -Indexes
     # katalog server/ wewnątrz docroot (hosting bez zmiany katalogu dokumentów) nigdy nie jest publiczny
     RewriteRule ^server(/|$) - [F,L]
 
+    # odnawianie certyfikatów SSL bez przekierowań
+    RewriteRule ^\.well-known/ - [L]
+
+    # www.zanimwyjdziesz.pl → zanimwyjdziesz.pl
+    RewriteCond %{HTTP_HOST} ^www\.zanimwyjdziesz\.pl$ [NC]
+    RewriteRule ^ https://zanimwyjdziesz.pl%{REQUEST_URI} [R=301,L]
+
+    # stary adres infoportal.abuczek.pl → zanimwyjdziesz.pl: API i pliki przekierowaniem 301, strony przez
+    # przenosiny.html (przenosi ulubione stacje i ustawienia z localStorage, przypisane do adresu).
+    # sw.js zostaje, by działały powiadomienia włączone jeszcze na starym adresie.
+    RewriteCond %{HTTP_HOST} ^infoportal\.abuczek\.pl$ [NC]
+    RewriteRule ^(sw\.js|przenosiny\.(html|js)|app-icon-192\.png)$ - [L]
+    RewriteCond %{HTTP_HOST} ^infoportal\.abuczek\.pl$ [NC]
+    RewriteCond %{REQUEST_URI} ^/api(/|$) [OR]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ https://zanimwyjdziesz.pl%{REQUEST_URI} [R=301,L]
+    RewriteCond %{HTTP_HOST} ^infoportal\.abuczek\.pl$ [NC]
+    RewriteRule ^ przenosiny.html [L]
+
     # JSON API
     RewriteRule ^api(/.*)?$ api/index.php [QSA,L]
 
@@ -28,7 +47,7 @@ Options -Indexes
     <FilesMatch "\.(js|css|woff2?|svg|png)$">
         Header set Cache-Control "public, max-age=31536000, immutable"
     </FilesMatch>
-    <FilesMatch "^(index\.html|manifest\.webmanifest|favicon\.svg|sw\.js|og-image\.png|app-icon-(192|512)\.png)$">
+    <FilesMatch "^(index\.html|manifest\.webmanifest|favicon\.svg|sw\.js|og-image\.png|app-icon-(192|512)\.png|przenosiny\.(html|js))$">
         Header set Cache-Control "no-cache"
     </FilesMatch>
 </IfModule>

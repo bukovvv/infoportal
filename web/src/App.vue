@@ -72,30 +72,12 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 
 <template>
   <v-app>
-    <v-navigation-drawer v-if="mdAndUp && !isAdmin" permanent width="88" class="rail" floating aria-label="Nawigacja główna">
-      <div class="rail-inner">
-        <router-link to="/" class="brand-mark" aria-label="zanimwyjdziesz.pl – start"><BrandMark :size="44" /></router-link>
-        <v-btn class="rail-fab" color="primary-container" icon="search" size="56" elevation="3" aria-label="Wyszukaj połączenie" @click="searchFab" />
-        <nav class="rail-items">
-          <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-current="current === item.name ? 'page' : undefined">
-            <span class="nav-ind">
-              <v-icon :icon="current === item.name ? `${item.icon}-fill` : item.icon" />
-              <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
-            </span>
-            <span>{{ item.label }}</span>
-          </router-link>
-        </nav>
-        <router-link to="/o-nas" class="nav-item rail-about" :aria-current="current === 'about' ? 'page' : undefined">
-          <span class="nav-ind"><v-icon :icon="current === 'about' ? 'info-fill' : 'info'" /></span>
-          <span>O nas</span>
-        </router-link>
-      </div>
-    </v-navigation-drawer>
-
+    <!-- pasek przed menu bocznym: na komputerze biegnie przez całą szerokość, logo jest tylko w nim -->
     <v-app-bar :elevation="0" color="band" height="64" scroll-behavior="elevate" :scroll-threshold="4" class="app-bar">
       <template #prepend>
-        <router-link v-if="isStart && !isAdmin" to="/" class="brand-logo ml-3" aria-label="zanimwyjdziesz.pl – start"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" height="40"></router-link>
-        <router-link v-else-if="!mdAndUp || isAdmin" to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark on-band :size="36" /></router-link>
+        <router-link v-if="(isStart || mdAndUp) && !isAdmin" to="/" class="brand-logo" aria-label="zanimwyjdziesz.pl – start"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" height="40"></router-link>
+        <router-link v-else to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark on-band :size="36" /></router-link>
+        <span v-if="mdAndUp && !isStart && !isAdmin" class="bar-divider" aria-hidden="true" />
       </template>
       <v-app-bar-title v-if="!isStart || isAdmin" class="text-title-large app-title">{{ title }}</v-app-bar-title>
       <v-spacer v-else />
@@ -132,6 +114,25 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       </template>
     </v-app-bar>
 
+    <v-navigation-drawer v-if="mdAndUp && !isAdmin" permanent width="88" class="rail" floating aria-label="Nawigacja główna">
+      <div class="rail-inner">
+        <v-btn class="rail-fab" color="primary-container" icon="search" size="56" elevation="3" aria-label="Wyszukaj połączenie" @click="searchFab" />
+        <nav class="rail-items">
+          <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-current="current === item.name ? 'page' : undefined">
+            <span class="nav-ind">
+              <v-icon :icon="current === item.name ? `${item.icon}-fill` : item.icon" />
+              <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
+            </span>
+            <span>{{ item.label }}</span>
+          </router-link>
+        </nav>
+        <router-link to="/o-nas" class="nav-item rail-about" :aria-current="current === 'about' ? 'page' : undefined">
+          <span class="nav-ind"><v-icon :icon="current === 'about' ? 'info-fill' : 'info'" /></span>
+          <span>O nas</span>
+        </router-link>
+      </div>
+    </v-navigation-drawer>
+
     <v-main>
       <router-view v-slot="{ Component }">
         <component :is="Component" />
@@ -162,9 +163,9 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 
 <style scoped>
 .rail { background: rgb(var(--v-theme-surface)) !important; }
-.rail-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 0 24px; min-height: 100%; }
+.rail-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0 24px; min-height: 100%; }
 .rail-about { margin-top: auto; }
-.rail-fab { margin: 8px 0 20px; }
+.rail-fab { margin: 4px 0 20px; }
 .rail-items { display: grid; gap: 12px; }
 .navbar {
   position: fixed; z-index: 1004; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr);
@@ -174,7 +175,10 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 .navbar .nav-ind { width: 64px; }
 .app-title { font-size: 22px; }
 .app-bar :deep(.v-toolbar__content) { padding-inline: 4px 8px; }
-.brand-logo { display: block; flex: none; }
+.brand-logo { display: block; flex: none; margin-inline-start: 12px; }
+/* na komputerze logo stoi nad menu bocznym (88 px), tytuł widoku zaczyna się nad treścią */
+@media (min-width: 840px) { .brand-logo { margin-inline-start: 20px; } }
+.bar-divider { width: 1px; height: 28px; margin-inline: 16px 4px; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 28%, transparent); }
 .brand-logo img { display: block; height: 40px; width: auto; }
 .live-chip {
   display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 16px;

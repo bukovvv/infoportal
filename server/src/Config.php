@@ -52,11 +52,11 @@ final class Config
             'agency_id' => 'KW',
             'rt_trip_prefix' => 'PLK_KW_',
             'rt_min_interval' => 110,
-            'site_url' => 'https://infoportal.abuczek.pl',
+            'site_url' => 'https://zanimwyjdziesz.pl',
             // e-mail na alerty o stanie danych (bin/check-health.php) — ustawiany w local.php na serwerze
             'alert_email' => null,
             'alert_from' => 'no-reply@abuczek.pl',
-            'user_agent' => 'zanimwyjdziesz.pl/1.0 (+https://infoportal.abuczek.pl)',
+            'user_agent' => 'zanimwyjdziesz.pl/1.0 (+https://zanimwyjdziesz.pl)',
         ];
         $local = $root . '/config/local.php';
         $overrides = is_file($local) ? require $local : [];

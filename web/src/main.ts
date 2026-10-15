@@ -1,3 +1,4 @@
+import './migrate'
 import '@fontsource-variable/figtree/wght.css'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
