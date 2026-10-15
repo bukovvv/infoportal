@@ -112,7 +112,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
   <BandHero overlap>
     <div class="hero">
       <h1 id="search-title" class="hero-title">Dokąd jedziesz?</h1>
-      <p class="hero-sub">Rozkład Kolei Wielkopolskich z opóźnieniami na żywo.</p>
+      <p class="hero-sub">Rozkład pociągów po Wielkopolsce. Szybko i w jednej aplikacji! :)</p>
     </div>
   </BandHero>
 
