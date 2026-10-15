@@ -18,7 +18,7 @@ use RuntimeException;
 final class GtfsImporter
 {
     /** Wersja układu bazy — starsza baza jest przebudowywana nawet bez zmian w rozkładzie. */
-    public const SCHEMA = 3;
+    public const SCHEMA = 4;
 
     /** @var callable(string): void */
     private $log;
@@ -182,41 +182,77 @@ final class GtfsImporter
             return $inRegion[$stationId] ??= $s !== null && $region->contains((float) $s['stop_lat'], (float) $s['stop_lon'], $s['stop_name']);
         };
 
-        // stop_times (największy plik — strumieniowo)
+        // stacje KW (także poza Wielkopolską, np. Mogilno) — kursy partnerów mogą na nich zostać, gdy łączą się z odcinkiem w województwie
+        $kwStations = [];
+        foreach ($src->rows('stop_times.txt') as $s) {
+            if (($trips[$s['trip_id']] ?? null) === false) {
+                $kwStations[$stationOf($s['stop_id'])] = true;
+            }
+        }
+
+        // stop_times (największy plik — strumieniowo); kursy KW od razu, kursy partnerów po wybraniu postojów
         $insStop = $pdo->prepare('INSERT INTO stop_times VALUES (?,?,?,?,?,?,?,?,?,?,?)');
-        $rows = 0;
+        $rowOf = static fn (array $s, string $stationId): array => [$s['trip_id'], (int) $s['stop_sequence'], $stationId, $s['stop_id'],
+            (Clock::parseGtfsTime($s['arrival_time']) ?? Clock::parseGtfsTime($s['departure_time'])),
+            (Clock::parseGtfsTime($s['departure_time']) ?? Clock::parseGtfsTime($s['arrival_time'])),
+            $s['shape_dist_traveled'] !== '' ? (float) $s['shape_dist_traveled'] : null,
+            ($s['platform'] ?? '') ?: null, ($s['track'] ?? '') ?: null, (int) ($s['pickup_type'] ?: 0), (int) ($s['drop_off_type'] ?: 0)];
         /** @var array<string, array{0: int, 1: string, 2: int, 3: string}> $ends */
         $ends = [];
+        /** @var array<string, array<int, int>> $kinds kurs partnera => seq => 2 w Wielkopolsce, 1 stacja KW poza nią, 0 inna */
+        $kinds = [];
+        /** @var array<string, array<int, array<int, mixed>>> $candidates wiersze postojów rodzaju 1 i 2 */
+        $candidates = [];
         foreach ($src->rows('stop_times.txt') as $s) {
-            if (!isset($trips[$s['trip_id']])) {
+            $tripId = $s['trip_id'];
+            if (!isset($trips[$tripId])) {
                 continue;
             }
-            $arr = Clock::parseGtfsTime($s['arrival_time']);
-            $dep = Clock::parseGtfsTime($s['departure_time']);
-            $arr ??= $dep;
-            $dep ??= $arr;
             $stationId = $stationOf($s['stop_id']);
-            if ($trips[$s['trip_id']]) {
-                // prawdziwy początek i koniec kursu partnera (przed obcięciem) — do „z:” i „do” na tablicy
-                $seq = (int) $s['stop_sequence'];
-                $e = &$ends[$s['trip_id']];
-                if ($e === null || $seq < $e[0]) {
-                    [$e[0], $e[1]] = [$seq, $stationId];
-                }
-                if ($seq > ($e[2] ?? -1)) {
-                    [$e[2], $e[3]] = [$seq, $stationId];
-                }
-                unset($e);
-                if (!$isInRegion($stationId)) {
+            if (!$trips[$tripId]) {
+                $insStop->execute($rowOf($s, $stationId));
+                continue;
+            }
+            // prawdziwy początek i koniec kursu partnera (przed obcięciem) — do „z:” i „do” na tablicy
+            $seq = (int) $s['stop_sequence'];
+            $e = &$ends[$tripId];
+            if ($e === null || $seq < $e[0]) {
+                [$e[0], $e[1]] = [$seq, $stationId];
+            }
+            if ($seq > ($e[2] ?? -1)) {
+                [$e[2], $e[3]] = [$seq, $stationId];
+            }
+            unset($e);
+            $kind = $isInRegion($stationId) ? 2 : (isset($kwStations[$stationId]) ? 1 : 0);
+            $kinds[$tripId][$seq] = $kind;
+            if ($kind > 0) {
+                $candidates[$tripId][$seq] = $rowOf($s, $stationId);
+            }
+        }
+        // postoje partnera: w Wielkopolsce oraz stacje KW poza nią, do których kurs dojeżdża z województwa bez przerwy
+        // (Gniezno – Trzemeszno – Mogilno tak, dalej Inowrocław już nie; kurs tylko poza Wielkopolską — wcale)
+        foreach ($kinds as $tripId => $bySeq) {
+            ksort($bySeq);
+            $seqs = array_keys($bySeq);
+            $keep = [];
+            foreach ($seqs as $i => $seq) {
+                if ($bySeq[$seq] !== 2) {
                     continue;
                 }
+                $keep[$seq] = true;
+                for ($j = $i + 1; isset($seqs[$j]) && $bySeq[$seqs[$j]] === 1; $j++) {
+                    $keep[$seqs[$j]] = true;
+                }
+                for ($j = $i - 1; $j >= 0 && $bySeq[$seqs[$j]] === 1; $j--) {
+                    $keep[$seqs[$j]] = true;
+                }
             }
-            $insStop->execute([$s['trip_id'], (int) $s['stop_sequence'], $stationId, $s['stop_id'], $arr, $dep,
-                $s['shape_dist_traveled'] !== '' ? (float) $s['shape_dist_traveled'] : null,
-                ($s['platform'] ?? '') ?: null, ($s['track'] ?? '') ?: null, (int) ($s['pickup_type'] ?: 0), (int) ($s['drop_off_type'] ?: 0)]);
-            $rows++;
+            foreach (array_keys($keep) as $seq) {
+                $insStop->execute($candidates[$tripId][$seq]);
+            }
         }
-        // kursy partnerów, z których w Wielkopolsce został najwyżej jeden postój, nie przydadzą się
+        unset($kinds, $candidates, $kwStations);
+        // kursy partnerów, z których został najwyżej jeden postój, nie przydadzą się
         $pdo->exec('CREATE TEMP TABLE short_trips AS SELECT t.trip_id FROM trips t LEFT JOIN stop_times st ON st.trip_id = t.trip_id
             WHERE t.agency <> ' . $pdo->quote($agency) . ' GROUP BY t.trip_id HAVING COUNT(st.seq) < 2');
         foreach (['stop_times', 'trip_numbers', 'trips'] as $table) {

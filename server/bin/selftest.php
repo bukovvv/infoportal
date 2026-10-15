@@ -278,12 +278,17 @@ if (is_file(Config::path('gtfs_db'))) {
         foreach ($t['stops'] as $s) {
             $st = $stations[$s[DayTimetable::STATION]];
             if (!$region->contains($st['lat'], $st['lon'], $st['name'])) {
-                $outsideRegion[$st['name']] = true;
+                $outsideRegion[$st['name']] = $st['kw'];
             }
         }
         $realEnds = $realEnds || ($t['destinationName'] !== null && $t['destinationName'] !== $stations[end($t['stops'])[DayTimetable::STATION]]['name']);
     }
-    check('POLREGIO: tylko stacje w Wielkopolsce', $outsideRegion === [], implode(', ', array_keys($outsideRegion)));
+    // poza województwem tylko stacje KW (np. Mogilno), do których kurs dojeżdża z Wielkopolski
+    check('POLREGIO: stacje w Wielkopolsce i stacje KW przy granicy', !in_array(false, $outsideRegion, true), implode(', ', array_keys(array_filter($outsideRegion, static fn (bool $kw): bool => !$kw))));
+    if (isset($byName['Mogilno'], $byName['Gniezno'])) {
+        $toMogilno = array_filter($partnerTrips, static fn (array $t): bool => DayTimetable::indexOf($t, $byName['Mogilno']) !== null && DayTimetable::indexOf($t, $byName['Gniezno']) !== null);
+        check('POLREGIO: Gniezno – Mogilno (stacja KW poza Wielkopolską)', $toMogilno !== []);
+    }
     check('POLREGIO: prawdziwa stacja końcowa kursu wyjeżdżającego z Wielkopolski', $realEnds);
     // tablica: POLREGIO też, także na stacji bez KW
     $prOnly = array_values(array_filter($stations, static fn (array $s): bool => !$s['kw']));
