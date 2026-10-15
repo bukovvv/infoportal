@@ -100,10 +100,10 @@ find "$D/public_html" -mindepth 1 -maxdepth 1 ! -name '.well-known' ! -name 'cgi
 cp -a infoportal-kw/public/. "$D/public_html/"
 
 cd "$D"
-if [ ! -f server/storage/gtfs.sqlite ]; then
-  echo "   Import rozkładu…"
-  "$PHP" server/bin/import-gtfs.php
-fi
+# import przy każdym wdrożeniu: bez zmian w rozkładzie i w układzie bazy (GtfsImporter::SCHEMA) kończy się od razu,
+# a po zmianie układu przebudowuje bazę od razu, nie dopiero w nocnym CRON-ie
+echo "   Import rozkładu…"
+"$PHP" server/bin/import-gtfs.php
 if [ -f public_html_v01/storage/infoportal.sqlite ] && [ ! -f server/storage/.legacy-imported ]; then
   "$PHP" server/bin/import-legacy-notices.php public_html_v01/storage/infoportal.sqlite && touch server/storage/.legacy-imported
 fi
