@@ -115,6 +115,8 @@ const noData = computed(() => {
     clearable
     persistent-clear
     clear-icon="close"
+    autocomplete="suppress"
+    name="stacja"
     @click:clear="cleared"
     :items="items"
     item-title="name"
