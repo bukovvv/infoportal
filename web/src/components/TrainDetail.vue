@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useDisplay } from 'vuetify'
 import { api } from '@/api/client'
 import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
@@ -18,6 +19,7 @@ const props = defineProps<{ tripKey?: string; number?: string; inSheet?: boolean
 const emit = defineEmits<{ close: []; loaded: [trip: Trip] }>()
 const router = useRouter()
 const ui = useUi()
+const { mdAndUp } = useDisplay()
 const notices = useNotices()
 const trip = ref<Trip | null>(null)
 const error = ref<string | null>(null)
@@ -67,8 +69,14 @@ function toStation(id: string) {
   emit('close')
   void router.push({ name: 'board', params: { stationId: id } })
 }
+/** Na telefonie panel zasłaniałby mapę — chowamy go, mapa pokazuje trasę i pociąg (panel wraca po dotknięciu pociągu). */
 function toMap() {
   if (!trip.value) return
+  if (router.currentRoute.value.name === 'map') {
+    ui.mapFocus = trip.value.key
+    if (!mdAndUp.value) emit('close')
+    return
+  }
   emit('close')
   void router.push({ name: 'map', query: { kurs: trip.value.key } })
 }

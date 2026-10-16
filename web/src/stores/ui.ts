@@ -25,6 +25,8 @@ export const useUi = defineStore('ui', () => {
   const snack = ref<{ text: string; action?: SnackAction; id: number } | null>(null)
   const sheet = ref<{ key?: string; number?: string; docked?: boolean } | null>(null)
   const theme = ref<ThemeMode>(read<ThemeMode>('kw_theme', 'system'))
+  /** „Pokaż na mapie” kliknięte na samej mapie: kurs do pokazania (mapa odbiera i czyści) */
+  const mapFocus = ref<string | null>(null)
 
   function notify(text: string, action?: SnackAction) {
     snack.value = { text, action, id: Date.now() }
@@ -43,5 +45,5 @@ export const useUi = defineStore('ui', () => {
     write('kw_theme', mode)
   }
 
-  return { snack, sheet, theme, notify, openTrain, closeTrain, setTheme }
+  return { snack, sheet, theme, mapFocus, notify, openTrain, closeTrain, setTheme }
 })

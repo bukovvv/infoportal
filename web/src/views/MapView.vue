@@ -260,7 +260,8 @@ function fitNetwork() {
   fitCoords(coords.length ? coords : stations.list.map((s) => [s.lon, s.lat]), 9)
 }
 
-async function select(key: string) {
+/** Wybór kursu: trasa na mapie i panel szczegółów (na telefonie bez panelu, gdy pasażer chce zobaczyć mapę). */
+async function select(key: string, openSheet = true) {
   selectedKey.value = key
   if (!mdAndUp.value) listOpen.value = false
   const train = live.trains.find((t) => keyOf(t) === key)
@@ -269,7 +270,7 @@ async function select(key: string) {
     if (train) map?.flyTo({ center: [train.lon, train.lat], zoom: Math.max(map.getZoom(), 11) })
     return
   }
-  ui.openTrain({ key }, true)
+  if (openSheet) ui.openTrain({ key }, true)
   void router.replace({ query: { kurs: key } })
   try {
     const trip = await api.trip(key)
@@ -316,7 +317,14 @@ watch(() => live.trains.length, (n) => {
 // pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
 watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
 watch(() => stations.list, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
-watch(() => ui.sheet, (sheet) => { if (!sheet && selectedKey.value) clearSelection() })
+watch(() => ui.sheet, (sheet) => { if (!sheet && selectedKey.value && !ui.mapFocus) clearSelection() })
+// „Pokaż na mapie” w panelu otwartym na mapie (panel na telefonie się chowa, kurs zostaje wybrany)
+ui.mapFocus = null
+watch(() => ui.mapFocus, (key) => {
+  if (!key) return
+  ui.mapFocus = null
+  void select(key, mdAndUp.value)
+}, { flush: 'post' }) // po obserwatorze panelu — ten nie może skasować wyboru
 watch(() => theme.global.name.value, async (name) => {
   if (!map) return
   try {
@@ -348,11 +356,13 @@ onMounted(async () => {
     m.on('style.load', addOverlays)
     m.on('move', layoutPills)
     m.on('movestart', (e) => { if (e.originalEvent) userMoved = true })
+    // dotknięcie mapy poza pociągiem kończy pokazywanie kursu bez panelu (telefon po „Pokaż na mapie”)
+    m.on('click', () => { if (selectedKey.value && !ui.sheet) clearSelection() })
     m.once('load', () => {
       // informacja o autorach mapy zwinięta do ikonki ⓘ (MapLibre rozwija ją na starcie)
       container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
       syncTrains()
-      if (selectedKey.value) void select(selectedKey.value)
+      if (selectedKey.value) void select(selectedKey.value, mdAndUp.value)
       else {
         fittedTrains = live.trains.length > 0
         fitNetwork()

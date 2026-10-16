@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import type { ConnectionsResult } from '@/api/types'
+import type { Connection, ConnectionsResult } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import ConnectionCard from '@/components/ConnectionCard.vue'
 import FavoriteStations from '@/components/FavoriteStations.vue'
@@ -15,7 +15,7 @@ import WhenChip from '@/components/WhenChip.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
-import { read, write } from '@/stores/ui'
+import { read, useUi, write } from '@/stores/ui'
 import { dayLabel, plural, warsawNow } from '@/utils/format'
 
 const route = useRoute()
@@ -24,6 +24,7 @@ const notices = useNotices()
 const status = useStatus()
 const journeys = useJourneys()
 const favorites = useFavorites()
+const ui = useUi()
 
 const initial = warsawNow()
 const last = read<{ from?: string; to?: string }>('kw_last_search', {})
@@ -49,6 +50,8 @@ async function search(scroll = true) {
   searching.value = true
   try {
     result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, direct: direct.value, arriveBy: arriveBy.value })
+    firstIndex.value = 0
+    extended.value = false
     write('kw_last_search', { from: from.value, to: to.value })
     void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...(direct.value ? { bezp: '1' } : {}), ...(arriveBy.value ? { przyj: '1' } : {}) }, hash: route.hash })
     if (scroll) requestAnimationFrame(() => resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
@@ -82,17 +85,52 @@ function whenChanged() {
   if (result.value) void search(false)
 }
 
-/** Następna strona wyników: późniejsze odjazdy albo, przy „przyjeździe do”, wcześniejsze przyjazdy. */
-function more() {
-  const list = result.value?.connections
-  if (!list?.length) return
-  const next = result.value!.arriveBy
+const connKey = (c: Connection) => c.legs.map((l) => l.key).join('+')
+/** wyróżnione połączenie: pierwsze z wyszukiwania (dopisane wcześniejsze go nie przejmują) */
+const firstIndex = ref(0)
+const highlightKey = computed(() => (result.value?.connections.length ? connKey(result.value.connections[firstIndex.value]) : null))
+/** wyniki poszerzone przyciskami — nagłówek bez „od 14:05” */
+const extended = ref(false)
+const paging = ref<'earlier' | 'later' | null>(null)
+const resultsInfo = computed(() => {
+  const r = result.value
+  if (!r) return ''
+  const n = r.connections.length
+  const count = `${n} ${plural(n, 'połączenie', 'połączenia', 'połączeń')}`
+  return extended.value ? count : `${count} ${r.arriveBy ? 'z przyjazdem do' : 'od'} ${r.time}`
+})
+
+/**
+ * Wcześniejsze albo późniejsze połączenia dopisywane do listy: wcześniejsze = z przyjazdem przed pierwszym
+ * na liście, późniejsze = z odjazdem po ostatnim (niezależnie od trybu odjazd/przyjazd).
+ */
+async function page(dir: 'earlier' | 'later') {
+  const r = result.value
+  if (!r?.connections.length || paging.value) return
+  const list = r.connections
+  const at = dir === 'earlier'
     ? new Date(new Date(list[0].arrival).getTime() - 60_000)
     : new Date(new Date(list[list.length - 1].departure).getTime() + 60_000)
-  const w = warsawNow(next)
-  date.value = w.date
-  time.value = w.time
-  void search(false)
+  const w = warsawNow(at)
+  paging.value = dir
+  try {
+    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, direct: direct.value, arriveBy: dir === 'earlier' })
+    if (result.value !== r) return
+    const known = new Set(list.map(connKey))
+    const fresh = res.connections.filter((c) => !known.has(connKey(c)))
+    if (!fresh.length) {
+      ui.notify(dir === 'earlier' ? 'Brak wcześniejszych połączeń.' : 'Brak późniejszych połączeń.')
+      return
+    }
+    const first = highlightKey.value
+    r.connections = dir === 'earlier' ? [...fresh, ...list] : [...list, ...fresh]
+    firstIndex.value = r.connections.findIndex((c) => connKey(c) === first)
+    extended.value = true
+  } catch (e) {
+    ui.notify((e as Error).message)
+  } finally {
+    paging.value = null
+  }
 }
 
 let timer: number | undefined
@@ -137,11 +175,14 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
       <section v-if="result" ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
         <div class="results-head">
           <h2 id="results-title" class="text-title-large">{{ result.from.name }} → {{ result.to.name }}</h2>
-          <span class="text-body-medium muted">{{ result.connections.length }} {{ plural(result.connections.length, 'połączenie', 'połączenia', 'połączeń') }} {{ result.arriveBy ? 'z przyjazdem do' : 'od' }} {{ result.time }}</span>
+          <span class="text-body-medium muted">{{ resultsInfo }}</span>
         </div>
-        <template v-for="(c, i) in result.connections" :key="c.legs.map((l) => l.key).join('+')">
+        <v-btn v-if="result.connections.length" variant="text" prepend-icon="keyboard_arrow_up" :loading="paging === 'earlier'" class="more" @click="page('earlier')">
+          Wcześniejsze połączenia
+        </v-btn>
+        <template v-for="(c, i) in result.connections" :key="connKey(c)">
           <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
-          <ConnectionCard :connection="c" :now="now" :highlight="i === 0" />
+          <ConnectionCard :connection="c" :now="now" :highlight="connKey(c) === highlightKey" />
         </template>
         <v-empty-state
           v-if="!result.connections.length"
@@ -150,8 +191,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           :text="direct ? 'Wyłącz filtr „Bez przesiadek” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW i POLREGIO w Wielkopolsce.'"
           class="card"
         />
-        <v-btn v-else variant="text" :prepend-icon="result.arriveBy ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" class="more" @click="more">
-          {{ result.arriveBy ? 'Wcześniejsze połączenia' : 'Późniejsze połączenia' }}
+        <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" :loading="paging === 'later'" class="more" @click="page('later')">
+          Późniejsze połączenia
         </v-btn>
         <BtkHint
           v-if="btkFits"
@@ -249,7 +290,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 }
 
 .cols { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); align-items: start; }
-.aside { display: grid; gap: 24px; align-content: start; min-width: 0; }
+/* minmax(0, 1fr): przewijany w bok pasek ulubionych stacji nie rozpycha strony na telefonie */
+.aside { display: grid; gap: 24px; align-content: start; min-width: 0; grid-template-columns: minmax(0, 1fr); }
 /* bez wyników: podróże, ulubione i komunikaty obok siebie */
 @media (min-width: 1145px) {
   .cols.has-result { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
