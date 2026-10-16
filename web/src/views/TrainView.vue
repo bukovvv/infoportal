@@ -14,11 +14,16 @@ function loaded(t: Trip) {
   trip.value = t
   document.title = `${trainLabel(t)} ${t.origin} – ${t.destination} | zanimwyjdziesz.pl`
 }
+/** Strona otwarta z linku (nowa karta, udostępnienie) nie ma poprzedniej strony w serwisie — wtedy na start. */
+function back() {
+  if (window.history.state?.back) router.back()
+  else void router.replace({ name: 'start' })
+}
 </script>
 
 <template>
   <div class="page-narrow">
-    <v-btn variant="text" prepend-icon="arrow_back" class="mb-2 ml-n2" @click="router.back()">Wróć</v-btn>
+    <v-btn variant="text" prepend-icon="arrow_back" class="mb-2 ml-n2" @click="back">Wróć</v-btn>
     <v-card color="surface-container-low" class="overflow-hidden">
       <TrainDetail :trip-key="key" :number="key ? undefined : number" @loaded="loaded" />
     </v-card>
