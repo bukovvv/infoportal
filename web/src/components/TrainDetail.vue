@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { agencyCode, agencyName, isPartner, trainLabel } from '@/utils/agency'
+import { agencyCode, agencyName, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
@@ -55,6 +55,7 @@ const category = computed(() => {
 })
 /** pociąg POLREGIO: bez mapy, pojazdu i komunikatów (dotyczą KW) */
 const partner = computed(() => isPartner(trip.value?.agency))
+const title = computed(() => (trip.value ? trainTitle(trip.value.number, trip.value.name) : null))
 const related = computed(() => (trip.value && !partner.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
 const progress = computed(() => {
   const t = trip.value
@@ -109,7 +110,7 @@ defineExpose({ trip })
           </span>
           <v-btn v-if="inSheet" icon="close" variant="text" color="on-band" aria-label="Zamknij" @click="emit('close')" />
         </div>
-        <h2 class="head-title">{{ agencyCode(trip.agency) }} {{ trip.number }}<span v-if="trip.name && !trip.name.startsWith('PKM')" class="head-name"> „{{ trip.name }}”</span></h2>
+        <h2 class="head-title">{{ agencyCode(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="head-name"> „{{ title!.name }}”</span></h2>
         <p class="head-route">{{ trip.origin }} → {{ trip.destination }}</p>
         <div class="d-flex flex-wrap ga-2">
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
