@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
 import type { Connection, ConnectionsResult } from '@/api/types'
@@ -103,6 +103,7 @@ const resultsInfo = computed(() => {
 /**
  * Wcześniejsze albo późniejsze połączenia dopisywane do listy: wcześniejsze = z przyjazdem przed pierwszym
  * na liście, późniejsze = z odjazdem po ostatnim (niezależnie od trybu odjazd/przyjazd).
+ * Wcześniejszych po 3 — strona przewija się do nich (nad listą, poza widokiem).
  */
 async function page(dir: 'earlier' | 'later') {
   const r = result.value
@@ -114,7 +115,7 @@ async function page(dir: 'earlier' | 'later') {
   const w = warsawNow(at)
   paging.value = dir
   try {
-    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, direct: direct.value, arriveBy: dir === 'earlier' })
+    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, direct: direct.value, arriveBy: dir === 'earlier', limit: dir === 'earlier' ? 3 : undefined })
     if (result.value !== r) return
     const known = new Set(list.map(connKey))
     const fresh = res.connections.filter((c) => !known.has(connKey(c)))
@@ -126,6 +127,10 @@ async function page(dir: 'earlier' | 'later') {
     r.connections = dir === 'earlier' ? [...fresh, ...list] : [...list, ...fresh]
     firstIndex.value = r.connections.findIndex((c) => connKey(c) === first)
     extended.value = true
+    if (dir === 'earlier') {
+      await nextTick()
+      resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   } catch (e) {
     ui.notify((e as Error).message)
   } finally {
