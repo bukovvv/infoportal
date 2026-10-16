@@ -239,7 +239,7 @@ function watchJourney() {
 .leg-no { color: rgb(var(--v-theme-on-surface)); }
 .leg-vehicle { display: grid; gap: 4px; margin-top: 6px; }
 .partner-note { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: rgb(var(--v-theme-on-surface-variant)); }
-.leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; scrollbar-width: thin; }
+.leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; }
 .leg-drawing img { flex: none; display: block; max-width: none; }
 .stops-btn { margin: 2px 0 -6px -12px; }
 .leg.mid .leg-t { font-weight: 400; padding-top: 6px; color: rgb(var(--v-theme-on-surface-variant)); }

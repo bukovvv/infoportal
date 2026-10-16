@@ -6,6 +6,7 @@ import { useStations } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useUi } from '@/stores/ui'
 import { clock, minutesUntil, relative } from '@/utils/format'
+import { vHscroll } from '@/utils/hscroll'
 import StatusTag from './StatusTag.vue'
 
 /** Najbliższe odjazdy z ulubionych stacji (po 3 na stację, odświeżane co minutę). */
@@ -40,7 +41,7 @@ watch(() => favorites.ids.join(), () => void refresh())
 </script>
 
 <template>
-  <div class="fav-list">
+  <div v-hscroll class="fav-list">
     <article v-for="s in list" :key="s.id" class="fav-station card">
       <router-link :to="{ name: 'board', params: { stationId: s.id } }" class="fav-head">
         <v-icon icon="star-fill" color="primary" size="20" />
@@ -73,9 +74,16 @@ watch(() => favorites.ids.join(), () => void refresh())
 </template>
 
 <style scoped>
-/* na telefonie karty stacji obok siebie (przewijane w bok), szerzej — jedna pod drugą */
-.fav-list { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px 4px; scroll-snap-type: x mandatory; }
-.fav-list::-webkit-scrollbar { display: none; }
+/* na telefonie karty stacji obok siebie (przewijane w bok), szerzej — jedna pod drugą; z myszą widoczny pasek przewijania, bez przyciągania */
+.fav-list { display: flex; gap: 12px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; scroll-snap-type: x mandatory; }
+@media (hover: none), (pointer: coarse) {
+  .fav-list { scrollbar-width: none; }
+  .fav-list::-webkit-scrollbar { display: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .fav-list { scroll-snap-type: none; padding-bottom: 8px; }
+  .fav-list::-webkit-scrollbar-track { margin: 0 12px; }
+}
 .fav-station { flex: none; width: min(300px, 82vw); padding-bottom: 6px; scroll-snap-align: start; }
 .fav-list:has(> :only-child) .fav-station { width: 100%; }
 @media (min-width: 600px) {

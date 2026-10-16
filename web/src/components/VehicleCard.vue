@@ -34,6 +34,6 @@ const title = computed(() => vehicleTitle(v.value))
 
 <style scoped>
 .vehicle { display: grid; gap: 12px; padding: 16px 24px 20px; }
-.drawing { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.drawing { display: flex; align-items: flex-end; gap: 2px; overflow-x: auto; padding-bottom: 4px; }
 .drawing img { flex: none; display: block; max-width: none; height: auto; }
 </style>

@@ -4,6 +4,7 @@ import BandHero from '@/components/BandHero.vue'
 import NoticeCard from '@/components/NoticeCard.vue'
 import { useNotices } from '@/stores/data'
 import { normalize, plural } from '@/utils/format'
+import { vHscroll } from '@/utils/hscroll'
 
 const notices = useNotices()
 const filter = ref<'all' | 'alert' | 'info'>('all')
@@ -43,7 +44,7 @@ const summary = computed(() => {
 
 <template>
   <BandHero narrow>
-    <div class="band-chips" role="group" aria-label="Rodzaj komunikatów">
+    <div v-hscroll class="band-chips" role="group" aria-label="Rodzaj komunikatów">
       <button v-for="f in filters" :key="f.value" type="button" class="band-chip" :aria-pressed="filter === f.value" @click="filter = f.value">
         {{ f.label }}<span class="chip-count">{{ f.count }}</span>
       </button>

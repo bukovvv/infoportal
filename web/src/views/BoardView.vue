@@ -15,6 +15,7 @@ import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
 import { agencyCode } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
+import { vHscroll } from '@/utils/hscroll'
 
 const route = useRoute()
 const router = useRouter()
@@ -146,7 +147,7 @@ const when = (iso: string) => {
         <v-icon :icon="isFavorite ? 'star-fill' : 'star'" />
       </button>
     </div>
-    <div class="band-chips" role="group" aria-label="Szybki wybór stacji">
+    <div v-hscroll class="band-chips" role="group" aria-label="Szybki wybór stacji">
       <button type="button" class="band-chip" :disabled="locating" @click="nearest"><v-icon icon="my_location" />{{ locating ? 'Szukam…' : 'Najbliższa' }}</button>
       <button
         v-for="s in favoriteStations"
