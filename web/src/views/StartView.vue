@@ -256,7 +256,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
         </section>
 
         <p class="text-body-small muted footnote">
-          zanimwyjdziesz.pl to nieoficjalny serwis pasażerski, niezwiązany z przewoźnikami. Bilety kupisz na stronie przewoźnika. <router-link to="/o-nas">O nas</router-link>
+          zanimwyjdziesz.pl to niezależny serwis informacji pasażerskiej. Dane o połączeniach i opóźnieniach mogą różnić się od sytuacji na kolei. <router-link to="/o-nas">O nas</router-link>
         </p>
       </div>
     </div>

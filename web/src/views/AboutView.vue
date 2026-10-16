@@ -90,8 +90,7 @@ const privacy = [
     </v-expansion-panels>
 
     <p class="text-body-small muted disclaimer">
-      Serwis nie jest związany z Kolejami Wielkopolskimi ani innymi przewoźnikami. Rozkład i opóźnienia mogą się różnić od rzeczywistości.
-      Bilety kupisz na <a href="https://wielkopolskiebilety.pl/" target="_blank" rel="noopener noreferrer" class="text-primary">wielkopolskiebilety.pl</a>.
+      zanimwyjdziesz.pl to niezależny serwis informacji pasażerskiej. Dane o połączeniach i opóźnieniach mogą różnić się od sytuacji na kolei.
     </p>
   </div>
 </template>
