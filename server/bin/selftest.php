@@ -21,6 +21,7 @@ use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\GtfsRtDecoder;
 use KwInfo\Live\Realtime;
 use KwInfo\Push\JourneyWatcher;
+use KwInfo\Push\RouteWatcher;
 use KwInfo\Push\WebPush;
 use KwInfo\Vehicles\Vagonweb;
 use KwInfo\Vehicles\VehicleRepository;
@@ -339,6 +340,12 @@ if (is_file(Config::path('gtfs_db'))) {
         check('opcje: bez przesiadek', $direct !== [] && max(array_column($direct, 'transfers')) === 0);
         $slow = $search(['minTransfer' => '15', 'agencies' => 'KW,PR']);
         check('opcje: przesiadka co najmniej 15 min', array_filter(array_merge(...array_column($slow, 'waits')), static fn (int $w): bool => $w < 15) === []);
+        // obserwowana trasa: pociągi połączeń z odjazdem w okienku 6:00–9:00, z opcjami trasy
+        $routeDate = (int) str_replace('-', '', $isoDay);
+        $routeLegs = (new RouteWatcher($tt))->legs($byName['Poznań Główny'], $byName['Konin'], ['transfers' => 2, 'minTransfer' => 3, 'agencies' => ['KW', 'PR']], $routeDate, ['start' => 6 * 3600, 'end' => 9 * 3600], new Realtime(), 0);
+        $firstDeps = array_map(static fn (array $l): string => date('H:i', $l['dep']), array_filter($routeLegs, static fn (array $l): bool => $l['first']));
+        check('trasa: pociągi w okienku, bez Intercity', $routeLegs !== [] && min($firstDeps) >= '06:00' && max($firstDeps) <= '09:00'
+            && !in_array('IC', array_column($routeLegs, 'agency'), true) && $routeLegs[0]['route'] === 'Poznań Główny → Konin', implode(' ', $firstDeps));
     }
     // sieć na mapie: także linie tylko partnerów (przycięte)
     $net = $api->network()->data['features'];
@@ -424,6 +431,29 @@ $transfer = [$leg(['to' => 'Poznań Wschód', 'arr' => $t0 + 2400, 'arrDelay' =>
 check('podróż: zagrożona przesiadka', count($m) === 1 && str_contains($m[0]['title'], 'Przesiadka zagrożona'));
 [, , $done] = JourneyWatcher::evaluate([$leg([])], [], $t0 + 4200 + 1000);
 check('podróż: koniec po przyjeździe', $done);
+
+// --- powiadomienia o trasie: okienko czasu i kiedy wysłać
+$win = ['dir' => 'ab', 'days' => [1, 2, 3, 4, 5], 'start' => 6 * 3600 + 1800, 'end' => 8 * 3600];
+check('trasa: okienko w dzień roboczy od godziny przed', RouteWatcher::active($win, 3, 5 * 3600 + 1800) && RouteWatcher::active($win, 1, 8 * 3600)
+    && !RouteWatcher::active($win, 3, 5 * 3600) && !RouteWatcher::active($win, 3, 8 * 3600 + 60) && !RouteWatcher::active($win, 6, 7 * 3600));
+$rleg = static fn (array $o): array => $o + ['id' => 'KW_1@20261014|P', 'number' => '77615', 'agency' => 'KW', 'from' => 'Poznań Główny', 'route' => 'Poznań Główny → Gniezno',
+    'dep' => $t0 + 1800, 'depDelay' => null, 'cancelled' => false, 'first' => true];
+[$m] = RouteWatcher::evaluate([$rleg(['depDelay' => 4])], [], $t0);
+check('trasa: opóźnienie 4 min bez powiadomienia', $m === []);
+[$m, $st] = RouteWatcher::evaluate([$rleg(['depDelay' => 5])], [], $t0);
+check('trasa: opóźnienie 5 min — powiadomienie', count($m) === 1 && str_contains($m[0]['title'], 'KW 77615: opóźnienie +5 min') && str_contains($m[0]['body'], 'Trasa Poznań Główny → Gniezno'));
+[$m, $st] = RouteWatcher::evaluate([$rleg(['depDelay' => 8])], $st, $t0);
+[$m2, $st] = RouteWatcher::evaluate([$rleg(['depDelay' => 0])], $st, $t0);
+check('trasa: zmiana o 3 min bez powiadomienia, powrót do rozkładu z powiadomieniem', $m === [] && count($m2) === 1 && str_contains($m2[0]['title'], 'planowo'));
+[$m] = RouteWatcher::evaluate([$rleg(['depDelay' => 12, 'first' => false])], [], $t0);
+[$m2, $st] = RouteWatcher::evaluate([$rleg(['cancelled' => true, 'first' => false, 'agency' => 'PR'])], [], $t0);
+[$again] = RouteWatcher::evaluate([$rleg(['cancelled' => true, 'first' => false])], $st, $t0);
+check('trasa: dalszy odcinek tylko odwołanie, raz', $m === [] && count($m2) === 1 && str_contains($m2[0]['title'], 'PR 77615 odwołany') && $again === []);
+$many = array_map(static fn (int $i): array => $rleg(['id' => "KW_$i@20261014|P", 'cancelled' => true]), range(1, 5));
+[$m, $st] = RouteWatcher::evaluate($many, [], $t0);
+[$m2] = RouteWatcher::evaluate($many, $st, $t0);
+check('trasa: najwyżej 3 powiadomienia naraz, reszta w następnym przebiegu', count($m) === 3 && count($m2) === 2);
+check('trasa: stan bez starych kursów', RouteWatcher::prune(['c' => ['A@20261001|P' => true, 'B@20261013|P' => true], 'd' => ['C@20261002|P' => 6]], 20261014) === ['c' => ['B@20261013|P' => true]]);
 
 echo PHP_EOL . "Wynik: {$passed} OK, {$failed} błędów" . PHP_EOL;
 exit($failed > 0 ? 1 : 0);

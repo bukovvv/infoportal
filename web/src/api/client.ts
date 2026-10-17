@@ -58,6 +58,12 @@ export const api = {
     watch: (body: { subscription: PushSubscriptionJSON; journeyId: string; legs: { key: string; from: string; to: string }[] }) =>
       request<{ watching: boolean }>('POST', '/push/watch', body),
     unwatch: (body: { endpoint: string; journeyId?: string }) => request<{ watching: boolean }>('POST', '/push/unwatch', body),
+    watchRoute: (body: {
+      subscription: PushSubscriptionJSON; routeId: string; from: string; to: string
+      options: { transfers: number; minTransfer: number; agencies: string[] }
+      windows: { dir: 'ab' | 'ba'; days: number[]; start: string; end: string }[]
+    }) => request<{ watching: boolean }>('POST', '/push/route-watch', body),
+    unwatchRoute: (body: { endpoint: string; routeId: string }) => request<{ watching: boolean }>('POST', '/push/route-unwatch', body),
   },
   admin: {
     session: () => request<AdminSession>('GET', '/admin/session'),

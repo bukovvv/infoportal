@@ -24,8 +24,8 @@ const sources: { title: string; parts: Part[] }[] = [
 
 const privacy = [
   'Bez kont, reklam i statystyk odwiedzin. Nie używamy ciasteczek (poza panelem administratora).',
-  'Ulubione stacje, obserwowane podróże, ostatnie wyszukiwanie i jego opcje, motyw i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
-  'Gdy włączysz powiadomienia o podróży, serwer zapisuje adres subskrypcji powiadomień Twojej przeglądarki i pociągi tej podróży. Usuwamy je po jej zakończeniu albo po wyłączeniu powiadomień. Powiadomienia dostarcza usługa producenta przeglądarki (Google, Mozilla, Apple, Microsoft).',
+  'Ulubione stacje, obserwowane podróże i trasy, ostatnie wyszukiwanie i jego opcje, motyw i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
+  'Gdy włączysz powiadomienia o podróży, serwer zapisuje adres subskrypcji powiadomień Twojej przeglądarki i pociągi tej podróży. Usuwamy je po jej zakończeniu albo po wyłączeniu powiadomień. Przy powiadomieniach o trasie serwer zapisuje adres subskrypcji, obie stacje, opcje wyszukiwania i wybrane dni i godziny — do wyłączenia powiadomień, a jeśli przez 90 dni nie otworzysz strony, usuwamy je same. Powiadomienia dostarcza usługa producenta przeglądarki (Google, Mozilla, Apple, Microsoft).',
   'Lokalizacji używamy tylko po kliknięciu „Najbliższa stacja” albo „Moja lokalizacja”. Najbliższą stację wylicza Twoja przeglądarka.',
   'Podkład mapy pobierany jest z OpenFreeMap, więc ten serwis widzi Twój adres IP. Hosting może zapisywać standardowe logi serwera.',
 ]

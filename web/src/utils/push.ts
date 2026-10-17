@@ -47,3 +47,19 @@ export async function unwatchJourney(id: string) {
   const sub = await registration?.pushManager.getSubscription()
   if (sub) await api.push.unwatch({ endpoint: sub.endpoint, journeyId: id })
 }
+
+/** Okienko powiadomień o trasie: dni 1–7 (pn–nd) i godziny odjazdu GG:MM. */
+export interface RouteWindowBody { dir: 'ab' | 'ba'; days: number[]; start: string; end: string }
+
+/** Włącza (albo odnawia) powiadomienia o trasie A–B w podanych okienkach czasu. */
+export async function watchRoute(id: string, body: { from: string; to: string; options: { transfers: number; minTransfer: number; agencies: string[] }; windows: RouteWindowBody[] }) {
+  const sub = await subscription()
+  await api.push.watchRoute({ subscription: sub.toJSON(), routeId: id, ...body })
+}
+
+export async function unwatchRoute(id: string) {
+  if (!('serviceWorker' in navigator)) return
+  const registration = await navigator.serviceWorker.getRegistration('/sw.js')
+  const sub = await registration?.pushManager.getSubscription()
+  if (sub) await api.push.unwatchRoute({ endpoint: sub.endpoint, routeId: id })
+}

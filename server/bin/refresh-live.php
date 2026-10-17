@@ -9,6 +9,7 @@ require dirname(__DIR__) . '/bootstrap.php';
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\LiveBuilder;
 use KwInfo\Push\JourneyWatcher;
+use KwInfo\Push\RouteWatcher;
 
 if (PHP_SAPI !== 'cli') {
     exit(1);
@@ -32,6 +33,12 @@ try {
         (new JourneyWatcher($tt, $log))->run();
     } catch (Throwable $exception) {
         fwrite(STDERR, '[BŁĄD powiadomień] ' . $exception->getMessage() . PHP_EOL);
+    }
+    // powiadomienia o obserwowanych trasach (okienka czasu) — osobno, żeby błąd jednych nie blokował drugich
+    try {
+        (new RouteWatcher($tt, $log))->run();
+    } catch (Throwable $exception) {
+        fwrite(STDERR, '[BŁĄD powiadomień o trasach] ' . $exception->getMessage() . PHP_EOL);
     }
     exit(0);
 } catch (Throwable $exception) {

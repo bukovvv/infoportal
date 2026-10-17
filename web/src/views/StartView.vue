@@ -2,11 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import type { Connection, ConnectionsResult } from '@/api/types'
+import type { Connection, ConnectionsResult, StationRef } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import ConnectionCard from '@/components/ConnectionCard.vue'
 import FavoriteStations from '@/components/FavoriteStations.vue'
 import JourneyCard from '@/components/JourneyCard.vue'
+import RouteCard from '@/components/RouteCard.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
 import BtkHint from '@/components/BtkHint.vue'
@@ -16,6 +17,7 @@ import WhenChip from '@/components/WhenChip.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
+import { useRoutes } from '@/stores/routes'
 import { read, useUi, write } from '@/stores/ui'
 import { dayLabel, plural, warsawNow } from '@/utils/format'
 import { changedCount, optionsFromQuery, optionsToApi, optionsToQuery, sanitize, type SearchOptions } from '@/utils/searchOptions'
@@ -25,6 +27,7 @@ const router = useRouter()
 const notices = useNotices()
 const status = useStatus()
 const journeys = useJourneys()
+const routes = useRoutes()
 const favorites = useFavorites()
 const ui = useUi()
 
@@ -144,16 +147,38 @@ async function page(dir: 'earlier' | 'later') {
   }
 }
 
+/** Moje trasy: trasa z wyników (stacje i opcje wyszukiwania) — oba kierunki na stronie startowej. */
+const routeSaved = computed(() => !!result.value && routes.has(result.value.from.id, result.value.to.id))
+function watchRoute() {
+  const r = result.value
+  if (!r || !routes.add(r.from, r.to, options.value)) return
+  ui.notify('Dodano do Moich tras', { label: 'Pokaż', run: () => document.getElementById('moje-trasy')?.scrollIntoView({ behavior: 'smooth' }) })
+}
+/** „Więcej połączeń” z karty trasy: wyszukiwarka od teraz z opcjami trasy. */
+function searchRoute(a: StationRef, b: StationRef, o: SearchOptions) {
+  const w = warsawNow()
+  from.value = a.id
+  to.value = b.id
+  options.value = { ...o, agencies: [...o.agencies] }
+  date.value = w.date
+  time.value = w.time
+  timeMode.value = 'dep'
+  void search()
+}
+
 let timer: number | undefined
 onMounted(() => {
   if (route.query.z && route.query.do) void search(false)
   timer = window.setInterval(() => { now.value = Date.now() }, 20_000)
   void journeys.refresh()
+  void routes.refresh()
+  routes.resync()
   if (route.hash === '#szukaj') requestAnimationFrame(() => document.getElementById('skad')?.focus())
+  if (route.hash === '#moje-trasy') requestAnimationFrame(() => document.getElementById('moje-trasy')?.scrollIntoView())
 })
 onBeforeUnmount(() => window.clearInterval(timer))
 watch(() => route.hash, (h) => { if (h === '#szukaj') document.getElementById('skad')?.focus() })
-const journeyTimer = window.setInterval(() => void journeys.refresh(), 60_000)
+const journeyTimer = window.setInterval(() => { void journeys.refresh(); void routes.refresh() }, 60_000)
 onBeforeUnmount(() => window.clearInterval(journeyTimer))
 </script>
 
@@ -183,8 +208,19 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
     <div class="cols" :class="{ 'has-result': !!result }">
       <section v-if="result" ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
         <div class="results-head">
-          <h2 id="results-title" class="text-title-large">{{ result.from.name }} → {{ result.to.name }}</h2>
-          <span class="text-body-medium muted">{{ resultsInfo }}</span>
+          <div class="results-title">
+            <h2 id="results-title" class="text-title-large">{{ result.from.name }} → {{ result.to.name }}</h2>
+            <span class="text-body-medium muted">{{ resultsInfo }}</span>
+          </div>
+          <v-btn
+            :variant="routeSaved ? 'text' : 'flat'"
+            :color="routeSaved ? undefined : 'secondary-container'"
+            :prepend-icon="routeSaved ? 'check' : 'add_road'"
+            :disabled="routeSaved"
+            @click="watchRoute"
+          >
+            {{ routeSaved ? 'Obserwujesz trasę' : 'Obserwuj trasę' }}
+          </v-btn>
         </div>
         <v-btn v-if="result.connections.length" variant="text" prepend-icon="keyboard_arrow_up" :loading="paging === 'earlier'" class="more" @click="page('earlier')">
           Wcześniejsze połączenia
@@ -212,6 +248,13 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
       <div v-else ref="resultsEl" class="results-anchor" />
 
       <div class="aside">
+        <section v-if="routes.list.length" id="moje-trasy" class="routes-sec" aria-labelledby="routes-title">
+          <div class="section-head"><h2 id="routes-title" class="text-title-large">Moje trasy</h2></div>
+          <div class="routes-grid">
+            <RouteCard v-for="r in routes.list" :key="r.id" :route="r" :now="now" @search="searchRoute" />
+          </div>
+        </section>
+
         <section id="moje-podroze" aria-labelledby="journeys-title">
           <div class="section-head"><h2 id="journeys-title" class="text-title-large">Moje podróże</h2></div>
           <div class="gap-grid">
@@ -220,7 +263,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
               <span class="empty-ic"><v-icon icon="bookmark" /></span>
               <div class="d-grid ga-1">
                 <strong class="text-title-small">Nie obserwujesz żadnej podróży</strong>
-                <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy.</span>
+                <span class="text-body-medium muted">Wyszukaj połączenie i wybierz „Obserwuj”. Pokażemy tu odliczanie, opóźnienia i komunikaty dla Twojej trasy. Jeździsz tak codziennie? Wybierz „Obserwuj trasę” nad wynikami.</span>
               </div>
             </div>
           </div>
@@ -304,11 +347,16 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 @media (min-width: 1145px) {
   .cols.has-result { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
   .cols:not(.has-result) .aside { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .cols:not(.has-result) .footnote { grid-column: 1 / -1; }
+  .cols:not(.has-result) .footnote, .cols:not(.has-result) .routes-sec { grid-column: 1 / -1; }
 }
+/* trasy: bez wyników na całą szerokość, karty obok siebie */
+.routes-sec { scroll-margin-top: 80px; min-width: 0; }
+.routes-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.has-result .routes-grid { grid-template-columns: minmax(0, 1fr); }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; min-width: 0; }
 .results-anchor { display: none; }
-.results-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; padding: 0 4px; }
+.results-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 0 4px; }
+.results-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
 .more { justify-self: center; }
 .day-sep { margin-top: 8px; padding: 0 4px; color: rgb(var(--v-theme-primary)); }
 .day-sep::first-letter { text-transform: uppercase; }

@@ -27,6 +27,8 @@ $router->get('/vehicles/img/{file}', [$api, 'vehicleImage']);
 $router->get('/push/key', [$push, 'key']);
 $router->post('/push/watch', [$push, 'watch']);
 $router->post('/push/unwatch', [$push, 'unwatch']);
+$router->post('/push/route-watch', [$push, 'watchRoute']);
+$router->post('/push/route-unwatch', [$push, 'unwatchRoute']);
 
 $router->get('/admin/session', [$admin, 'session']);
 $router->post('/admin/login', [$admin, 'login']);
