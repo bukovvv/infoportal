@@ -328,14 +328,38 @@ if (is_file(Config::path('gtfs_db'))) {
         check('Intercity: bilety KW nie obowiązują', !in_array(true, array_column($icLegs, 'kwTickets'), true));
         $pk = array_values(array_filter($icLegs, static fn (array $l): bool => $l['from']['name'] === 'Poznań Główny' && $l['to']['name'] === 'Konin'));
         check('Intercity: Poznań – Konin ok. 100 km', $pk === [] || abs($pk[0]['distanceKm'] - 102) <= 8, (string) ($pk[0]['distanceKm'] ?? ''));
+        // opcje wyszukiwarki: przewoźnicy, przesiadki, minimalny czas na przesiadkę
+        $search = static function (array $extra) use ($api, $byName, $isoDay): array {
+            $_GET = ['from' => $byName['Poznań Główny'], 'to' => $byName['Konin'], 'date' => $isoDay, 'time' => '06:00', 'limit' => '10'] + $extra;
+            return $api->connections()->data['connections'];
+        };
+        $kwOnly = $search(['agencies' => 'KW']);
+        check('opcje: tylko KW', $kwOnly !== [] && array_diff(array_merge(...array_map(static fn (array $c): array => array_column($c['legs'], 'agency'), $kwOnly)), ['KW']) === []);
+        $direct = $search(['transfers' => '0']);
+        check('opcje: bez przesiadek', $direct !== [] && max(array_column($direct, 'transfers')) === 0);
+        $slow = $search(['minTransfer' => '15', 'agencies' => 'KW,PR']);
+        check('opcje: przesiadka co najmniej 15 min', array_filter(array_merge(...array_column($slow, 'waits')), static fn (int $w): bool => $w < 15) === []);
     }
+    // sieć na mapie: także linie tylko partnerów (przycięte)
+    $net = $api->network()->data['features'];
+    check('mapa: linie POLREGIO / PKP Intercity w sieci', array_filter($net, static fn (array $f): bool => $f['properties']['partner']) !== []);
     // bilet KW na odcinku wspólnym z KW (do Piły) tak, na odcinku bez KW (do Złotowa) nie
     check('POLREGIO: bilety KW tylko na odcinkach wspólnych', !in_array(true, $tickets['Złotów'] ?? [false], true)
         && (!isset($tickets['Piła Główna']) || !in_array(false, $tickets['Piła Główna'], true)), json_encode($tickets, JSON_UNESCAPED_UNICODE));
     if ($partnerLeg !== null) {
         $_GET = [];
         $page = $api->trip(['key' => $partnerLeg['key']])->data;
-        check('POLREGIO: strona pociągu bez mapy i pojazdu', $page['agency'] !== $agency && $page['shape'] === [] && $page['position'] === null && $page['vehicle'] === null);
+        check('POLREGIO: strona pociągu bez pojazdu, z kilometrami', $page['agency'] !== $agency && $page['vehicle'] === null && $page['distanceKm'] > 0 && end($page['stops'])['km'] > 0);
+        // kształt przycięty: końce blisko którejś z naszych stacji (Wielkopolska i stacje KW za granicą), nie np. w Gdyni
+        $near = static function (array $pt) use ($stations): bool {
+            foreach ($stations as $st) {
+                if (PositionEstimator::distanceKm($pt[0], $pt[1], $st['lat'], $st['lon']) < 30) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        check('POLREGIO: kształt na mapie przycięty do Wielkopolski', $page['shape'] !== [] && $near($page['shape'][0]) && $near(end($page['shape'])));
         $number = GtfsImporter::splitNumbers($partnerLeg['number'])[0];
         $_GET = ['q' => 'PR ' . $number];
         $found = $api->searchTrains()->data['trains'];

@@ -32,10 +32,11 @@ final class ConnectionFinder
 
     /**
      * Połączenia z odjazdem od $time albo, z $arriveBy, z przyjazdem najpóźniej o $time (wtedy te, które odjeżdżają najpóźniej).
+     * $maxTransfers: 0 — tylko bezpośrednie, 1 albo 2 (domyślnie).
      *
      * @return array<int, array{dep: int, arr: int, legs: array<int, array{key: string, from: int, to: int}>, waits: array<int, int>, via: array<int, string>}>
      */
-    public function find(string $from, string $to, int $time, int $limit = 8, bool $directOnly = false, bool $arriveBy = false): array
+    public function find(string $from, string $to, int $time, int $limit = 8, int $maxTransfers = 2, bool $arriveBy = false): array
     {
         if ($from === $to) {
             return [];
@@ -45,6 +46,7 @@ final class ConnectionFinder
             $time -= $this->window;
         }
         $trips = $this->day->trips;
+        $directOnly = $maxTransfers <= 0;
         $lastLegs = $directOnly ? [] : $this->lastLegs($from, $to);
         $results = [];
         foreach ($this->day->byStation[$from] ?? [] as [$key, $k]) {
@@ -77,6 +79,9 @@ final class ConnectionFinder
                 }
 
                 // dwie przesiadki: dowolny kurs ze stacji $station do $station2, stamtąd ostatni odcinek
+                if ($maxTransfers < 2) {
+                    continue;
+                }
                 foreach ($this->day->byStation[$station] as [$key2, $k2]) {
                     $trip2 = $trips[$key2];
                     $board2 = $trip2['stops'][$k2];

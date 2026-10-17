@@ -26,7 +26,7 @@ final class DayTimetable
     {
     }
 
-    /** $partners — także kursy przewoźników partnerskich (tylko wyszukiwarka połączeń i obserwowane podróże). */
+    /** $partners — także kursy przewoźników partnerskich (POLREGIO, PKP Intercity). */
     public static function load(Timetable $tt, int $date, bool $partners = false): self
     {
         $dir = Config::path('cache_dir');

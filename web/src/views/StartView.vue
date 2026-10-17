@@ -11,12 +11,14 @@ import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
+import SearchOptionsChip from '@/components/SearchOptionsChip.vue'
 import WhenChip from '@/components/WhenChip.vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
 import { read, useUi, write } from '@/stores/ui'
 import { dayLabel, plural, warsawNow } from '@/utils/format'
+import { changedCount, optionsFromQuery, optionsToApi, optionsToQuery, sanitize, type SearchOptions } from '@/utils/searchOptions'
 
 const route = useRoute()
 const router = useRouter()
@@ -32,7 +34,9 @@ const from = ref<string | null>((route.query.z as string) || last.from || null)
 const to = ref<string | null>((route.query.do as string) || last.to || null)
 const date = ref((route.query.data as string) || initial.date)
 const time = ref((route.query.godz as string) || initial.time)
-const direct = ref(route.query.bezp === '1')
+// opcje: z adresu (link udostępniony), inaczej ostatnio używane w tej przeglądarce
+const options = ref<SearchOptions>(optionsFromQuery(route.query) ?? sanitize(read<Partial<SearchOptions> | null>('kw_search_options', null)))
+const optionsChanged = computed(() => changedCount(options.value) > 0)
 const timeMode = ref<'dep' | 'arr'>(route.query.przyj === '1' ? 'arr' : 'dep')
 const arriveBy = computed(() => timeMode.value === 'arr')
 const result = ref<ConnectionsResult | null>(null)
@@ -49,11 +53,12 @@ async function search(scroll = true) {
   if (from.value === to.value) { error.value = 'Stacja początkowa i docelowa muszą się różnić.'; return }
   searching.value = true
   try {
-    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, direct: direct.value, arriveBy: arriveBy.value })
+    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, arriveBy: arriveBy.value, ...optionsToApi(options.value) })
     firstIndex.value = 0
     extended.value = false
     write('kw_last_search', { from: from.value, to: to.value })
-    void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...(direct.value ? { bezp: '1' } : {}), ...(arriveBy.value ? { przyj: '1' } : {}) }, hash: route.hash })
+    write('kw_search_options', options.value)
+    void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...optionsToQuery(options.value), ...(arriveBy.value ? { przyj: '1' } : {}) }, hash: route.hash })
     if (scroll) requestAnimationFrame(() => resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   } catch (e) {
     error.value = (e as Error).message
@@ -76,8 +81,9 @@ function swap() {
   ;[from.value, to.value] = [to.value, from.value]
   if (result.value) void search(false)
 }
-function toggleDirect() {
-  direct.value = !direct.value
+/** Po zamknięciu okna opcji — zapamiętane i, gdy są wyniki, nowe wyszukiwanie. */
+function optionsDone() {
+  write('kw_search_options', options.value)
   if (result.value) void search(false)
 }
 /** Po zamknięciu okna dnia i godziny — nowe wyniki dla zmienionych ustawień. */
@@ -115,7 +121,7 @@ async function page(dir: 'earlier' | 'later') {
   const w = warsawNow(at)
   paging.value = dir
   try {
-    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, direct: direct.value, arriveBy: dir === 'earlier', limit: dir === 'earlier' ? 3 : undefined })
+    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, arriveBy: dir === 'earlier', limit: dir === 'earlier' ? 3 : undefined, ...optionsToApi(options.value) })
     if (result.value !== r) return
     const known = new Set(list.map(connKey))
     const fresh = res.connections.filter((c) => !known.has(connKey(c)))
@@ -166,9 +172,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
       <StationField v-model="to" label="Dokąd" icon="location_on" hide-details variant="solo-filled" flat class="f-to" />
       <div class="f-opts">
         <WhenChip v-model:date="date" v-model:time="time" v-model:mode="timeMode" :min="range.min" :max="range.max" @done="whenChanged" />
-        <v-chip :variant="direct ? 'flat' : 'outlined'" :color="direct ? 'secondary-container' : undefined" :prepend-icon="direct ? 'check' : undefined" filter class="opt-chip" @click="toggleDirect">
-          Bez przesiadek
-        </v-chip>
+        <SearchOptionsChip v-model="options" @done="optionsDone" />
       </div>
       <v-btn type="submit" size="x-large" prepend-icon="search" :loading="searching" class="f-btn">Szukaj połączeń</v-btn>
       <v-alert v-if="error" color="error-container" icon="error" density="compact" class="f-error">{{ error }}</v-alert>
@@ -193,7 +197,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           v-if="!result.connections.length"
           icon="search_off"
           title="Brak połączeń w ciągu 12 godzin"
-          :text="direct ? 'Wyłącz filtr „Bez przesiadek” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW, POLREGIO i PKP Intercity w Wielkopolsce.'"
+          :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : 'Zmień godzinę. Szukamy pociągów KW, POLREGIO i PKP Intercity w Wielkopolsce.'"
           class="card"
         />
         <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" :loading="paging === 'later'" class="more" @click="page('later')">
@@ -280,7 +284,6 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .f-swap { grid-area: swap; justify-self: center; }
 .f-opts { grid-area: opts; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 /* oba chipy w jednym rzędzie także na wąskim telefonie (360 px) */
-.opt-chip { font-size: 13px; padding: 0 10px; }
 .f-btn { grid-area: btn; margin-top: 2px; }
 .f-error { grid-area: err; }
 .search :deep(.v-field--variant-solo-filled) { background: rgb(var(--v-theme-surface-container)); }

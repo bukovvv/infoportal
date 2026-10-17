@@ -135,10 +135,17 @@ final class Timetable
         return $this->shapes[$id];
     }
 
-    /** @return array<int, array{shape_id: string, route_id: string}> */
+    /**
+     * Kształty z linią (KW ma pierwszeństwo, gdy kształt dzielą przewoźnicy); kw = 0 — kształt tylko partnera (przycięty do Wielkopolski).
+     * @return array<int, array{shape_id: string, route_id: string, kw: int}>
+     */
     public function shapeRoutes(): array
     {
-        return $this->pdo->query('SELECT shape_id, MIN(route_id) AS route_id FROM trips WHERE shape_id IS NOT NULL GROUP BY shape_id')->fetchAll();
+        $stmt = $this->pdo->prepare('SELECT shape_id, SUBSTR(MIN((agency <> ?) || route_id), 2) AS route_id, MAX(agency = ?) AS kw
+            FROM trips WHERE shape_id IN (SELECT shape_id FROM shapes) GROUP BY shape_id ORDER BY kw DESC');
+        $stmt->execute([$this->agency(), $this->agency()]);
+
+        return array_map(static fn (array $r): array => ['shape_id' => (string) $r['shape_id'], 'route_id' => (string) $r['route_id'], 'kw' => (int) $r['kw']], $stmt->fetchAll());
     }
 
     /**

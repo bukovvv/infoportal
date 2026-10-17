@@ -176,8 +176,14 @@ final class PublicApi
         $isToday = $date === Clock::today();
         $nowSec = Clock::secondsSince($date);
         $rt = $this->rt();
-        $finder = new ConnectionFinder($day, isCancelled: static fn (string $key): bool => $rt->cancelled($key));
-        $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), ($_GET['direct'] ?? '0') === '1', $arriveBy);
+        // opcje: ?transfers=0..2 (?direct=1 = 0), ?minTransfer=minuty (2–30), ?agencies=KW,PR,IC (pusto — wszyscy)
+        $maxTransfers = ($_GET['direct'] ?? '0') === '1' ? 0 : max(0, min(2, (int) ($_GET['transfers'] ?? 2)));
+        $minTransfer = max(2, min(30, (int) ($_GET['minTransfer'] ?? 3))) * 60;
+        $agencies = array_values(array_filter(explode(',', strtoupper((string) ($_GET['agencies'] ?? '')))));
+        $trips = $day->trips;
+        $skip = static fn (string $key): bool => $rt->cancelled($key) || ($agencies !== [] && !in_array($trips[$key]['agency'], $agencies, true));
+        $finder = new ConnectionFinder($day, minTransfer: $minTransfer, isCancelled: $skip);
+        $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), $maxTransfers, $arriveBy);
 
         $vehicles = new VehicleRepository();
         $kwTicketAgencies = (array) Config::get('kw_ticket_agencies');
@@ -346,7 +352,7 @@ final class PublicApi
         $date = (int) $m[2];
         $day = $this->day($date);
         $trip = $day->trips[$p['key']] ?? throw new ApiException('Ten kurs nie jedzie w wybranym dniu.', 404);
-        // kurs POLREGIO / PKP Intercity: bez mapy, komunikatów (dotyczą KW) i pojazdu; postoje tylko w Wielkopolsce
+        // kurs POLREGIO / PKP Intercity: bez komunikatów (dotyczą KW) i pojazdu; postoje tylko w Wielkopolsce
         $partner = $trip['agency'] !== $this->tt()->agency();
         $nowSec = Clock::secondsSince($date);
         $exp = $this->applied($trip, $nowSec);
@@ -358,6 +364,7 @@ final class PublicApi
             }
         }
         $stops = [];
+        $startKm = $trip['stops'][0][D::DIST];
         foreach ($trip['stops'] as $i => $s) {
             $station = $this->tt()->station($s[D::STATION]);
             $e = $exp['stops'][$i];
@@ -374,6 +381,8 @@ final class PublicApi
                 'track' => $s[D::TRACK],
                 'skipped' => $e['skipped'],
                 'requestOnly' => $s[D::PICKUP] === 3 || $s[D::DROPOFF] === 3,
+                // km od pierwszej pokazanej stacji (z rozkładu; autobus zastępczy — brak)
+                'km' => $startKm !== null && $s[D::DIST] !== null ? round($s[D::DIST] - $startKm, 1) : null,
             ];
         }
         $legs = [];
@@ -405,6 +414,7 @@ final class PublicApi
             'origin' => $this->origin($trip),
             'destination' => $this->destination($trip),
             // kurs partnera jedzie dalej poza Wielkopolskę — pokazujemy tylko tutejsze stacje
+            'distanceKm' => end($stops)['km'] !== null ? (int) round(end($stops)['km']) : null,
             'trimmed' => $partner && ($this->origin($trip) !== $stops[0]['station']['name'] || $this->destination($trip) !== end($stops)['station']['name']),
             'stops' => $stops,
             'shape' => array_map(static fn (array $pt): array => [$pt[0], $pt[1]], $this->tt()->shape($trip['shapeId'])),
@@ -424,7 +434,7 @@ final class PublicApi
         return new FileResponse($path, str_ends_with($path, '.png') ? 'image/png' : 'image/gif', 7 * 86400);
     }
 
-    /** Sieć linii KW jako GeoJSON do mapy (cache na dysku). */
+    /** Sieć linii KW (i przyciętych do Wielkopolski linii partnerów) jako GeoJSON do mapy (cache na dysku). */
     public function network(): Response
     {
         $file = Config::path('cache_dir') . '/network-' . $this->tt()->version() . '.json';
@@ -444,7 +454,8 @@ final class PublicApi
             $route = $this->route($row['route_id']);
             $features[] = [
                 'type' => 'Feature',
-                'properties' => ['route' => $route['short'] ?? '', 'color' => $route['color'] ?? '#B3122D', 'bus' => ($route['type'] ?? 2) === 3],
+                // partner — linia tylko POLREGIO / PKP Intercity (na mapie cieńsza)
+                'properties' => ['route' => $route['short'] ?? '', 'color' => $route['color'] ?? '#B3122D', 'bus' => ($route['type'] ?? 2) === 3, 'partner' => $row['kw'] === 0],
                 'geometry' => ['type' => 'LineString', 'coordinates' => $coords],
             ];
         }

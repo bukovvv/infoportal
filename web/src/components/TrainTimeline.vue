@@ -80,6 +80,7 @@ function details(s: TripStop, row: Row) {
   if (s.requestOnly) out.push('na żądanie')
   const d = dwell(s)
   if (d >= 2 && row.index !== 0 && row.index !== lastIndex.value) out.push(`postój ${d} min`)
+  if (row.index > 0 && s.km != null) out.push(`${Math.round(s.km)} km`)
   if (row.here) out.push('pociąg na stacji')
   return out
 }

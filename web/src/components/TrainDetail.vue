@@ -54,7 +54,7 @@ const category = computed(() => {
   if (t.route?.id === 'PR_IR') return 'interREGIO'
   return t.route?.id === 'KW_P' || t.route?.id === 'PR_RP' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
 })
-/** pociąg POLREGIO / PKP Intercity: bez mapy, pojazdu i komunikatów (dotyczą KW) */
+/** pociąg POLREGIO / PKP Intercity: bez pojazdu i komunikatów (dotyczą KW) */
 const partner = computed(() => isPartner(trip.value?.agency))
 const title = computed(() => (trip.value ? trainTitle(trip.value.number, trip.value.name) : null))
 const related = computed(() => (trip.value && !partner.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
@@ -117,6 +117,7 @@ defineExpose({ trip })
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
           <span v-if="trip.position?.source === 'gps'" class="tag tag-band"><v-icon icon="satellite_alt" />GPS · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</span>
           <span class="tag tag-band tnum"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
+          <span v-if="trip.distanceKm" class="tag tag-band tnum"><v-icon icon="straighten" />{{ trip.distanceKm }} km</span>
         </div>
         <v-progress-linear v-if="progress !== null" :model-value="progress" rounded height="6" color="on-band" class="head-progress" aria-label="Postęp kursu" />
         <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact">
@@ -130,7 +131,7 @@ defineExpose({ trip })
         </div>
       </header>
       <div class="actions">
-        <v-btn v-if="!partner" variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
+        <v-btn v-if="!partner || trip.shape.length" variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
         <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
         <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>

@@ -132,6 +132,8 @@ export interface TripStop {
   track: string | null
   skipped: boolean
   requestOnly: boolean
+  /** km od pierwszej pokazanej stacji (z rozkładu); autobus zastępczy — null */
+  km?: number | null
 }
 
 export interface LiveTrain {
@@ -139,6 +141,8 @@ export interface LiveTrain {
   tripId: string | null
   serviceDate: string | null
   number: string
+  /** KW, PR albo IC; null — niedopasowana pozycja GPS */
+  agency?: string | null
   route: Pick<Route, 'id' | 'short' | 'color' | 'textColor'> | null
   isBus: boolean
   headsign: string | null
@@ -166,6 +170,8 @@ export interface Trip {
   agency?: string
   /** kurs POLREGIO / PKP Intercity jedzie dalej poza Wielkopolskę (origin/destination to prawdziwe końce, stops — tylko tutejsze) */
   trimmed?: boolean
+  /** długość kursu w km (pokazany odcinek) */
+  distanceKm?: number | null
   number: string
   numbers: string[]
   name: string | null

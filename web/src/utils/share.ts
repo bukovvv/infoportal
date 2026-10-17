@@ -27,7 +27,8 @@ export function connectionUrl(c: Connection) {
   const first = c.legs[0]
   const last = c.legs[c.legs.length - 1]
   const params = new URLSearchParams({ z: first.from.id, do: last.to.id, data: c.departure.slice(0, 10), godz: clock(c.departure) })
-  if (!c.transfers) params.set('bezp', '1')
+  // opcje w adresie (nie te zapamiętane u odbiorcy), żeby to połączenie na pewno się znalazło
+  params.set('przes', c.transfers ? '2' : '0')
   return `${location.origin}/?${params}`
 }
 

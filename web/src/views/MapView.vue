@@ -7,11 +7,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { api } from '@/api/client'
 import type { LiveTrain } from '@/api/types'
+import AgencyToggles from '@/components/AgencyToggles.vue'
 import MapSwitch from '@/components/MapSwitch.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useLive, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
+import { agencyCode } from '@/utils/agency'
 import { clock, normalize } from '@/utils/format'
+import { AGENCIES } from '@/utils/searchOptions'
 import type { Trip } from '@/api/types'
 import { loadMapStyle, mapPalette } from '@/utils/mapStyle'
 import icons from 'virtual:material-symbols'
@@ -30,6 +33,9 @@ const { mdAndUp } = useDisplay()
 const container = ref<HTMLElement | null>(null)
 const selectedKey = ref<string | null>((route.query.kurs as string) || null)
 const filter = ref<'all' | 'late' | 'est'>('all')
+/** przewoźnicy na mapie (POLREGIO i PKP Intercity tylko w Wielkopolsce i do stacji KW za granicą) */
+const agencies = ref<string[]>(AGENCIES.map((a) => a.code))
+const allAgencies = computed(() => agencies.value.length === AGENCIES.length)
 const query = ref('')
 /** lista pociągów z wyszukiwarką (domyślnie schowana — mapa na cały ekran) */
 const listOpen = ref(false)
@@ -44,6 +50,7 @@ const visible = computed(() => {
   const q = normalize(query.value)
   return live.trains
     .filter((t) => filter.value === 'all' || (filter.value === 'late' ? (t.delay ?? 0) >= 2 : t.delay === null))
+    .filter((t) => allAgencies.value || agencies.value.includes(agencyCode(t.agency)))
     .filter((t) => !q || t.number.includes(q) || [t.origin, t.destination, t.next?.name, t.prev?.name].some((s) => s && normalize(s).includes(q)))
     .sort((a, b) => Number(keyOf(b) === selectedKey.value) - Number(keyOf(a) === selectedKey.value) || (b.delay ?? 0) - (a.delay ?? 0) || a.number.localeCompare(b.number, 'pl', { numeric: true }))
 })
@@ -93,6 +100,7 @@ function refreshRoute() {
   ;(map.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson())
   ;(map.getSource('kw-route-stops') as GeoJSONSource | undefined)?.setData(routeStopsGeoJson())
   if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.35 : 0.9)
+  if (map.getLayer('kw-network-partner')) map.setPaintProperty('kw-network-partner', 'line-opacity', routeTrip.value ? 0.2 : 0.45)
   // trasa wybranego kursu w kolorze jego linii (jak kółko w pastylce), autobus i brak koloru — kolor akcji
   const trip = routeTrip.value
   const color = trip && !trip.isBus && trip.route?.color ? trip.route.color : colors().primary
@@ -162,7 +170,7 @@ function syncTrains() {
     m.el.classList.toggle('bus', t.isBus)
     m.el.querySelector('.no')!.textContent = number
     m.el.querySelector('.late')!.textContent = late ? `+${t.delay}` : ''
-    m.el.setAttribute('aria-label', `KW ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
+    m.el.setAttribute('aria-label', `${agencyCode(t.agency)} ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
     m.el.dataset.priority = selected ? '3' : late ? '2' : '1'
   }
   layoutPills()
@@ -197,7 +205,7 @@ function layoutPills() {
 function stationsGeoJson(): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: stations.list.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id, name: s.name, major: s.daily >= 60 } })),
+    features: stations.all.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id, name: s.name, major: s.daily >= 60 } })),
   }
 }
 
@@ -208,7 +216,10 @@ function addOverlays() {
   map.addSource('kw-route', { type: 'geojson', data: routeGeoJson() })
   map.addSource('kw-route-stops', { type: 'geojson', data: routeStopsGeoJson() })
   map.addSource('kw-stations', { type: 'geojson', data: stationsGeoJson() })
-  map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['!', ['get', 'bus']], layout: { 'line-cap': 'round', 'line-join': 'round' },
+  // linie tylko POLREGIO / PKP Intercity (przycięte do Wielkopolski) — cieńsze i bledsze, pod siecią KW
+  map.addLayer({ id: 'kw-network-partner', type: 'line', source: 'kw-network', filter: ['all', ['!', ['get', 'bus']], ['==', ['get', 'partner'], true]], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.2 : 0.45, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 11, 2, 14, 3] } })
+  map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['all', ['!', ['get', 'bus']], ['!=', ['get', 'partner'], true]], layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2, 11, 3.5, 14, 5] } })
   map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.halo, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 7, 12, 11] } })
@@ -305,7 +316,7 @@ function locate() {
   )
 }
 
-watch([() => live.trains, filter, query, selectedKey], syncTrains)
+watch([() => live.trains, filter, agencies, query, selectedKey], syncTrains)
 // pierwsze pozycje przyszły po wczytaniu mapy — dopasuj widok raz, jeśli pasażer jeszcze nie ruszał mapy
 let userMoved = false
 let fittedTrains = false
@@ -316,7 +327,7 @@ watch(() => live.trains.length, (n) => {
 })
 // pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
 watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
-watch(() => stations.list, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
+watch(() => stations.all, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
 watch(() => ui.sheet, (sheet) => { if (!sheet && selectedKey.value && !ui.mapFocus) clearSelection() })
 // „Pokaż na mapie” w panelu otwartym na mapie (panel na telefonie się chowa, kurs zostaje wybrany)
 ui.mapFocus = null
@@ -386,31 +397,42 @@ const whereText = (t: LiveTrain) => {
   return `${t.prev.name} → ${t.next.name}`
 }
 const filters = [
-  { value: 'all', label: 'Wszystkie pociągi' },
-  { value: 'late', label: 'Tylko opóźnione' },
-  { value: 'est', label: 'Bez danych na żywo' },
+  { value: 'all', label: 'Wszystkie', icon: 'train' },
+  { value: 'late', label: 'Opóźnione', icon: 'schedule' },
+  { value: 'est', label: 'Bez danych na żywo', icon: 'cloud_off' },
 ] as const
+function resetFilters() {
+  filter.value = 'all'
+  agencies.value = AGENCIES.map((a) => a.code)
+}
 </script>
 
 <template>
   <div class="map-screen">
-    <div ref="container" class="map" role="region" aria-label="Mapa pociągów Kolei Wielkopolskich" />
+    <div ref="container" class="map" role="region" aria-label="Mapa pociągów w Wielkopolsce" />
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
 
     <div class="switch"><MapSwitch /></div>
 
     <div class="fabs top">
       <v-btn icon="search" :color="listOpen ? 'primary-container' : 'surface-container-high'" size="48" elevation="3" :aria-pressed="listOpen" aria-label="Szukaj pociągu" @click="listOpen = !listOpen" />
-      <v-menu location="start top">
+      <v-menu location="start top" :close-on-content-click="false">
         <template #activator="{ props }">
-          <v-btn v-bind="props" :color="filter === 'all' ? 'surface-container-high' : 'primary-container'" size="48" elevation="3" icon aria-label="Filtruj pociągi">
-            <v-badge :model-value="filter !== 'all'" dot color="primary"><v-icon icon="filter_list" /></v-badge>
+          <v-btn v-bind="props" :color="filter === 'all' && allAgencies ? 'surface-container-high' : 'primary-container'" size="48" elevation="3" icon aria-label="Filtruj pociągi">
+            <v-badge :model-value="filter !== 'all' || !allAgencies" dot color="primary"><v-icon icon="filter_list" /></v-badge>
           </v-btn>
         </template>
-        <v-list density="compact" nav>
-          <v-list-subheader>Pokaż</v-list-subheader>
-          <v-list-item v-for="f in filters" :key="f.value" :title="f.label" :active="filter === f.value" :prepend-icon="filter === f.value ? 'check' : undefined" @click="filter = f.value" />
-        </v-list>
+        <v-card class="map-filter" elevation="4">
+          <h3 class="mf-h">Pokaż</h3>
+          <div class="mf-pills" role="group" aria-label="Pokaż pociągi">
+            <button v-for="f in filters" :key="f.value" type="button" class="mf-pill" :aria-pressed="filter === f.value" @click="filter = f.value">
+              <v-icon :icon="f.icon" size="18" />{{ f.label }}
+            </button>
+          </div>
+          <h3 class="mf-h">Przewoźnicy</h3>
+          <AgencyToggles v-model="agencies" />
+          <v-btn v-if="filter !== 'all' || !allAgencies" variant="text" prepend-icon="restart_alt" class="mt-2" @click="resetFilters">Pokaż wszystko</v-btn>
+        </v-card>
       </v-menu>
     </div>
     <div class="fabs bottom" :class="{ raised: listOpen && !mdAndUp }">
@@ -439,7 +461,7 @@ const filters = [
             <span class="lead" :style="{ background: pillColor(t).bg, color: pillColor(t).fg }"><v-icon :icon="t.isBus ? 'directions_bus' : 'train'" size="20" /></span>
           </template>
           <v-list-item-title class="text-title-small">
-            KW {{ t.number }} <span v-if="t.destination" class="muted font-weight-regular">→ {{ t.destination }}</span>
+            {{ agencyCode(t.agency) }} {{ t.number }} <span v-if="t.destination" class="muted font-weight-regular">→ {{ t.destination }}</span>
           </v-list-item-title>
           <v-list-item-subtitle class="text-body-small">
             {{ whereText(t) }}<template v-if="t.next?.expected && !t.dwelling"> · {{ clock(t.next.expected) }}</template>
@@ -455,6 +477,18 @@ const filters = [
 </template>
 
 <style scoped>
+/* filtr mapy: pigułki „Pokaż” i przełączniki przewoźników */
+.map-filter { width: min(340px, calc(100vw - 32px)); padding: 16px; }
+.mf-h { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: rgb(var(--v-theme-on-surface-variant)); margin: 4px 0 10px; }
+.mf-h + .mf-pills { margin-bottom: 18px; }
+.mf-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.mf-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border: 1px solid rgb(var(--v-theme-outline-variant)); border-radius: 999px;
+  background: transparent; color: rgb(var(--v-theme-on-surface)); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.mf-pill:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 6%, transparent); }
+.mf-pill:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+.mf-pill[aria-pressed='true'] { border-color: transparent; background: rgb(var(--v-theme-inverse-surface)); color: rgb(var(--v-theme-on-inverse-surface)); }
 .map-screen { position: relative; height: calc(100dvh - 64px); overflow: hidden; background: rgb(var(--v-theme-surface-container-low)); }
 .map { position: absolute; inset: 0; }
 .map-error { position: absolute; z-index: 3; top: 72px; left: 50%; transform: translateX(-50%); }

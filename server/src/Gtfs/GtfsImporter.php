@@ -12,13 +12,14 @@ use RuntimeException;
 
 /**
  * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy przewoźnika (KW) i buduje gtfs.sqlite.
- * Kursy przewoźników partnerskich (POLREGIO, PKP Intercity) trafiają do bazy obcięte do stacji w Wielkopolsce — poza mapą.
+ * Kursy przewoźników partnerskich (POLREGIO, PKP Intercity) trafiają do bazy obcięte do stacji w Wielkopolsce,
+ * a ich kształty — do odcinka między pierwszym a ostatnim zachowanym postojem.
  * Nowa baza zastępuje starą dopiero po pozytywnej walidacji.
  */
 final class GtfsImporter
 {
     /** Wersja układu bazy — starsza baza jest przebudowywana nawet bez zmian w rozkładzie. */
-    public const SCHEMA = 5;
+    public const SCHEMA = 6;
 
     /** @var callable(string): void */
     private $log;
@@ -137,6 +138,8 @@ final class GtfsImporter
         $trips = [];
         $services = [];
         $shapesNeeded = [];
+        /** @var array<string, string> $partnerShapes kurs partnera => kształt (zapisywany przycięty, gdy kurs zostanie) */
+        $partnerShapes = [];
         $insTrip = $pdo->prepare('INSERT INTO trips (trip_id, route_id, service_id, shape_id, short_name, headsign, category, name, block_id, is_bus, agency) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
         $insNumber = $pdo->prepare('INSERT OR IGNORE INTO trip_numbers VALUES (?,?)');
         $busRoutes = [];
@@ -149,12 +152,14 @@ final class GtfsImporter
             }
             $id = $t['trip_id'];
             $tripAgency = $routes[$t['route_id']];
-            // kursy partnerów: true = obcinane do Wielkopolski, bez kształtu (nie ma ich na mapie)
+            // kursy partnerów: true = obcinane do Wielkopolski (kształt też)
             $trips[$id] = $tripAgency !== $agency;
             $services[$t['service_id']] = true;
-            $shape = $tripAgency === $agency ? ($t['shape_id'] ?: null) : null;
-            if ($shape !== null) {
+            $shape = $t['shape_id'] ?: null;
+            if ($shape !== null && $tripAgency === $agency) {
                 $shapesNeeded[$shape] = true;
+            } elseif ($shape !== null) {
+                $partnerShapes[$id] = $shape;
             }
             $short = $t['trip_short_name'] !== '' ? $t['trip_short_name'] : ($t['plk_train_number'] ?? '');
             $insTrip->execute([$id, $t['route_id'], $t['service_id'], $shape, $short, $t['trip_headsign'],
@@ -204,6 +209,8 @@ final class GtfsImporter
         $kinds = [];
         /** @var array<string, array<int, array<int, mixed>>> $candidates wiersze postojów rodzaju 1 i 2 */
         $candidates = [];
+        /** @var array<string, array{0: float, 1: float}> $shapeRanges kształt partnera => [od km, do km] */
+        $shapeRanges = [];
         foreach ($src->rows('stop_times.txt') as $s) {
             $tripId = $s['trip_id'];
             if (!isset($trips[$tripId])) {
@@ -251,6 +258,16 @@ final class GtfsImporter
             foreach (array_keys($keep) as $seq) {
                 $insStop->execute($candidates[$tripId][$seq]);
             }
+            // zakres kształtu (km) potrzebny na mapie: od pierwszego do ostatniego zachowanego postoju, suma po kursach
+            $dists = array_filter(array_map(static fn (int $seq): ?float => $candidates[$tripId][$seq][6], array_keys($keep)), static fn (?float $d): bool => $d !== null);
+            $shape = $partnerShapes[$tripId] ?? null;
+            if (count($keep) >= 2 && $shape !== null && count($dists) === count($keep) && !isset($shapesNeeded[$shape])) {
+                $range = $shapeRanges[$shape] ?? [INF, -INF];
+                $shapeRanges[$shape] = [min($range[0], min($dists)), max($range[1], max($dists))];
+            }
+        }
+        foreach (array_keys($shapeRanges) as $shape) {
+            $shapesNeeded[$shape] = true;
         }
         unset($kinds, $candidates, $kwStations);
         // kursy partnerów, z których został najwyżej jeden postój, nie przydadzą się
@@ -313,9 +330,17 @@ final class GtfsImporter
         $insShape = $pdo->prepare('INSERT INTO shapes VALUES (?,?)');
         $current = null;
         $points = [];
-        $flush = function () use (&$current, &$points, $insShape): void {
+        $flush = function () use (&$current, &$points, $insShape, $shapeRanges): void {
             if ($current !== null && count($points) > 1) {
                 usort($points, static fn (array $a, array $b): int => $a[3] <=> $b[3]);
+                // kształt kursów partnera: tylko odcinek w Wielkopolsce (+ punkt z każdej strony), odległości bez zmian
+                if (isset($shapeRanges[$current])) {
+                    [$min, $max] = $shapeRanges[$current];
+                    $inside = array_keys(array_filter($points, static fn (array $p): bool => $p[2] !== null && $p[2] >= $min && $p[2] <= $max));
+                    $points = $inside === [] ? [] : array_slice($points, max(0, $inside[0] - 1), min(count($points) - 1, end($inside) + 1) - max(0, $inside[0] - 1) + 1);
+                }
+            }
+            if ($current !== null && count($points) > 1) {
                 $simplified = self::simplify(array_map(static fn (array $p): array => [$p[0], $p[1], $p[2]], $points), 0.00004);
                 $insShape->execute([$current, json_encode($simplified)]);
             }

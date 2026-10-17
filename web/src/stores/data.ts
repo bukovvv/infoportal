@@ -18,9 +18,9 @@ function poll(fn: () => Promise<void>, everyMs: number) {
 }
 
 export const useStations = defineStore('stations', () => {
-  /** wszystkie stacje, także te, na których staje tylko POLREGIO */
+  /** wszystkie stacje, także te, na których staje tylko POLREGIO (mapa) */
   const all = shallowRef<Station[]>([])
-  /** stacje KW: mapa i schemat (POLREGIO nie ma na mapie) */
+  /** stacje KW */
   const list = computed(() => all.value.filter((s) => s.kw !== false))
   const byId = computed(() => new Map(all.value.map((s) => [s.id, s])))
   const loaded = ref(false)

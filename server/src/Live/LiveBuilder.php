@@ -40,7 +40,8 @@ final class LiveBuilder
         $now = Clock::now();
         $today = Clock::today();
         $nowSec = Clock::secondsSince($today, $now);
-        $day = DayTimetable::load($this->tt, $today);
+        // z partnerami (POLREGIO, PKP Intercity — przycięci do Wielkopolski i stacji KW za granicą)
+        $day = DayTimetable::load($this->tt, $today, true);
 
         [$rtTrips, $rtSource] = $this->refreshRt();
         [$gps, $gpsSource] = $this->fetchGps();
@@ -121,11 +122,13 @@ final class LiveBuilder
                 'tripId' => $trip['tripId'],
                 'serviceDate' => Clock::isoDate($trip['serviceDate']),
                 'number' => $trip['number'],
+                'agency' => $trip['agency'],
                 'route' => $route ? ['id' => $route['id'], 'short' => $route['short'], 'color' => $route['color'], 'textColor' => $route['textColor']] : null,
                 'isBus' => $trip['isBus'],
                 'headsign' => $trip['headsign'],
-                'origin' => $this->stationName($trip['stops'][0][D::STATION]),
-                'destination' => $this->stationName($trip['stops'][count($trip['stops']) - 1][D::STATION]),
+                // kurs partnera: prawdziwe końce (sprzed obcięcia do Wielkopolski)
+                'origin' => $trip['originName'] ?? $this->stationName($trip['stops'][0][D::STATION]),
+                'destination' => $trip['destinationName'] ?? $this->stationName($trip['stops'][count($trip['stops']) - 1][D::STATION]),
                 'lat' => $useGps ? round($gpsTrain->lat, 6) : $pos['lat'],
                 'lon' => $useGps ? round($gpsTrain->lon, 6) : $pos['lon'],
                 'bearing' => $useGps && $gpsTrain->heading !== null ? $gpsTrain->heading : ($pos['bearing'] ?? null),
@@ -149,7 +152,7 @@ final class LiveBuilder
         }
         foreach ($unmatched as $train) {
             $trains[] = [
-                'key' => null, 'tripId' => null, 'serviceDate' => null, 'number' => $train->number, 'route' => null, 'isBus' => false,
+                'key' => null, 'tripId' => null, 'serviceDate' => null, 'number' => $train->number, 'agency' => null, 'route' => null, 'isBus' => false,
                 'headsign' => null, 'origin' => null, 'destination' => null,
                 'lat' => round($train->lat, 6), 'lon' => round($train->lon, 6), 'bearing' => $train->heading, 'speed' => $train->speed,
                 'source' => 'gps', 'gpsProvider' => $train->provider, 'observedAt' => date(DATE_ATOM, $train->observedAt),
