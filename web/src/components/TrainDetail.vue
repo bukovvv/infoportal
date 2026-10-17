@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { agencyCode, agencyName, isPartner, trainLabel, trainTitle } from '@/utils/agency'
+import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
@@ -50,10 +50,11 @@ const category = computed(() => {
   const t = trip.value
   if (!t) return ''
   if (t.isBus) return 'Zastępcza komunikacja autobusowa'
+  if (isIntercity(t.agency)) return t.route?.long || 'PKP Intercity'
   if (t.route?.id === 'PR_IR') return 'interREGIO'
   return t.route?.id === 'KW_P' || t.route?.id === 'PR_RP' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
 })
-/** pociąg POLREGIO: bez mapy, pojazdu i komunikatów (dotyczą KW) */
+/** pociąg POLREGIO / PKP Intercity: bez mapy, pojazdu i komunikatów (dotyczą KW) */
 const partner = computed(() => isPartner(trip.value?.agency))
 const title = computed(() => (trip.value ? trainTitle(trip.value.number, trip.value.name) : null))
 const related = computed(() => (trip.value && !partner.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
@@ -136,10 +137,11 @@ defineExpose({ trip })
       <div v-if="related.length" class="notices divider">
         <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
       </div>
-      <p v-if="partner" class="partner-note text-body-medium divider">
-        <v-icon icon="info" size="20" />
+      <p v-if="partner" class="partner-note text-body-medium divider" :class="{ ic: isIntercity(trip.agency) }">
+        <v-icon :icon="isIntercity(trip.agency) ? 'confirmation_number' : 'info'" size="20" />
         <span>
-          Pociąg {{ agencyName(trip.agency) }}. Bilety KW są honorowane na odcinkach, na których jeżdżą też pociągi KW.
+          <template v-if="isIntercity(trip.agency)">Pociąg {{ agencyName(trip.agency) }}. Bilety KW i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</template>
+          <template v-else>Pociąg {{ agencyName(trip.agency) }}. Bilety KW są honorowane na odcinkach, na których jeżdżą też pociągi KW.</template>
           <template v-if="trip.trimmed"> Pokazujemy stacje w Wielkopolsce.</template>
         </span>
       </p>
@@ -176,4 +178,5 @@ defineExpose({ trip })
 .actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 6px 24px; }
 .notices { background: rgb(var(--v-theme-surface-container-low)); }
 .partner-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px 12px 24px; color: rgb(var(--v-theme-on-surface-variant)); }
+.partner-note.ic { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-weight: 600; }
 </style>

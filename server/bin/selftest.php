@@ -39,7 +39,7 @@ check('splitNumbers 77610/1', GtfsImporter::splitNumbers('77610/1') === ['77610'
 check('splitNumbers pojedynczy', GtfsImporter::splitNumbers('77345') === ['77345']);
 check('splitNumbers z nazwą pociągu', GtfsImporter::splitNumbers('77684/5 Rzepicha') === ['77684', '77685'] && GtfsImporter::splitNumbers('77375 Sokół') === ['77375']);
 check('numer pociągu z wyszukiwarki', PublicApi::trainQuery('77600') === '77600' && PublicApi::trainQuery(' KW 77600 ') === '77600' && PublicApi::trainQuery('kw77610/1') === '77610'
-    && PublicApi::trainQuery('77375 Sokół') === '77375' && PublicApi::trainQuery('12') === null && PublicApi::trainQuery('Poznań') === null);
+    && PublicApi::trainQuery('77375 Sokół') === '77375' && PublicApi::trainQuery('TLK 45102') === '45102' && PublicApi::trainQuery('12') === null && PublicApi::trainQuery('Poznań') === null);
 
 // --- granica Wielkopolski (kursy POLREGIO obcinane do województwa)
 $region = new Region();
@@ -265,7 +265,7 @@ if (is_file(Config::path('gtfs_db'))) {
         check('API: Łódź Kaliska — odjazdy tylko z wybranego dnia', $lodz !== [] && count(array_filter($lodz, static fn (array $r): bool => substr($r['scheduled'], 0, 10) !== $isoDay)) === 0, (string) count($lodz));
     }
 
-    // POLREGIO: wszędzie poza mapą, obcięte do Wielkopolski
+    // POLREGIO i PKP Intercity: wszędzie poza mapą, obcięte do Wielkopolski
     $agency = $tt->agency();
     $partnerDay = DayTimetable::load($tt, $day->date, true);
     $partnerTrips = array_filter($partnerDay->trips, static fn (array $t): bool => $t['agency'] !== $agency);
@@ -299,7 +299,9 @@ if (is_file(Config::path('gtfs_db'))) {
     $mixed = false;
     $partnerLeg = null;
     $tickets = [];
-    foreach ([['Poznań Główny', 'Złotów'], ['Gniezno', 'Piła Główna'], ['Leszno', 'Kępno']] as [$a, $b]) {
+    $icLegs = [];
+    $kmOk = true;
+    foreach ([['Poznań Główny', 'Złotów'], ['Gniezno', 'Piła Główna'], ['Leszno', 'Kępno'], ['Poznań Główny', 'Konin']] as [$a, $b]) {
         if (!isset($byName[$a], $byName[$b])) {
             continue;
         }
@@ -307,15 +309,26 @@ if (is_file(Config::path('gtfs_db'))) {
         foreach ($api->connections()->data['connections'] as $c) {
             $agencies = array_unique(array_column($c['legs'], 'agency'));
             $mixed = $mixed || count($agencies) > 1;
+            // suma odcinków różni się od całości najwyżej zaokrągleniami
+            $kmOk = $kmOk && $c['distanceKm'] > 0 && abs($c['distanceKm'] - array_sum(array_column($c['legs'], 'distanceKm'))) <= count($c['legs']);
             foreach ($c['legs'] as $l) {
-                $partnerLeg ??= $l['agency'] !== $agency ? $l : null;
-                if ($l['agency'] !== $agency) {
+                if ($l['agency'] === 'PR') {
+                    $partnerLeg ??= $l;
                     $tickets[$l['to']['name']][] = $l['kwTickets'];
+                } elseif ($l['agency'] === 'IC') {
+                    $icLegs[] = $l;
                 }
             }
         }
     }
     check('POLREGIO: połączenia z przesiadką KW ↔ POLREGIO', $mixed);
+    check('połączenia: kilometry', $kmOk);
+    if (isset($byName['Poznań Główny'], $byName['Konin'])) {
+        check('Intercity: w wyszukiwarce (Poznań – Konin)', $icLegs !== []);
+        check('Intercity: bilety KW nie obowiązują', !in_array(true, array_column($icLegs, 'kwTickets'), true));
+        $pk = array_values(array_filter($icLegs, static fn (array $l): bool => $l['from']['name'] === 'Poznań Główny' && $l['to']['name'] === 'Konin'));
+        check('Intercity: Poznań – Konin ok. 100 km', $pk === [] || abs($pk[0]['distanceKm'] - 102) <= 8, (string) ($pk[0]['distanceKm'] ?? ''));
+    }
     // bilet KW na odcinku wspólnym z KW (do Piły) tak, na odcinku bez KW (do Złotowa) nie
     check('POLREGIO: bilety KW tylko na odcinkach wspólnych', !in_array(true, $tickets['Złotów'] ?? [false], true)
         && (!isset($tickets['Piła Główna']) || !in_array(false, $tickets['Piła Główna'], true)), json_encode($tickets, JSON_UNESCAPED_UNICODE));

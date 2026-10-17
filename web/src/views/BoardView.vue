@@ -13,7 +13,7 @@ import TimeField from '@/components/TimeField.vue'
 import { useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
-import { agencyCode } from '@/utils/agency'
+import { agencyCode, isIntercity } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
 
@@ -206,6 +206,7 @@ const when = (iso: string) => {
             <span class="d-flex align-center flex-wrap ga-2">
               <RouteBadge :route="row.route" :bus="row.isBus" />
               <span class="text-label-medium number">{{ agencyCode(row.agency) }} {{ row.number }}</span>
+              <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" title="Bilety KW i POLREGIO nie obowiązują">PKP Intercity · osobny bilet</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
             </span>
           </span>
@@ -253,6 +254,8 @@ const when = (iso: string) => {
 .dep-main { display: grid; gap: 3px; min-width: 0; }
 .dest { font-size: 16px; line-height: 22px; font-weight: 700; }
 .number { color: rgb(var(--v-theme-on-surface-variant)); font-weight: 700; }
+/* PKP Intercity: bilety KW i POLREGIO nie obowiązują */
+.ic-tag { padding: 1px 8px; border-radius: 999px; background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-weight: 700; }
 .platform { display: grid; justify-items: center; min-width: 56px; padding: 6px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); }
 .platform strong { font-size: 20px; line-height: 24px; font-weight: 800; }
 .platform small { font-size: 11px; line-height: 14px; color: rgb(var(--v-theme-on-surface-variant)); white-space: nowrap; }

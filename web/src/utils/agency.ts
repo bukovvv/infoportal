@@ -1,9 +1,12 @@
-// Przewoźnicy w wynikach wyszukiwarki: KW oraz POLREGIO (tylko w Wielkopolsce, bez strony pociągu, mapy i tablicy).
+// Przewoźnicy: KW oraz partnerzy POLREGIO i PKP Intercity (tylko w Wielkopolsce, bez mapy).
 
-const NAMES: Record<string, string> = { KW: 'Koleje Wielkopolskie', PR: 'POLREGIO' }
+const NAMES: Record<string, string> = { KW: 'Koleje Wielkopolskie', PR: 'POLREGIO', IC: 'PKP Intercity' }
 
 /** Kurs innego przewoźnika niż KW (brak pola w starszych zapisanych podróżach = KW). */
 export const isPartner = (agency?: string | null) => !!agency && agency !== 'KW'
+
+/** PKP Intercity — bilety KW i POLREGIO nie obowiązują. */
+export const isIntercity = (agency?: string | null) => agency === 'IC'
 
 /** Skrót przed numerem pociągu: „KW 77600”, „PR 85724”. */
 export const agencyCode = (agency?: string | null) => agency || 'KW'

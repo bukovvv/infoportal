@@ -63,8 +63,8 @@ async function search(scroll = true) {
   }
 }
 
-/** BTK obowiązuje w pociągach regionalnych KW i POLREGIO — nie w interREGIO. */
-const btkFits = computed(() => !!result.value?.connections.length && result.value.connections[0].legs.every((l) => l.route?.short !== 'IR'))
+/** BTK obowiązuje w pociągach regionalnych KW i POLREGIO — nie w interREGIO ani PKP Intercity. */
+const btkFits = computed(() => !!result.value?.connections.length && result.value.connections[0].legs.every((l) => l.route?.short !== 'IR' && l.agency !== 'IC'))
 
 /** Nagłówek dnia nad połączeniem, które odjeżdża innego dnia niż poprzednie (lub niż data wyszukiwania). */
 function newDay(i: number) {
@@ -193,7 +193,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           v-if="!result.connections.length"
           icon="search_off"
           title="Brak połączeń w ciągu 12 godzin"
-          :text="direct ? 'Wyłącz filtr „Bez przesiadek” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW i POLREGIO w Wielkopolsce.'"
+          :text="direct ? 'Wyłącz filtr „Bez przesiadek” albo zmień godzinę.' : 'Zmień godzinę. Szukamy pociągów KW, POLREGIO i PKP Intercity w Wielkopolsce.'"
           class="card"
         />
         <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" :loading="paging === 'later'" class="more" @click="page('later')">

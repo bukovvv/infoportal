@@ -12,13 +12,13 @@ use RuntimeException;
 
 /**
  * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy przewoźnika (KW) i buduje gtfs.sqlite.
- * Kursy przewoźników partnerskich (POLREGIO) trafiają do bazy obcięte do stacji w Wielkopolsce — tylko dla wyszukiwarki połączeń.
+ * Kursy przewoźników partnerskich (POLREGIO, PKP Intercity) trafiają do bazy obcięte do stacji w Wielkopolsce — poza mapą.
  * Nowa baza zastępuje starą dopiero po pozytywnej walidacji.
  */
 final class GtfsImporter
 {
     /** Wersja układu bazy — starsza baza jest przebudowywana nawet bez zmian w rozkładzie. */
-    public const SCHEMA = 4;
+    public const SCHEMA = 5;
 
     /** @var callable(string): void */
     private $log;
@@ -160,7 +160,8 @@ final class GtfsImporter
             $insTrip->execute([$id, $t['route_id'], $t['service_id'], $shape, $short, $t['trip_headsign'],
                 $t['plk_category_code'] ?? null, ($t['plk_train_name'] ?? '') ?: null,
                 preg_replace('/_LEG\d+$/', '', $id), $busRoutes[$t['route_id']] ? 1 : 0, $tripAgency]);
-            foreach (self::splitNumbers(($t['plk_train_number'] ?? '') ?: $short) as $number) {
+            // numer PLK i handlowy (w Intercity bywają różne: „212 Comenius” = PLK 34004/5)
+            foreach (array_unique([...self::splitNumbers(($t['plk_train_number'] ?? '') ?: $short), ...self::splitNumbers($short)]) as $number) {
                 $insNumber->execute([$number, $id]);
             }
         }

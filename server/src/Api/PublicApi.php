@@ -37,7 +37,7 @@ final class PublicApi
         return $this->rt ??= Realtime::fromStorage();
     }
 
-    /** Dzień rozkładu z kursami POLREGIO (w Wielkopolsce) — wszędzie poza mapą (LiveBuilder bierze same KW). */
+    /** Dzień rozkładu z kursami POLREGIO i PKP Intercity (w Wielkopolsce) — wszędzie poza mapą (LiveBuilder bierze same KW). */
     private function day(int $date, bool $partners = true): DayTimetable
     {
         return $this->days[$date . ($partners ? 'p' : '')] ??= DayTimetable::load($this->tt(), $date, $partners);
@@ -180,9 +180,12 @@ final class PublicApi
         $found = $finder->find($from['id'], $to['id'], $time, max(1, min(10, (int) ($_GET['limit'] ?? 6))), ($_GET['direct'] ?? '0') === '1', $arriveBy);
 
         $vehicles = new VehicleRepository();
+        $kwTicketAgencies = (array) Config::get('kw_ticket_agencies');
         $connections = [];
         foreach ($found as $c) {
             $legs = [];
+            $km = 0.0;
+            $kmApprox = false;
             foreach ($c['legs'] as $l) {
                 $trip = $day->trips[$l['key']];
                 $a = $trip['stops'][$l['from']];
@@ -191,6 +194,9 @@ final class PublicApi
                 $depDelay = $exp['stops'][$l['from']]['depDelay'] ?? null;
                 $arrDelay = $exp['stops'][$l['to']]['arrDelay'] ?? null;
                 $partner = $trip['agency'] !== $this->tt()->agency();
+                [$legKm, $approx] = $this->distance($trip, $l['from'], $l['to']);
+                $km += $legKm;
+                $kmApprox = $kmApprox || $approx;
                 $legs[] = [
                     'key' => $l['key'],
                     'number' => $trip['number'],
@@ -210,10 +216,12 @@ final class PublicApi
                     'track' => $a[D::TRACK],
                     'arrivalPlatform' => $b[D::PLATFORM],
                     'stopsBetween' => $l['to'] - $l['from'] - 1,
+                    'distanceKm' => (int) round($legKm),
                     'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
                     'vehicle' => $trip['isBus'] || $partner ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
-                    // bilety KW są honorowane w POLREGIO na odcinkach wspólnych z KW: każda stacja odcinka obsługiwana też przez KW
-                    'kwTickets' => !$partner || $this->kwSection($trip, $l['from'], $l['to']),
+                    // bilety KW są honorowane w POLREGIO na odcinkach wspólnych z KW: każda stacja odcinka obsługiwana też przez KW;
+                    // w PKP Intercity nigdy
+                    'kwTickets' => !$partner || (in_array($trip['agency'], $kwTicketAgencies, true) && $this->kwSection($trip, $l['from'], $l['to'])),
                 ];
             }
             $connections[] = [
@@ -221,6 +229,9 @@ final class PublicApi
                 'arrival' => Clock::iso($date, $c['arr']),
                 'durationMinutes' => intdiv($c['arr'] - $c['dep'], 60),
                 'transfers' => count($c['legs']) - 1,
+                // kilometry po torach z rozkładu; approx — w połączeniu jest autobus zastępczy (odległość w linii prostej)
+                'distanceKm' => (int) round($km),
+                'distanceApprox' => $kmApprox,
                 'waits' => array_map(static fn (int $w): int => intdiv($w, 60), $c['waits']),
                 'via' => array_map(fn (string $id): array => ['id' => $id, 'name' => $this->name($id)], $c['via']),
                 'legs' => $legs,
@@ -291,10 +302,10 @@ final class PublicApi
         return new Response(['query' => $query, 'trains' => array_slice($trains, 0, 8)]);
     }
 
-    /** „KW 77600”, „PR 85724”, „77610/1” → „77600”, „85724”, „77610”; null — to nie numer pociągu. */
+    /** „KW 77600”, „PR 85724”, „TLK 45102”, „77610/1” → „77600”, „85724”, „45102”, „77610”; null — to nie numer pociągu. */
     public static function trainQuery(string $value): ?string
     {
-        if (preg_match('/^\s*(?:(?:kw|pr)\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
+        if (preg_match('/^\s*(?:(?:kw|pr|ic|tlk|eic|eip|ec|en)\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
             return null;
         }
 
@@ -302,7 +313,7 @@ final class PublicApi
     }
 
     /**
-     * Kursy KW i POLREGIO (bez odcinków autobusowych) spośród podanych trip_id dziś i jutro, od najlepszego:
+     * Kursy KW i partnerów (bez odcinków autobusowych) spośród podanych trip_id dziś i jutro, od najlepszego:
      * 0 — w drodze teraz (±30 min), potem najbliższy odjazd, na końcu już zakończone.
      * @param array<int, string> $tripIds @return array<string, int> klucz kursu => wynik
      */
@@ -335,7 +346,7 @@ final class PublicApi
         $date = (int) $m[2];
         $day = $this->day($date);
         $trip = $day->trips[$p['key']] ?? throw new ApiException('Ten kurs nie jedzie w wybranym dniu.', 404);
-        // kurs POLREGIO: bez mapy, komunikatów (dotyczą KW) i pojazdu; postoje tylko w Wielkopolsce
+        // kurs POLREGIO / PKP Intercity: bez mapy, komunikatów (dotyczą KW) i pojazdu; postoje tylko w Wielkopolsce
         $partner = $trip['agency'] !== $this->tt()->agency();
         $nowSec = Clock::secondsSince($date);
         $exp = $this->applied($trip, $nowSec);
@@ -506,6 +517,39 @@ final class PublicApi
     private function destination(array $trip): string
     {
         return $trip['destinationName'] ?? $this->name(end($trip['stops'])[D::STATION]);
+    }
+
+    /**
+     * Długość odcinka w km: z kilometrażu rozkładu (shape_dist_traveled), a gdy go brak (autobus zastępczy) —
+     * suma odległości w linii prostej między kolejnymi przystankami.
+     * @param array<string, mixed> $trip @return array{0: float, 1: bool} [km, przybliżona]
+     */
+    private function distance(array $trip, int $from, int $to): array
+    {
+        $a = $trip['stops'][$from][D::DIST];
+        $b = $trip['stops'][$to][D::DIST];
+        if ($a !== null && $b !== null && $b >= $a) {
+            return [$b - $a, false];
+        }
+        $km = 0.0;
+        for ($i = $from; $i < $to; $i++) {
+            $p = $this->tt()->station($trip['stops'][$i][D::STATION]);
+            $q = $this->tt()->station($trip['stops'][$i + 1][D::STATION]);
+            if ($p !== null && $q !== null) {
+                $km += self::haversine($p['lat'], $p['lon'], $q['lat'], $q['lon']);
+            }
+        }
+
+        return [$km, true];
+    }
+
+    private static function haversine(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $h = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        return 2 * 6371.0 * asin(min(1.0, sqrt($h)));
     }
 
     /** Czy wszystkie stacje odcinka obsługuje też KW (odcinek wspólny — bilety KW honorowane). @param array<string, mixed> $trip */

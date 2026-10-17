@@ -30,7 +30,7 @@ export type DelaySource = 'rt' | 'gps' | null
 export interface BoardRow {
   key: string
   number: string
-  /** KW albo PR (POLREGIO) */
+  /** KW, PR (POLREGIO) albo IC (PKP Intercity) */
   agency?: string
   route: Route | null
   isBus: boolean
@@ -58,7 +58,7 @@ export interface Board {
 export interface Leg {
   key: string
   number: string
-  /** przewoźnik: KW albo PR (POLREGIO); brak w podróżach zapisanych przed dodaniem pola = KW */
+  /** przewoźnik: KW, PR (POLREGIO) albo IC (PKP Intercity); brak w podróżach zapisanych przed dodaniem pola = KW */
   agency?: string
   route: Route | null
   isBus: boolean
@@ -79,8 +79,10 @@ export interface Leg {
   stops?: LegStop[]
   /** spodziewany pojazd (vagonWEB); brak danych lub autobus — null */
   vehicle?: VehicleInfo | null
-  /** POLREGIO na odcinku wspólnym z KW — bilety KW honorowane; brak w starszych zapisanych podróżach */
+  /** POLREGIO na odcinku wspólnym z KW — bilety KW honorowane (PKP Intercity — nigdy); brak w starszych zapisanych podróżach */
   kwTickets?: boolean
+  /** długość odcinka w km */
+  distanceKm?: number
 }
 
 export interface LegStop {
@@ -98,6 +100,10 @@ export interface Connection {
   arrival: string
   durationMinutes: number
   transfers: number
+  /** kilometry po torach z rozkładu; brak w starszych zapisanych podróżach */
+  distanceKm?: number
+  /** w połączeniu jest autobus zastępczy — odległość przybliżona */
+  distanceApprox?: boolean
   waits: number[]
   via: StationRef[]
   legs: Leg[]
@@ -158,7 +164,7 @@ export interface Trip {
   tripId: string
   serviceDate: string
   agency?: string
-  /** kurs POLREGIO jedzie dalej poza Wielkopolskę (origin/destination to prawdziwe końce, stops — tylko tutejsze) */
+  /** kurs POLREGIO / PKP Intercity jedzie dalej poza Wielkopolskę (origin/destination to prawdziwe końce, stops — tylko tutejsze) */
   trimmed?: boolean
   number: string
   numbers: string[]

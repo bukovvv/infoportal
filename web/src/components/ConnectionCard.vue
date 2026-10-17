@@ -4,7 +4,7 @@ import type { Connection, Leg } from '@/api/types'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
-import { agencyCode, agencyName, isPartner } from '@/utils/agency'
+import { agencyCode, agencyName, isIntercity, isPartner } from '@/utils/agency'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
 import { unitLabel, vehicleTitle } from '@/utils/vehicle'
@@ -41,13 +41,17 @@ const nextDay = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) !=
 
 /** Kolor odcinka: linia z rozkładu, autobus zastępczy neutralnie, bez koloru — kolor akcji. */
 const legColor = (leg: Leg) => (leg.isBus ? 'rgb(var(--v-theme-outline))' : leg.route?.color ?? 'rgb(var(--v-theme-primary))')
-/** Bilety na odcinku POLREGIO: KW honorowane na odcinkach wspólnych z KW (zasady POLREGIO). */
+/** Bilety na odcinku POLREGIO: KW honorowane na odcinkach wspólnych z KW (zasady POLREGIO). W PKP Intercity — osobny bilet. */
 function partnerTickets(leg: Leg) {
   const name = agencyName(leg.agency)
+  if (isIntercity(leg.agency)) return `Pociąg ${name}: bilety KW i POLREGIO nie obowiązują, potrzebny bilet ${name}`
   if (leg.kwTickets === true) return `Pociąg ${name}: bilety KW są tu honorowane`
   if (leg.kwTickets === false) return `Pociąg ${name}: na tym odcinku nie jeżdżą pociągi KW, potrzebny bilet ${name}`
   return `Pociąg ${name}`
 }
+/** „102 km”, przy autobusie zastępczym „ok. 45 km”; brak w starszych zapisanych podróżach. */
+const km = computed(() => (c.value.distanceKm ? `${c.value.distanceApprox ? 'ok. ' : ''}${c.value.distanceKm} km` : ''))
+const intercity = computed(() => c.value.legs.some((l) => isIntercity(l.agency)))
 const legMinutes = (leg: Leg) => Math.max(1, (new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) / 60_000)
 /** Odliczanie do odjazdu (z opóźnieniem) w ciągu najbliższej godziny. */
 const countdown = computed(() => {
@@ -77,6 +81,7 @@ function watchJourney() {
         <div class="text-right">
           <div class="dur tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
           <div class="text-body-small muted">{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}</div>
+          <div v-if="km" class="text-body-small muted tnum">{{ km }}</div>
         </div>
       </div>
       <div class="strip" aria-hidden="true">
@@ -96,6 +101,7 @@ function watchJourney() {
             <span v-if="leg.platform" class="text-body-small muted ml-1">peron {{ leg.platform }}</span>
           </span>
         </template>
+        <span v-if="intercity" class="ic-tag text-label-medium"><v-icon icon="confirmation_number" size="16" />PKP Intercity · osobny bilet</span>
         <span class="meta-end">
           <span v-if="countdown" class="countdown text-body-medium">{{ countdown }}</span>
           <StatusTag v-if="first.departureDelay !== null" :delay="first.departureDelay" />
@@ -130,8 +136,8 @@ function watchJourney() {
                 <RouteBadge :route="leg.route" :bus="leg.isBus" />
                 <strong class="leg-no">{{ agencyCode(leg.agency) }} {{ leg.number }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
               </div>
-              <div v-if="isPartner(leg.agency)" class="partner-note text-body-small">
-                <v-icon icon="info" size="16" />{{ partnerTickets(leg) }}
+              <div v-if="isPartner(leg.agency)" class="partner-note text-body-small" :class="{ ic: isIntercity(leg.agency) }">
+                <v-icon :icon="isIntercity(leg.agency) ? 'confirmation_number' : 'info'" size="16" />{{ partnerTickets(leg) }}
               </div>
               <div v-if="leg.vehicle" class="leg-vehicle">
                 <span class="text-body-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ vehicleTitle(leg.vehicle) }}</span>
@@ -157,10 +163,10 @@ function watchJourney() {
                 :aria-expanded="openLegs.has(leg.key)"
                 @click="toggleLeg(leg.key)"
               >
-                {{ leg.stopsBetween }} {{ plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków') }} po drodze
+                {{ leg.stopsBetween }} {{ plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków') }} po drodze<template v-if="leg.distanceKm"> · {{ leg.distanceKm }} km</template>
               </v-btn>
               <div v-else class="text-body-small muted mt-1">
-                {{ leg.stopsBetween ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze` : 'bez zatrzymań po drodze' }}
+                {{ leg.stopsBetween ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze` : 'bez zatrzymań po drodze' }}<template v-if="leg.distanceKm"> · {{ leg.distanceKm }} km</template>
               </div>
             </div>
           </div>
@@ -239,6 +245,16 @@ function watchJourney() {
 .leg-no { color: rgb(var(--v-theme-on-surface)); }
 .leg-vehicle { display: grid; gap: 4px; margin-top: 6px; }
 .partner-note { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: rgb(var(--v-theme-on-surface-variant)); }
+/* PKP Intercity: inny bilet — wyraźnie, jak ostrzeżenie */
+.partner-note.ic {
+  align-items: flex-start; width: fit-content; margin-top: 6px; padding: 6px 12px 6px 8px; border-radius: var(--kw-r-m);
+  background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-weight: 600;
+}
+.partner-note.ic .v-icon { margin-top: 1px; }
+.ic-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px 2px 6px; border-radius: 999px;
+  background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container));
+}
 .leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; }
 .leg-drawing img { flex: none; display: block; max-width: none; }
 .stops-btn { margin: 2px 0 -6px -12px; }

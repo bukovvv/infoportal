@@ -51,8 +51,10 @@ final class Config
             'backup_gps_url' => 'https://kierownik-plus-v2.jak-ste139.workers.dev/',
             'agency_id' => 'KW',
             'rt_trip_prefix' => 'PLK_KW_',
-            // przewoźnicy tylko w wyszukiwarce połączeń, obcięci do Wielkopolski: agency_id => prefiks trip_id w GTFS-RT
-            'partner_agencies' => ['PR' => 'PLK_PR_'],
+            // przewoźnicy poza mapą (wyszukiwarka, tablica, strona pociągu), obcięci do Wielkopolski: agency_id => prefiks trip_id w GTFS-RT
+            'partner_agencies' => ['PR' => 'PLK_PR_', 'IC' => 'PLK_IC_'],
+            // partnerzy honorujący bilety KW na odcinkach wspólnych z KW (POLREGIO tak, PKP Intercity nie)
+            'kw_ticket_agencies' => ['PR'],
             'rt_min_interval' => 110,
             'site_url' => 'https://zanimwyjdziesz.pl',
             // e-mail na alerty o stanie danych (bin/check-health.php) — ustawiany w local.php na serwerze

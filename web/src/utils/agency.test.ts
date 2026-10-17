@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agencyCode, agencyName, isPartner, trainLabel, trainTitle } from './agency'
+import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from './agency'
 
 describe('agency', () => {
   it('rozróżnia KW i POLREGIO (brak pola = KW)', () => {
@@ -10,6 +10,14 @@ describe('agency', () => {
     expect(agencyName('PR')).toBe('POLREGIO')
     expect(trainLabel({ agency: 'PR', number: '85724' })).toBe('PR 85724')
     expect(trainLabel({ number: '77600/1' })).toBe('KW 77600/1')
+  })
+
+  it('rozpoznaje PKP Intercity', () => {
+    expect(isIntercity('IC')).toBe(true)
+    expect(isIntercity('PR')).toBe(false)
+    expect(isPartner('IC')).toBe(true)
+    expect(agencyName('IC')).toBe('PKP Intercity')
+    expect(trainTitle('45102/3 Flisak', 'FLISAK')).toEqual({ number: '45102/3', name: 'Flisak' })
   })
 
   it('pokazuje nazwę pociągu raz', () => {

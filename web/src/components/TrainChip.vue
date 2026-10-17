@@ -2,7 +2,7 @@
 import { useUi } from '@/stores/ui'
 import { agencyCode } from '@/utils/agency'
 
-// agency: KW albo PR (POLREGIO) — skrót przed numerem
+// agency: KW, PR (POLREGIO) albo IC (PKP Intercity) — skrót przed numerem
 const props = defineProps<{ number: string; tripKey?: string | null; bus?: boolean; agency?: string }>()
 const ui = useUi()
 const open = () => ui.openTrain(props.tripKey ? { key: props.tripKey } : { number: props.number.split('/')[0] })
