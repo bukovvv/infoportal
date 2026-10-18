@@ -19,7 +19,7 @@ import { useFavorites } from '@/stores/favorites'
 import { useJourneys } from '@/stores/journeys'
 import { useRoutes } from '@/stores/routes'
 import { read, useUi, write } from '@/stores/ui'
-import { dayLabel, plural, warsawNow } from '@/utils/format'
+import { clock, dayLabel, plural, warsawNow } from '@/utils/format'
 import { changedCount, optionsFromQuery, optionsToApi, optionsToQuery, sanitize, type SearchOptions } from '@/utils/searchOptions'
 
 const route = useRoute()
@@ -47,6 +47,8 @@ const searching = ref(false)
 const error = ref<string | null>(null)
 const now = ref(Date.now())
 const resultsEl = ref<HTMLElement | null>(null)
+/** wyniki stronami po 4 — „Wcześniejsze”/„Późniejsze” podmieniają listę zamiast dopisywać */
+const PAGE = 4
 
 const range = computed(() => ({ min: status.status?.timetable.validFrom, max: status.status?.timetable.validUntil }))
 
@@ -56,9 +58,9 @@ async function search(scroll = true) {
   if (from.value === to.value) { error.value = 'Stacja początkowa i docelowa muszą się różnić.'; return }
   searching.value = true
   try {
-    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, arriveBy: arriveBy.value, ...optionsToApi(options.value) })
-    firstIndex.value = 0
-    extended.value = false
+    result.value = await api.connections({ from: from.value, to: to.value, date: date.value, time: time.value, arriveBy: arriveBy.value, limit: PAGE, ...optionsToApi(options.value) })
+    highlightKey.value = result.value.connections.length ? connKey(result.value.connections[0]) : null
+    paged.value = false
     write('kw_last_search', { from: from.value, to: to.value })
     write('kw_search_options', options.value)
     void router.replace({ query: { z: from.value, do: to.value, data: date.value, godz: time.value, ...optionsToQuery(options.value), ...(arriveBy.value ? { przyj: '1' } : {}) }, hash: route.hash })
@@ -95,24 +97,32 @@ function whenChanged() {
 }
 
 const connKey = (c: Connection) => c.legs.map((l) => l.key).join('+')
-/** wyróżnione połączenie: pierwsze z wyszukiwania (dopisane wcześniejsze go nie przejmują) */
-const firstIndex = ref(0)
-const highlightKey = computed(() => (result.value?.connections.length ? connKey(result.value.connections[firstIndex.value]) : null))
-/** wyniki poszerzone przyciskami — nagłówek bez „od 14:05” */
-const extended = ref(false)
+/** wyróżnione połączenie: pierwsze z wyszukiwania (na innych stronach wyników go nie ma) */
+const highlightKey = ref<string | null>(null)
+/** strona inna niż z wyszukiwania — nagłówek „od” pierwszego odjazdu na liście */
+const paged = ref(false)
 const paging = ref<'earlier' | 'later' | null>(null)
 const resultsInfo = computed(() => {
   const r = result.value
   if (!r) return ''
   const n = r.connections.length
   const count = `${n} ${plural(n, 'połączenie', 'połączenia', 'połączeń')}`
-  return extended.value ? count : `${count} ${r.arriveBy ? 'z przyjazdem do' : 'od'} ${r.time}`
+  if (!n) return r.arriveBy ? `z przyjazdem do ${r.time}` : `od ${r.time}`
+  if (r.arriveBy && !paged.value) return `${count} z przyjazdem do ${r.time}`
+  const a = clock(r.connections[0].departure)
+  const b = clock(r.connections[n - 1].departure)
+  return a === b ? `${count} · odjazd ${a}` : `${count} · odjazdy ${a}–${b}`
 })
 
+/** Zamyka wyniki (stacje zostają w polach) i czyści adres, żeby po odświeżeniu nie wróciły. */
+function closeResults() {
+  result.value = null
+  void router.replace({ query: {}, hash: route.hash })
+}
+
 /**
- * Wcześniejsze albo późniejsze połączenia dopisywane do listy: wcześniejsze = z przyjazdem przed pierwszym
+ * Poprzednie albo następne 4 połączenia w miejsce bieżących: wcześniejsze = z przyjazdem przed pierwszym
  * na liście, późniejsze = z odjazdem po ostatnim (niezależnie od trybu odjazd/przyjazd).
- * Wcześniejszych po 3 — strona przewija się do nich (nad listą, poza widokiem).
  */
 async function page(dir: 'earlier' | 'later') {
   const r = result.value
@@ -124,7 +134,7 @@ async function page(dir: 'earlier' | 'later') {
   const w = warsawNow(at)
   paging.value = dir
   try {
-    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, arriveBy: dir === 'earlier', limit: dir === 'earlier' ? 3 : undefined, ...optionsToApi(options.value) })
+    const res = await api.connections({ from: r.from.id, to: r.to.id, date: w.date, time: w.time, arriveBy: dir === 'earlier', limit: PAGE, ...optionsToApi(options.value) })
     if (result.value !== r) return
     const known = new Set(list.map(connKey))
     const fresh = res.connections.filter((c) => !known.has(connKey(c)))
@@ -132,14 +142,10 @@ async function page(dir: 'earlier' | 'later') {
       ui.notify(dir === 'earlier' ? 'Brak wcześniejszych połączeń.' : 'Brak późniejszych połączeń.')
       return
     }
-    const first = highlightKey.value
-    r.connections = dir === 'earlier' ? [...fresh, ...list] : [...list, ...fresh]
-    firstIndex.value = r.connections.findIndex((c) => connKey(c) === first)
-    extended.value = true
-    if (dir === 'earlier') {
-      await nextTick()
-      resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    r.connections = fresh
+    paged.value = true
+    await nextTick()
+    resultsEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   } catch (e) {
     ui.notify((e as Error).message)
   } finally {
@@ -207,24 +213,26 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 
     <div class="cols" :class="{ 'has-result': !!result }">
       <section v-if="result" ref="resultsEl" class="results" aria-live="polite" aria-labelledby="results-title">
-        <div class="results-head">
+        <div class="results-head card">
           <div class="results-title">
-            <h2 id="results-title" class="text-title-large">{{ result.from.name }} → {{ result.to.name }}</h2>
-            <span class="text-body-medium muted">{{ resultsInfo }}</span>
+            <h2 id="results-title" class="text-title-large">
+              {{ result.from.name }}<v-icon icon="arrow_forward" size="20" class="muted" />{{ result.to.name }}
+            </h2>
+            <span class="text-body-medium muted tnum">{{ resultsInfo }}</span>
           </div>
+          <v-btn icon="close" variant="text" size="small" color="on-surface-variant" class="results-close" aria-label="Zamknij wyniki" title="Zamknij wyniki" @click="closeResults" />
           <v-btn
             :variant="routeSaved ? 'text' : 'flat'"
-            :color="routeSaved ? undefined : 'secondary-container'"
+            :color="routeSaved ? undefined : 'surface-container-high'"
             :prepend-icon="routeSaved ? 'check' : 'add_road'"
             :disabled="routeSaved"
+            size="small"
+            class="results-watch"
             @click="watchRoute"
           >
             {{ routeSaved ? 'Obserwujesz trasę' : 'Obserwuj trasę' }}
           </v-btn>
         </div>
-        <v-btn v-if="result.connections.length" variant="text" prepend-icon="keyboard_arrow_up" :loading="paging === 'earlier'" class="more" @click="page('earlier')">
-          Wcześniejsze połączenia
-        </v-btn>
         <template v-for="(c, i) in result.connections" :key="connKey(c)">
           <h3 v-if="newDay(i)" class="day-sep text-title-small">{{ dayLabel(c.departure) }}</h3>
           <ConnectionCard :connection="c" :now="now" :highlight="connKey(c) === highlightKey" />
@@ -236,9 +244,14 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : 'Zmień godzinę. Szukamy pociągów KW, POLREGIO i PKP Intercity w Wielkopolsce.'"
           class="card"
         />
-        <v-btn v-else variant="text" prepend-icon="keyboard_arrow_down" :loading="paging === 'later'" class="more" @click="page('later')">
-          Późniejsze połączenia
-        </v-btn>
+        <nav v-else class="pager" aria-label="Kolejne połączenia">
+          <v-btn variant="flat" color="surface-container-high" prepend-icon="chevron_left" :loading="paging === 'earlier'" :disabled="!!paging" @click="page('earlier')">
+            Wcześniejsze
+          </v-btn>
+          <v-btn variant="flat" color="surface-container-high" append-icon="chevron_right" :loading="paging === 'later'" :disabled="!!paging" @click="page('later')">
+            Późniejsze
+          </v-btn>
+        </nav>
         <BtkHint
           v-if="btkFits"
           :stations="[result.from.name, result.to.name, ...result.connections[0].via.map((v) => v.name)]"
@@ -355,9 +368,22 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .has-result .routes-grid { grid-template-columns: minmax(0, 1fr); }
 .results { display: grid; gap: 12px; scroll-margin-top: 80px; min-width: 0; }
 .results-anchor { display: none; }
-.results-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 0 4px; }
-.results-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
-.more { justify-self: center; }
+/* nagłówek wyników: trasa i zakres godzin, ✕ w rogu, pod spodem „Obserwuj trasę” */
+.results-head {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'title close' 'watch watch';
+  align-items: start; gap: 8px; padding: 14px 8px 12px 18px;
+}
+.results-title { grid-area: title; display: grid; gap: 2px; min-width: 0; }
+.results-title h2 { display: flex; align-items: center; flex-wrap: wrap; gap: 0 8px; font-weight: 800; }
+.results-close { grid-area: close; margin: -6px 0; }
+.results-watch { grid-area: watch; justify-self: start; margin-left: -4px; }
+@media (min-width: 600px) {
+  .results-head { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: 'title watch close'; align-items: center; padding: 12px 8px 12px 18px; }
+  .results-watch, .results-close { margin: 0; }
+}
+/* Wcześniejsze / Późniejsze: dwie równe pigułki pod listą */
+.pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
 .day-sep { margin-top: 8px; padding: 0 4px; color: rgb(var(--v-theme-primary)); }
 .day-sep::first-letter { text-transform: uppercase; }
 .notices { overflow: hidden; }

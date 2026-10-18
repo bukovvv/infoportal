@@ -80,8 +80,7 @@ function watchJourney() {
         </div>
         <div class="text-right">
           <div class="dur tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
-          <div class="text-body-small muted">{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}</div>
-          <div v-if="km" class="text-body-small muted tnum">{{ km }}</div>
+          <div class="text-body-small muted tnum">{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}<template v-if="km"> · {{ km }}</template></div>
         </div>
       </div>
       <div class="strip" aria-hidden="true">
@@ -110,7 +109,7 @@ function watchJourney() {
     </div>
     <div class="conn-actions">
       <v-btn variant="text" :prepend-icon="expanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" :aria-expanded="expanded" @click="expanded = !expanded">Szczegóły</v-btn>
-      <v-btn :variant="saved ? 'text' : 'flat'" :color="saved ? undefined : 'primary-container'" :prepend-icon="saved ? 'bookmark_added' : 'bookmark_add'" :disabled="saved" @click="watchJourney">
+      <v-btn variant="text" :color="saved ? undefined : 'primary'" :prepend-icon="saved ? 'bookmark_added' : 'bookmark_add'" :disabled="saved" @click="watchJourney">
         {{ saved ? 'Obserwujesz' : 'Obserwuj' }}
       </v-btn>
     </div>
@@ -204,7 +203,7 @@ function watchJourney() {
 <style scoped>
 .conn { overflow: hidden; }
 .conn.highlight { box-shadow: 0 0 0 2px rgb(var(--v-theme-primary)); }
-.conn-main { display: grid; gap: 10px; padding: 16px 16px 8px 18px; }
+.conn-main { display: grid; gap: 10px; padding: 14px 16px 6px 18px; }
 .conn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .conn-times { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
 .conn-times .t { font-size: 26px; line-height: 32px; font-weight: 800; letter-spacing: -0.3px; }
@@ -212,13 +211,14 @@ function watchJourney() {
 .conn-times .was { font-size: 14px; }
 .conn-times .v-icon { align-self: center; }
 .dur { font-size: 16px; font-weight: 800; }
+.conn-top .text-right { white-space: nowrap; }
 .strip { display: flex; align-items: center; gap: 6px; }
 .strip-seg { height: 6px; border-radius: 3px; flex-basis: 0; }
 .strip-stop, .strip-end { flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgb(var(--v-theme-on-surface-variant)); }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .meta-end { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
 .wait { display: inline-flex; align-items: center; gap: 2px; }
-.conn-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 8px; }
+.conn-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 6px; }
 .conn-detail { padding: 6px 16px 16px 8px; border-top: 1px solid rgb(var(--v-theme-outline-variant)); }
 /* Powiadom / Do kalendarza / Udostępnij: ikona nad podpisem */
 .detail-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 4px 0 8px 8px; }
