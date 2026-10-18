@@ -6,6 +6,7 @@ namespace KwInfo\Api;
 
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Http\ApiException;
+use KwInfo\Http\RateLimit;
 use KwInfo\Http\Response;
 use KwInfo\Http\Router;
 use KwInfo\Live\Realtime;
@@ -24,6 +25,7 @@ final class PushApi
 
     public function watch(): Response
     {
+        RateLimit::hit('push');
         $body = Router::body();
         [$endpoint, $p256dh, $auth] = self::subscription($body['subscription'] ?? null);
         $id = (string) ($body['journeyId'] ?? '');
@@ -54,6 +56,7 @@ final class PushApi
 
     public function unwatch(): Response
     {
+        RateLimit::hit('push');
         $body = Router::body();
         $endpoint = (string) ($body['endpoint'] ?? '');
         if (!WebPush::allowedEndpoint($endpoint)) {
@@ -71,6 +74,7 @@ final class PushApi
      */
     public function watchRoute(): Response
     {
+        RateLimit::hit('push');
         $body = Router::body();
         [$endpoint, $p256dh, $auth] = self::subscription($body['subscription'] ?? null);
         $id = (string) ($body['routeId'] ?? '');
@@ -109,6 +113,7 @@ final class PushApi
 
     public function unwatchRoute(): Response
     {
+        RateLimit::hit('push');
         $body = Router::body();
         $endpoint = (string) ($body['endpoint'] ?? '');
         if (!WebPush::allowedEndpoint($endpoint) || !isset($body['routeId'])) {

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { descriptions, isNoindex, setMeta } from '@/utils/seo'
 import StartView from '@/views/StartView.vue'
 
 const titles: Record<string, string> = {
@@ -45,16 +46,24 @@ const router = createRouter({
       children: [
         { path: '', name: 'admin', component: () => import('@/views/admin/AdminNotices.vue') },
         { path: 'stan', name: 'admin-health', component: () => import('@/views/admin/AdminHealth.vue') },
+        { path: 'dziennik', name: 'admin-log', component: () => import('@/views/admin/AdminLog.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', name: 'missing', component: () => import('@/views/NotFound.vue') },
   ],
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from, failure) => {
+  // sama zmiana zapytania (np. godzina na tablicy) zostawia opis ustawiony przez widok
+  if (failure || (to.path === from.path && from.matched.length)) return
   const name = String(to.name ?? '')
   const base = name.startsWith('admin') ? titles.admin : titles[name] ?? titles.start
-  document.title = name === 'start' ? `${base} | już wiesz, jak pojedziesz.` : `${base} | zanimwyjdziesz.pl`
+  setMeta({
+    title: name === 'start' ? `${base} | Twój osobisty przewodnik w podróży.` : `${base} | zanimwyjdziesz.pl`,
+    description: descriptions[name],
+    path: to.path,
+    noindex: isNoindex(name),
+  })
 })
 
 export { shortTitles, titles }

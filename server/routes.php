@@ -23,6 +23,7 @@ $router->get('/network', [$api, 'network']);
 $router->get('/live', [$api, 'live']);
 $router->get('/status', [$api, 'status']);
 $router->get('/notices', [$api, 'notices']);
+$router->get('/sitemap.xml', [$api, 'sitemap']);
 $router->get('/vehicles/img/{file}', [$api, 'vehicleImage']);
 $router->get('/push/key', [$push, 'key']);
 $router->post('/push/watch', [$push, 'watch']);
@@ -37,6 +38,7 @@ $router->get('/admin/notices', [$admin, 'notices']);
 $router->post('/admin/notices', [$admin, 'createNotice']);
 $router->put('/admin/notices/{id}', [$admin, 'updateNotice']);
 $router->delete('/admin/notices/{id}', [$admin, 'deleteNotice']);
+$router->get('/admin/log', [$admin, 'log']);
 $router->get('/admin/health', [$admin, 'health']);
 $router->post('/admin/import', [$admin, 'import']);
 

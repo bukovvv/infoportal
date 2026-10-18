@@ -1,0 +1,6 @@
+# zanimwyjdziesz.pl — /api/ zostaje dostępne: robot Google pobiera z niego dane, renderując strony
+# (odpowiedzi API mają nagłówek X-Robots-Tag: noindex)
+User-agent: *
+Disallow: /admin
+
+Sitemap: https://zanimwyjdziesz.pl/sitemap.xml

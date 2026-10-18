@@ -9,7 +9,8 @@ use RuntimeException;
 /** Błąd z komunikatem przeznaczonym dla użytkownika i kodem HTTP. */
 final class ApiException extends RuntimeException
 {
-    public function __construct(string $message, public readonly int $status = 400)
+    /** @param array<string, string> $headers np. Retry-After przy 429 */
+    public function __construct(string $message, public readonly int $status = 400, public readonly array $headers = [])
     {
         parent::__construct($message);
     }

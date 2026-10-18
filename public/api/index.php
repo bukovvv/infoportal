@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+header_remove('X-Powered-By'); // expose_php w .user.ini nie działa (ustawienie tylko dla całego serwera)
+
 // Front controller API. Katalog server/ leży obok public/ (zalecane) albo wewnątrz katalogu dokumentów
 // (hosting bez zmiany docroot — wtedy chroniony przez .htaccess).
 $server = getenv('KW_SERVER_DIR') ?: null;

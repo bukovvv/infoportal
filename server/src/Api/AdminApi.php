@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KwInfo\Api;
 
 use KwInfo\Auth\AdminAuth;
+use KwInfo\Auth\AdminLog;
 use KwInfo\Config;
 use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Http\ApiException;
@@ -46,25 +47,44 @@ final class AdminApi
     public function createNotice(): Response
     {
         AdminAuth::require(true);
+        $notice = (new NoticeRepository())->save(Router::body());
+        AdminLog::write('notice-create', $notice['id'], ['after' => self::logged($notice)]);
 
-        return new Response((new NoticeRepository())->save(Router::body()), 201);
+        return new Response($notice, 201);
     }
 
     public function updateNotice(array $p): Response
     {
         AdminAuth::require(true);
+        $repo = new NoticeRepository();
+        $id = self::id($p);
+        $before = $repo->find($id);
+        $notice = $repo->save(Router::body(), $id);
+        AdminLog::write('notice-update', $id, ['before' => $before ? self::logged($before) : null, 'after' => self::logged($notice)]);
 
-        return new Response((new NoticeRepository())->save(Router::body(), self::id($p)));
+        return new Response($notice);
     }
 
     public function deleteNotice(array $p): Response
     {
         AdminAuth::require(true);
-        if (!(new NoticeRepository())->delete(self::id($p))) {
+        $repo = new NoticeRepository();
+        $id = self::id($p);
+        $before = $repo->find($id);
+        if (!$repo->delete($id)) {
             throw new ApiException('Nie znaleziono komunikatu. Lista mogła zostać odświeżona.', 404);
         }
+        AdminLog::write('notice-delete', $id, ['before' => $before ? self::logged($before) : null]);
 
         return new Response(['deleted' => true]);
+    }
+
+    /** Dziennik panelu: logowania i zmiany komunikatów (ostatnie wpisy). */
+    public function log(): Response
+    {
+        AdminAuth::require(false);
+
+        return new Response(AdminLog::recent(150));
     }
 
     public function health(): Response
@@ -141,11 +161,19 @@ final class AdminApi
             $stats = (new GtfsImporter(static function (string $line) use (&$log): void {
                 $log[] = $line;
             }))->run(force: true);
+            AdminLog::write('import');
         } catch (Throwable $e) {
+            AdminLog::write('import-failed');
             throw new ApiException('Import nie powiódł się: ' . $e->getMessage(), 502);
         }
 
         return new Response(['stats' => $stats, 'log' => $log]);
+    }
+
+    /** @param array<string, mixed> $n @return array<string, mixed> pola komunikatu zapisywane w dzienniku */
+    private static function logged(array $n): array
+    {
+        return array_intersect_key($n, array_flip(['title', 'body', 'line', 'severity', 'trains', 'startsAt', 'endsAt', 'active']));
     }
 
     private static function id(array $p): int

@@ -13,6 +13,8 @@ use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Http\ApiException;
 use KwInfo\Http\FileResponse;
+use KwInfo\Http\RateLimit;
+use KwInfo\Http\RawResponse;
 use KwInfo\Http\Response;
 use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
@@ -159,6 +161,7 @@ final class PublicApi
 
     public function connections(): Response
     {
+        RateLimit::hit('search');
         $from = $this->tt()->station((string) ($_GET['from'] ?? '')) ?? throw new ApiException('Wybierz stację początkową z listy.', 422);
         $to = $this->tt()->station((string) ($_GET['to'] ?? '')) ?? throw new ApiException('Wybierz stację docelową z listy.', 422);
         if ($from['id'] === $to['id']) {
@@ -272,6 +275,7 @@ final class PublicApi
      */
     public function searchTrains(): Response
     {
+        RateLimit::hit('search');
         $query = self::trainQuery((string) ($_GET['q'] ?? '')) ?? throw new ApiException('Podaj numer pociągu, np. 77600.', 422);
         $runs = $this->runsForNumbers($this->tt()->tripIdsForNumberPrefix($query));
         $today = Clock::today();
@@ -486,6 +490,25 @@ final class PublicApi
     public function notices(): Response
     {
         return new Response((new NoticeRepository())->published());
+    }
+
+    /** Mapa strony dla wyszukiwarek: strony stałe, tablice odjazdów wszystkich stacji, opublikowane komunikaty. */
+    public function sitemap(): RawResponse
+    {
+        $base = rtrim((string) Config::get('site_url'), '/');
+        $urls = array_map(static fn (string $path): array => [$path, null], ['/', '/mapa', '/schemat', '/komunikaty', '/bus-tramwaj-kolej', '/o-nas']);
+        foreach ($this->tt()->stations() as $station) {
+            $urls[] = ['/odjazdy/' . rawurlencode((string) $station['id']), null];
+        }
+        foreach ((new NoticeRepository())->published() as $notice) {
+            $urls[] = ['/komunikaty/' . $notice['id'], substr((string) $notice['updatedAt'], 0, 10)];
+        }
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($urls as [$path, $modified]) {
+            $xml .= '  <url><loc>' . htmlspecialchars($base . $path, ENT_XML1) . '</loc>' . ($modified ? '<lastmod>' . $modified . '</lastmod>' : '') . "</url>\n";
+        }
+
+        return new RawResponse($xml . "</urlset>\n", 'application/xml; charset=utf-8', 3600);
     }
 
     /** @param array<string, mixed> $trip @return array<string, mixed> */

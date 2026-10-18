@@ -21,6 +21,7 @@ final class Response
         http_response_code($this->status);
         header('Content-Type: application/json; charset=utf-8');
         header('X-Content-Type-Options: nosniff');
+        header('X-Robots-Tag: noindex'); // dane API nie są stronami dla wyszukiwarek (robot Google i tak je pobiera, renderując strony)
         foreach ($this->headers as $name => $value) {
             header($name . ': ' . $value);
         }

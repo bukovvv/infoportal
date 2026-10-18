@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import TrainChip from '@/components/TrainChip.vue'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { ago, clock, dateTime, dayLabel } from '@/utils/format'
 import { noticeIcon, noticeLabel } from '@/utils/notices'
+import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
 const notices = useNotices()
@@ -15,9 +16,10 @@ const now = ref(Date.now())
 const timer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onBeforeUnmount(() => window.clearInterval(timer))
 
-watchEffect(() => {
-  if (notice.value) document.title = `${notice.value.title} | zanimwyjdziesz.pl`
-})
+usePageMeta(() => notice.value ? {
+  title: `${notice.value.title} | zanimwyjdziesz.pl`,
+  description: notice.value.body.replace(/\s+/g, ' ').slice(0, 160),
+} : null)
 
 const facts = computed(() => {
   const n = notice.value

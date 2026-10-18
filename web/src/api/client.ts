@@ -1,4 +1,4 @@
-import type { AdminSession, Board, ConnectionsResult, Live, Notice, Station, Status, TrainMatch, Trip } from './types'
+import type { AdminLogEntry, AdminSession, Board, ConnectionsResult, Live, Notice, Station, Status, TrainMatch, Trip } from './types'
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -73,6 +73,7 @@ export const api = {
     saveNotice: (notice: Partial<Notice>, id?: number) =>
       id ? request<Notice>('PUT', `/admin/notices/${id}`, notice) : request<Notice>('POST', '/admin/notices', notice),
     deleteNotice: (id: number) => request<{ deleted: boolean }>('DELETE', `/admin/notices/${id}`),
+    log: () => request<AdminLogEntry[]>('GET', '/admin/log'),
     health: () => request<Status & { server: Record<string, unknown> }>('GET', '/admin/health'),
     importTimetable: () => request<{ stats: Record<string, unknown>; log: string[] }>('POST', '/admin/import', {}),
   },

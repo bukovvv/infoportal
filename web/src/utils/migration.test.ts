@@ -20,6 +20,14 @@ describe('importMigratedSettings', () => {
     expect(localStorage.getItem('token')).toBeNull()
   })
 
+  it('od 1.01.2027 pomija ustawienia z adresu, ale czyści adres', () => {
+    expect(importMigratedSettings(at({ kw_theme: '"dark"' }), localStorage, Date.parse('2026-12-31T23:59:00+01:00'))).toBe(1)
+    localStorage.clear()
+    expect(importMigratedSettings(at({ kw_theme: '"dark"' }), localStorage, Date.parse('2027-01-01T00:00:00+01:00'))).toBe(0)
+    expect(localStorage.getItem('kw_theme')).toBeNull()
+    expect(location.hash).toBe('')
+  })
+
   it('ignoruje uszkodzone dane i zwykłe kotwice', () => {
     expect(importMigratedSettings({ hash: MIGRATION_HASH + '%7Bzle', pathname: '/', search: '' })).toBe(0)
     expect(importMigratedSettings({ hash: '#szukaj', pathname: '/', search: '' })).toBe(0)

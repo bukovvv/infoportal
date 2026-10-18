@@ -281,6 +281,15 @@ export interface Notice {
   updatedAt: string
 }
 
+export interface AdminLogEntry {
+  id: number
+  at: string
+  ip: string
+  action: string
+  noticeId: number | null
+  detail: Record<string, unknown>
+}
+
 export interface AdminSession {
   loggedIn: boolean
   configured?: boolean

@@ -51,6 +51,7 @@ async function submit() {
         <v-tabs color="primary" density="comfortable">
           <v-tab :to="{ name: 'admin' }" prepend-icon="campaign" exact>Komunikaty</v-tab>
           <v-tab :to="{ name: 'admin-health' }" prepend-icon="monitor_heart">Stan źródeł</v-tab>
+          <v-tab :to="{ name: 'admin-log' }" prepend-icon="history">Dziennik</v-tab>
         </v-tabs>
         <div class="d-flex ga-2">
           <v-btn variant="text" prepend-icon="open_in_new" to="/" target="_blank">Portal</v-btn>

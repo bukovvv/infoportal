@@ -42,8 +42,12 @@ final class WebPush
 
     public static function allowedEndpoint(string $endpoint): bool
     {
+        // bez danych logowania, portu, ukośników wstecznych i znaków sterujących — parse_url i curl muszą widzieć ten sam host
+        if (strlen($endpoint) > 1000 || preg_match('#^https://[a-z0-9.-]+/[!-~]*$#i', $endpoint) !== 1 || preg_match('#[\\\\@]#', $endpoint) === 1) {
+            return false;
+        }
         $parts = parse_url($endpoint);
-        if (($parts['scheme'] ?? '') !== 'https' || !isset($parts['host']) || strlen($endpoint) > 1000) {
+        if ($parts === false || ($parts['scheme'] ?? '') !== 'https' || !isset($parts['host']) || isset($parts['user']) || isset($parts['port'])) {
             return false;
         }
         foreach (self::PUSH_HOSTS as $host) {
@@ -81,6 +85,8 @@ final class WebPush
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 10,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/octet-stream',
                 'Content-Encoding: aes128gcm',

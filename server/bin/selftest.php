@@ -9,6 +9,9 @@ require dirname(__DIR__) . '/bootstrap.php';
 ini_set('memory_limit', '512M');
 
 use KwInfo\Http\ApiException;
+use KwInfo\Auth\AdminLog;
+use KwInfo\Http\RateLimit;
+use KwInfo\Notices\NoticeRepository;
 use KwInfo\Api\PublicApi;
 use KwInfo\Clock;
 use KwInfo\Config;
@@ -409,6 +412,32 @@ check('push: token VAPID z poprawnym podpisem ES256', isset($jwt[4]) && openssl_
     && ($claims['aud'] ?? '') === 'https://fcm.googleapis.com');
 check('push: tylko adresy usług push', WebPush::allowedEndpoint('https://fcm.googleapis.com/fcm/send/x') && WebPush::allowedEndpoint('https://web.push.apple.com/abc')
     && !WebPush::allowedEndpoint('https://example.com/push') && !WebPush::allowedEndpoint('http://fcm.googleapis.com/x') && !WebPush::allowedEndpoint('https://evilgoogleapis.com/x'));
+check('push: adres bez sztuczek z hostem', WebPush::allowedEndpoint('https://wns2-db5p.notify.windows.com/w/?token=BQYAAA%3d%3d')
+    && !WebPush::allowedEndpoint('https://evil.com\\@fcm.googleapis.com/x') && !WebPush::allowedEndpoint('https://u@fcm.googleapis.com/x')
+    && !WebPush::allowedEndpoint('https://fcm.googleapis.com:8443/x') && !WebPush::allowedEndpoint('https://fcm.googleapis.com.evil.com/x')
+    && !WebPush::allowedEndpoint("https://fcm.googleapis.com/x\ny") && !WebPush::allowedEndpoint('https://fcm.googleapis.com/a\\b'));
+
+// --- komunikaty: czysty tekst, dziennik panelu, limit zapytań
+check('komunikat: bez znaczników HTML i znaków sterujących', NoticeRepository::plain("Opóźnienie <5 min <b>x</b><script>alert(1)</script> a < b\u{200B}\x07!\r\n\r\n\r\n\r\nDalej", 500, true) === "Opóźnienie <5 min xalert(1) a < b!\n\nDalej"
+    && NoticeRepository::plain("Tytuł\nw dwóch liniach", 160) === 'Tytuł w dwóch liniach' && NoticeRepository::plain(str_repeat('ą', 200), 160) === str_repeat('ą', 160));
+AdminLog::use(new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]));
+AdminLog::write('notice-create', 7, ['after' => ['title' => 'Test']]);
+AdminLog::write('login-failed', null, ['username' => 'x']);
+$log = AdminLog::recent();
+check('dziennik panelu: najnowsze na górze, z treścią', count($log) === 2 && $log[0]['action'] === 'login-failed' && $log[1]['noticeId'] === 7 && $log[1]['detail']['after']['title'] === 'Test');
+AdminLog::use(null);
+$limitIp = 'selftest-' . bin2hex(random_bytes(6));
+$limited = 0;
+for ($i = 0; $i < RateLimit::LIMITS['push'][0] + 2; $i++) {
+    try {
+        RateLimit::hit('push', $limitIp, 1_800_000_000);
+    } catch (ApiException $e) {
+        $limited++;
+        $retry = $e->headers['Retry-After'] ?? null;
+    }
+}
+RateLimit::hit('push', $limitIp, 1_800_000_000 + RateLimit::LIMITS['push'][1]);
+check('limit zapytań: blokada po limicie, Retry-After, nowe okno od zera', $limited === 2 && $e->status === 429 && (int) $retry > 0);
 
 // --- powiadomienia o podróży: kiedy wysłać
 $t0 = strtotime('2026-10-14 16:00');

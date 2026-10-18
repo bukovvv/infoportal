@@ -126,10 +126,9 @@ final class NoticeRepository
     /** @param array<string, mixed> $data @return array<string, mixed> */
     private static function validate(array $data): array
     {
-        $text = static fn (string $key, int $max): string => mb_substr(trim((string) ($data[$key] ?? '')), 0, $max);
-        $title = $text('title', 160);
-        $body = $text('body', 1200);
-        $line = $text('line', 120) ?: 'Cała sieć KW';
+        $title = self::plain((string) ($data['title'] ?? ''), 160);
+        $body = self::plain((string) ($data['body'] ?? ''), 1200, true);
+        $line = self::plain((string) ($data['line'] ?? ''), 120) ?: 'Cała sieć KW';
         if ($title === '' || $body === '') {
             throw new ApiException('Tytuł i treść komunikatu są wymagane.', 422);
         }
@@ -167,6 +166,20 @@ final class NoticeRepository
             'active' => !empty($data['active']) ? 1 : 0,
             'trains' => json_encode(array_values(array_unique(array_slice($trains, 0, 10)))),
         ];
+    }
+
+    /**
+     * Czysty tekst komunikatu: bez znaczników HTML i znaków sterujących (w treści zostają nowe linie).
+     * Widoki i tak wstawiają tekst jako tekst (bez v-html) — to druga warstwa, także dla powiadomień i podglądów.
+     */
+    public static function plain(string $value, int $max, bool $multiline = false): string
+    {
+        $value = str_replace(["\r\n", "\r"], "\n", mb_scrub($value, 'UTF-8'));
+        $value = preg_replace('/<\/?[a-z!?][^<>]*>/iu', '', $value) ?? '';
+        $value = preg_replace($multiline ? '/[^\P{C}\n]/u' : '/\p{C}/u', $multiline ? '' : ' ', $value) ?? '';
+        $value = preg_replace('/\n{3,}/', "\n\n", $value) ?? '';
+
+        return mb_substr(trim($value), 0, $max);
     }
 
     /** @param array<string, mixed> $row @return array<string, mixed> */

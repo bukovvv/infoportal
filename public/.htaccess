@@ -26,8 +26,9 @@ Options -Indexes
     RewriteCond %{HTTP_HOST} ^infoportal\.abuczek\.pl$ [NC]
     RewriteRule ^ przenosiny.html [L]
 
-    # JSON API
+    # JSON API; mapa strony dla wyszukiwarek generowana z rozkładu (lista stacji) i komunikatów
     RewriteRule ^api(/.*)?$ api/index.php [QSA,L]
+    RewriteRule ^sitemap\.xml$ api/index.php [L]
 
     # pliki statyczne bez zmian, reszta → aplikacja (vue-router w trybie historii)
     RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -40,8 +41,11 @@ Options -Indexes
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
-    Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://tiles.openfreemap.org; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), browsing-topics=()"
+    Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://tiles.openfreemap.org; connect-src 'self' https://tiles.openfreemap.org; worker-src 'self' blob:; manifest-src 'self'"
+    # HTTPS przez rok (http:// przekierowuje już hosting); bez includeSubDomains i preload — do decyzji po starcie
+    Header always set Strict-Transport-Security "max-age=31536000"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
 
     # zasoby z hashem w nazwie — cache na rok; index.html zawsze świeży
     <FilesMatch "\.(js|css|woff2?|svg|png)$">

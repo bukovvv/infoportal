@@ -31,7 +31,7 @@ final class Router
         $this->routes[] = ['DELETE', $pattern, $handler];
     }
 
-    public function dispatch(string $method, string $path): Response|FileResponse
+    public function dispatch(string $method, string $path): Response|FileResponse|RawResponse
     {
         $path = '/' . trim($path, '/');
         $allowed = false;
@@ -45,13 +45,14 @@ final class Router
                     $allowed = true;
                     continue;
                 }
+                RateLimit::hit('api');
                 $params = array_map('rawurldecode', array_filter($m, 'is_string', ARRAY_FILTER_USE_KEY));
                 $result = $handler($params);
-                return $result instanceof Response || $result instanceof FileResponse ? $result : new Response($result);
+                return $result instanceof Response || $result instanceof FileResponse || $result instanceof RawResponse ? $result : new Response($result);
             }
             throw new ApiException($allowed ? 'Niedozwolona metoda.' : 'Nie znaleziono zasobu.', $allowed ? 405 : 404);
         } catch (ApiException $e) {
-            return new Response(['error' => $e->getMessage()], $e->status);
+            return new Response(['error' => $e->getMessage()], $e->status, $e->headers);
         } catch (Throwable $e) {
             error_log('[kw-api] ' . $e::class . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
             $message = $e instanceof \RuntimeException && str_contains($e->getMessage(), 'Rozkład nie został')

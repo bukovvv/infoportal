@@ -3,7 +3,9 @@
    i nowa strona zapisuje je u siebie (utils/migration.ts). */
 (function () {
   var data = {}
-  try {
+  // od 1.01.2027 bez przenoszenia ustawień, samo przekierowanie (ta sama data w src/utils/migration.ts)
+  var active = Date.now() < Date.parse('2027-01-01T00:00:00+01:00')
+  if (active) try {
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i)
       if (key && key.indexOf('kw_') === 0) data[key] = localStorage.getItem(key)

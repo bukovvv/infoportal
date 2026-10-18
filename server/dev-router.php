@@ -8,7 +8,7 @@ declare(strict_types=1);
 $public = dirname(__DIR__) . '/public';
 $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
 
-if (str_starts_with($path, '/api/') || $path === '/api') {
+if (str_starts_with($path, '/api/') || $path === '/api' || $path === '/sitemap.xml') {
     require $public . '/api/index.php';
     return true;
 }

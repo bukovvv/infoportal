@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="description" content="Rozkład, odjazdy, mapa pociągów i komunikaty kolei w Wielkopolsce (Koleje Wielkopolskie). Nieoficjalny serwis pasażerski.">
+    <meta name="description" content="Wyszukiwarka połączeń kolejowych w Wielkopolsce: Koleje Wielkopolskie, POLREGIO i PKP Intercity, z przesiadkami i opóźnieniami na żywo. Nieoficjalny serwis pasażerski bez reklam i bez konta.">
+    <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#1A1111" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#231B1B" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -14,16 +15,41 @@
     <!-- podgląd linku (Discord, komunikatory) -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="zanimwyjdziesz.pl">
-    <meta property="og:title" content="zanimwyjdziesz.pl | już wiesz, jak pojedziesz.">
+    <meta property="og:title" content="zanimwyjdziesz.pl | Twój osobisty przewodnik w podróży.">
     <meta property="og:description" content="Nieoficjalny serwis pasażerski kolei w Wielkopolsce: pociągi Kolei Wielkopolskich, połączenia z przesiadkami, odjazdy, opóźnienia PKP PLK, mapa pociągów i komunikaty. Bez reklam i bez konta.">
-    <meta property="og:url" content="https://zanimwyjdziesz.pl/">
     <meta property="og:image" content="https://zanimwyjdziesz.pl/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="Logo zanimwyjdziesz.pl: zegar ze strzałką i hasło „Już wiesz, jak pojedziesz.”">
-    <meta name="twitter:card" content="summary_large_image">
     <meta property="og:locale" content="pl_PL">
-    <title>zanimwyjdziesz.pl | już wiesz, jak pojedziesz.</title>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image:alt" content="Logo zanimwyjdziesz.pl: zegar ze strzałką i hasło „Już wiesz, jak pojedziesz.”">
+    <!-- dane strukturalne (adres kanoniczny i opisy podstron ustawia aplikacja: src/utils/seo.ts) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://zanimwyjdziesz.pl/#website",
+            "url": "https://zanimwyjdziesz.pl/",
+            "name": "zanimwyjdziesz.pl",
+            "alternateName": "zanimwyjdziesz",
+            "description": "Nieoficjalny serwis pasażerski kolei w Wielkopolsce: połączenia z przesiadkami, odjazdy, opóźnienia na żywo, mapa pociągów i komunikaty.",
+            "inLanguage": "pl-PL",
+            "publisher": { "@id": "https://zanimwyjdziesz.pl/#organization" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://zanimwyjdziesz.pl/#organization",
+            "name": "zanimwyjdziesz.pl",
+            "url": "https://zanimwyjdziesz.pl/",
+            "logo": { "@type": "ImageObject", "url": "https://zanimwyjdziesz.pl/app-icon-512.png", "width": 512, "height": 512 }
+          }
+        ]
+      }
+    </script>
+    <title>zanimwyjdziesz.pl | Twój osobisty przewodnik w podróży.</title>
   </head>
   <body>
     <div id="app"></div>

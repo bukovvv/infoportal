@@ -16,6 +16,7 @@ import { read, useUi, write } from '@/stores/ui'
 import { agencyCode, isIntercity } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
+import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +35,10 @@ const now = ref(Date.now())
 const locating = ref(false)
 
 const station = computed(() => (stationId.value ? stations.byId.get(stationId.value) : undefined))
+usePageMeta(() => station.value ? {
+  title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
+  description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: Koleje Wielkopolskie, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,
+} : null)
 
 // Wybrany dzień i godzina. Puste = „teraz” (tablica na żywo, pola pokazują bieżący czas).
 // Zmiana jednego pola przypina oba — tablica pokazuje dokładnie to, co widać w polach.
