@@ -48,6 +48,7 @@ export const useRoutes = defineStore('routes', () => {
     if (has(from.id, to.id)) return false
     list.value.unshift({ id: routeId(from.id, to.id), a: { ...from }, b: { ...to }, options: { ...options, agencies: [...options.agencies] }, dir: 'ab', savedAt: new Date().toISOString() })
     void load(list.value[0], 'ab', true)
+    void load(list.value[0], 'ba', true)
     return true
   }
 
@@ -72,17 +73,17 @@ export const useRoutes = defineStore('routes', () => {
     void load(r, dir)
   }
 
-  /** Najbliższe połączenia w kierunku; bez `force` nie częściej niż co 50 s. */
-  async function load(r: SavedRoute, dir: RouteDir = r.dir, force = false) {
+  /** Najbliższe połączenia w kierunku; bez `force` nie częściej niż co `maxAge` ms. */
+  async function load(r: SavedRoute, dir: RouteDir = r.dir, force = false, maxAge = 50_000) {
     const k = `${r.id}|${dir}`
-    if (loading.value[k] || (!force && results.value[k] && Date.now() - results.value[k].at < 50_000)) return
+    if (loading.value[k] || (!force && results.value[k] && Date.now() - results.value[k].at < maxAge)) return
     const { from, to } = ends(r, dir)
     // kilkanaście minut wstecz: opóźniony pociąg zostaje na karcie do faktycznego odjazdu
     const since = warsawNow(new Date(Date.now() - 20 * 60_000))
     loading.value[k] = true
     try {
       const res = await api.connections({ from: from.id, to: to.id, date: since.date, time: since.time, limit: 8, ...optionsToApi(r.options) })
-      results.value[k] = { at: Date.now(), connections: upcoming(res.connections, Date.now(), 3) }
+      results.value[k] = { at: Date.now(), connections: upcoming(res.connections, Date.now(), 6) }
     } catch (e) {
       results.value[k] = { at: Date.now(), connections: results.value[k]?.connections ?? [], error: (e as Error).message }
     } finally {
@@ -90,9 +91,12 @@ export const useRoutes = defineStore('routes', () => {
     }
   }
 
-  /** Odświeża pokazywane kierunki wszystkich tras (co minutę ze strony startowej). */
+  /**
+   * Odświeża pokazywane kierunki wszystkich tras (co minutę ze strony startowej), drugi kierunek co 5 minut —
+   * przełącznik kierunku pokazuje wtedy od razu zapisane połączenia, a świeże dochodzą w tle.
+   */
   async function refresh() {
-    await Promise.all(list.value.map((r) => load(r)))
+    await Promise.all(list.value.flatMap((r) => [load(r), load(r, r.dir === 'ab' ? 'ba' : 'ab', false, 300_000)]))
   }
 
   function windowsBody(r: SavedRoute) {

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Powiadomienia o obserwowanej trasie: dla każdego kierunku okienko czasu (dni tygodnia + godziny odjazdu).
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { ends, type SavedRoute, useRoutes } from '@/stores/routes'
+import { pushBlocked, pushSupport } from '@/utils/push'
 import { DAY_NAMES, DEFAULT_WINDOWS, windowError, type RouteDir, type RouteWindow } from '@/utils/routes'
 import TimeField from './TimeField.vue'
 
@@ -14,8 +15,18 @@ const draft = reactive<Record<RouteDir, RouteWindow & { on: boolean }>>({
   ab: { on: true, ...DEFAULT_WINDOWS.ab },
   ba: { on: true, ...DEFAULT_WINDOWS.ba },
 })
+/** powiadomienia niemożliwe w tej przeglądarce — komunikat w oknie zamiast błędu po „Zapisz” */
+const unavailable = ref<string | null>(null)
 watch(open, (isOpen) => {
   if (!isOpen) return
+  const support = pushSupport()
+  unavailable.value = support === 'ios-install'
+    ? 'Na iPhonie powiadomienia działają tylko w aplikacji: Udostępnij → Do ekranu początkowego, potem otwórz ją z ekranu.'
+    : support === 'unsupported'
+      ? 'Ta przeglądarka nie obsługuje powiadomień.'
+      : pushBlocked()
+        ? 'Powiadomienia są zablokowane dla tej strony. Zezwól na nie w ustawieniach przeglądarki (ikona obok adresu strony) i spróbuj ponownie.'
+        : null
   const saved = props.route.notify
   for (const d of DIRS) {
     const w = saved?.[d] ?? DEFAULT_WINDOWS[d]
@@ -34,14 +45,20 @@ function toggleDay(d: RouteDir, day: number) {
   draft[d].days = days.includes(day) ? days.filter((x) => x !== day) : [...days, day].sort((a, b) => a - b)
 }
 
-async function save() {
+/**
+ * Okno zamyka się od razu, zapis trwa w tle (kręci się dzwonek na karcie, wynik w pasku na dole).
+ * setNotify wołane jeszcze w obsłudze kliknięcia — Safari pyta o zgodę na powiadomienia tylko wtedy.
+ */
+function save() {
   const notify = anyOn.value
-    ? Object.fromEntries(DIRS.filter((d) => draft[d].on).map((d) => [d, { days: draft[d].days, start: draft[d].start, end: draft[d].end }]))
+    ? Object.fromEntries(DIRS.filter((d) => draft[d].on).map((d) => [d, { days: [...draft[d].days], start: draft[d].start, end: draft[d].end }]))
     : null
-  if (await routes.setNotify(props.route.id, notify)) open.value = false
+  void routes.setNotify(props.route.id, notify)
+  open.value = false
 }
-async function disable() {
-  if (await routes.setNotify(props.route.id, null)) open.value = false
+function disable() {
+  void routes.setNotify(props.route.id, null)
+  open.value = false
 }
 </script>
 
@@ -57,6 +74,7 @@ async function disable() {
         <p class="text-body-medium">
           Powiadomimy Cię, gdy pociąg z odjazdem w wybranych godzinach spóźni się co najmniej 5 minut albo zostanie odwołany. Pierwsze powiadomienia — godzinę przed początkiem okienka.
         </p>
+        <v-alert v-if="unavailable" color="warning-container" icon="notifications_off" density="compact" class="text-body-medium">{{ unavailable }}</v-alert>
         <section v-for="d in DIRS" :key="d" class="dir-sec" :class="{ off: !draft[d].on }">
           <div class="dir-head">
             <span class="min-w-0">
@@ -87,8 +105,7 @@ async function disable() {
           color="primary"
           size="large"
           class="px-6"
-          :loading="busy"
-          :disabled="(!anyOn && !active) || !!errors.ab || !!errors.ba"
+          :disabled="busy || (!anyOn && !active) || (anyOn && !!unavailable) || !!errors.ab || !!errors.ba"
           @click="save"
         >
           {{ anyOn ? 'Zapisz' : 'Wyłącz' }}

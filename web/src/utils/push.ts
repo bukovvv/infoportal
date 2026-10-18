@@ -20,16 +20,32 @@ function keyBytes(base64url: string): Uint8Array {
 /** Subskrypcja tej przeglądarki (pyta o zgodę przy pierwszym razie). Rzuca Error z komunikatem dla pasażera. */
 async function subscription(): Promise<PushSubscription> {
   const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission
-  if (permission !== 'granted') {
-    throw new Error('Powiadomienia są zablokowane. Zezwól na nie w ustawieniach przeglądarki dla tej strony.')
-  }
-  const registration = await navigator.serviceWorker.register('/sw.js')
-  await navigator.serviceWorker.ready
+  if (permission !== 'granted') throw new Error(BLOCKED)
+  // rejestracja i usługa push przeglądarki potrafią nie odpowiadać — bez limitu przycisk kręciłby się bez końca
+  const registration = await withinTime(navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready))
   const existing = await registration.pushManager.getSubscription()
   if (existing) return existing
   const { key } = await api.push.key()
-  return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) as BufferSource })
+  // przeglądarka zgłasza błędy po angielsku — pasażerowi pokazujemy polski komunikat
+  return withinTime(registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(key) as BufferSource }))
+    .catch((e: unknown) => {
+      if (e instanceof Error && e.message === TIMEOUT) throw e
+      throw new Error((e as DOMException)?.name === 'NotAllowedError' ? BLOCKED : 'Nie udało się włączyć powiadomień w tej przeglądarce. Spróbuj ponownie za chwilę.')
+    })
 }
+
+const BLOCKED = 'Powiadomienia są zablokowane. Zezwól na nie w ustawieniach przeglądarki dla tej strony.'
+const TIMEOUT = 'Przeglądarka nie odpowiada przy włączaniu powiadomień. Spróbuj ponownie za chwilę.'
+
+function withinTime<T>(promise: Promise<T>, ms = 15_000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(TIMEOUT)), ms)),
+  ])
+}
+
+/** Czy powiadomienia są zablokowane w ustawieniach przeglądarki (wtedy nie pytamy, tylko podpowiadamy). */
+export const pushBlocked = () => typeof Notification !== 'undefined' && Notification.permission === 'denied'
 
 export async function watchJourney(id: string, connection: Connection) {
   const sub = await subscription()
