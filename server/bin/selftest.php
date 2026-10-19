@@ -116,6 +116,13 @@ $exp = $rt->apply($trip, 1500);
 check('RT: brak danych przed pierwszą aktualizacją', $exp['stops'][0]['depDelay'] === null);
 check('RT: opóźnienie przeniesione dalej', $exp['stops'][2]['arrDelay'] === 180 && $exp['stops'][3]['arr'] === 2980);
 check('RT: bieżące opóźnienie', $exp['delay'] === 180 && $exp['source'] === 'rt');
+$early = (new Realtime(['T@20261001' => ['c' => 0, 's' => ['1' => [-3000, null, 0]]]]))->apply($trip, 1500);
+check('RT: przyjazd przed czasem nie przyspiesza odjazdu', $early['stops'][1]['arrDelay'] === -3000 && $early['stops'][1]['depDelay'] === 0
+    && $early['stops'][3]['arrDelay'] === 0 && $early['stops'][3]['arr'] === 2800);
+$ahead = (new Realtime(['T@20261001' => ['c' => 0, 's' => ['2' => [null, -600, 0]]]]))->apply($trip, 1500);
+check('RT: prognoza odjazdu przed czasem = planowo', $ahead['stops'][2]['depDelay'] === 0);
+$gone = (new Realtime(['T@20261001' => ['c' => 0, 's' => ['1' => [0, -60, 0]]]]))->apply($trip, 1900);
+check('RT: faktyczny odjazd przed czasem zostaje', $gone['stops'][1]['depDelay'] === -60);
 $gps = (new Realtime([], ['T@20261001' => 4]))->apply($trip, 1700);
 check('GPS: opóźnienie tylko na przyszłych postojach', $gps['stops'][0]['depDelay'] === null && $gps['stops'][2]['arrDelay'] === 240);
 

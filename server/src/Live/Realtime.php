@@ -69,7 +69,14 @@ final class Realtime
             foreach ($trip['stops'] as $stop) {
                 $u = $updates[(string) $stop[D::SEQ]] ?? null;
                 $arrDelay = $u !== null ? ($u[0] ?? $u[1] ?? $last) : $last;
-                $depDelay = $u !== null ? ($u[1] ?? $u[0] ?? $last) : $last;
+                $depDelay = $u[1] ?? null;
+                if ($depDelay === null) {
+                    // pociąg nie odjeżdża przed czasem: przyjazd przed czasem (np. przed długim postojem) nie przyspiesza odjazdu
+                    $depDelay = $arrDelay === null ? null : max(0, $arrDelay);
+                } elseif ($depDelay < 0 && $stop[D::DEP] !== null && $stop[D::DEP] + $depDelay > $now) {
+                    // prognoza odjazdu przed czasem — jeszcze nie odjechał, więc odjedzie planowo
+                    $depDelay = 0;
+                }
                 if ($u !== null) {
                     $last = $depDelay;
                 }
