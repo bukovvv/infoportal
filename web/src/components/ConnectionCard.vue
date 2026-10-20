@@ -82,9 +82,10 @@ function watchJourney() {
           <span class="t" :class="{ late: arrDelay >= 2 }">{{ clock(arrDelay >= 2 ? last.expectedArrival : c.arrival) }}<sup v-if="nextDay(arrDelay >= 2 ? last.expectedArrival : c.arrival)" class="plus-day">+1</sup></span>
           <span v-if="arrDelay >= 2" class="was">{{ clock(c.arrival) }}</span>
         </div>
-        <div class="text-right">
-          <div class="dur tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
-          <div class="text-body-small muted tnum">{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}<template v-if="km"> · {{ km }}</template></div>
+        <div class="dur tnum">{{ duration(c.durationMinutes + Math.max(0, arrDelay - depDelay)) }}</div>
+        <div class="conn-facts text-body-small muted tnum">
+          <span>{{ c.transfers ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')}` : 'bezpośrednio' }}</span>
+          <span v-if="km">{{ km }}</span>
         </div>
       </div>
       <div class="strip" aria-hidden="true">
@@ -208,14 +209,17 @@ function watchJourney() {
 .conn { overflow: hidden; }
 .conn.highlight { box-shadow: 0 0 0 2px rgb(var(--v-theme-primary)); }
 .conn-main { display: grid; gap: 10px; padding: 14px 16px 6px 18px; }
-.conn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+/* godziny i czas podróży w jednym rzędzie (od 360 px), przesiadki i km pod nimi — nic nie łamie godzin */
+.conn-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 12px; }
 .conn-times { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
 .conn-times .t { font-size: 26px; line-height: 32px; font-weight: 800; letter-spacing: -0.3px; }
 .conn-times .t.late { color: rgb(var(--v-theme-warning)); }
 .conn-times .was { font-size: 14px; }
 .conn-times .v-icon { align-self: center; }
-.dur { font-size: 16px; font-weight: 800; }
-.conn-top .text-right { white-space: nowrap; }
+.dur { align-self: start; margin-top: 4px; font-size: 16px; font-weight: 800; white-space: nowrap; }
+.conn-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 6px; }
+.conn-facts > span { white-space: nowrap; }
+.conn-facts > span + span::before { content: '·'; margin-right: 6px; }
 .strip { display: flex; align-items: center; gap: 6px; }
 .strip-seg { height: 6px; border-radius: 3px; flex-basis: 0; }
 .strip-stop, .strip-end { flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgb(var(--v-theme-on-surface-variant)); }
@@ -284,4 +288,5 @@ button.leg-facts:focus-visible { outline: 3px solid rgb(var(--v-theme-primary));
   border-radius: var(--kw-r-m); background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-size: 14px; font-weight: 700;
 }
 @media (max-width: 480px) { .conn-times .t { font-size: 24px; } }
+@media (max-width: 400px) { .conn-times { column-gap: 6px; } .conn-times .t { font-size: 22px; } }
 </style>
