@@ -52,6 +52,10 @@ function partnerTickets(leg: Leg) {
 /** „102 km”, przy autobusie zastępczym „ok. 45 km”; brak w starszych zapisanych podróżach. */
 const km = computed(() => (c.value.distanceKm ? `${c.value.distanceApprox ? 'ok. ' : ''}${c.value.distanceKm} km` : ''))
 const intercity = computed(() => c.value.legs.some((l) => isIntercity(l.agency)))
+/** „12 przystanków po drodze”, „bez zatrzymań po drodze” */
+const stopsLabel = (leg: Leg) => (leg.stopsBetween
+  ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze`
+  : 'bez zatrzymań po drodze')
 const legMinutes = (leg: Leg) => Math.max(1, (new Date(leg.arrival).getTime() - new Date(leg.departure).getTime()) / 60_000)
 /** Odliczanie do odjazdu (z opóźnieniem) w ciągu najbliższej godziny. */
 const countdown = computed(() => {
@@ -153,20 +157,20 @@ function watchJourney() {
                   </template>
                 </div>
               </div>
-              <v-btn
-                v-if="leg.stops?.length"
-                variant="text"
-                size="small"
-                class="stops-btn"
-                :append-icon="openLegs.has(leg.key) ? 'keyboard_arrow_up' : 'keyboard_arrow_down'"
-                :aria-expanded="openLegs.has(leg.key)"
-                @click="toggleLeg(leg.key)"
+              <component
+                :is="leg.stops?.length ? 'button' : 'div'"
+                :type="leg.stops?.length ? 'button' : undefined"
+                class="leg-facts"
+                :aria-expanded="leg.stops?.length ? openLegs.has(leg.key) : undefined"
+                @click="leg.stops?.length && toggleLeg(leg.key)"
               >
-                {{ leg.stopsBetween }} {{ plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków') }} po drodze<template v-if="leg.distanceKm"> · {{ leg.distanceKm }} km</template>
-              </v-btn>
-              <div v-else class="text-body-small muted mt-1">
-                {{ leg.stopsBetween ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze` : 'bez zatrzymań po drodze' }}<template v-if="leg.distanceKm"> · {{ leg.distanceKm }} km</template>
-              </div>
+                <span class="facts">
+                  <span><v-icon icon="location_on" size="16" />{{ stopsLabel(leg) }}</span>
+                  <span v-if="leg.distanceKm"><v-icon icon="straighten" size="16" />{{ leg.isBus ? 'ok. ' : '' }}{{ leg.distanceKm }} km</span>
+                  <span><v-icon icon="schedule" size="16" />{{ duration(legMinutes(leg)) }}</span>
+                </span>
+                <v-icon v-if="leg.stops?.length" :icon="openLegs.has(leg.key) ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" size="20" class="chev" />
+              </component>
             </div>
           </div>
           <template v-if="openLegs.has(leg.key)">
@@ -257,7 +261,18 @@ function watchJourney() {
 }
 .leg-drawing { display: flex; align-items: flex-end; gap: 1px; overflow-x: auto; }
 .leg-drawing img { flex: none; display: block; max-width: none; }
-.stops-btn { margin: 2px 0 -6px -12px; }
+/* przystanki · km · czas odcinka: kafelek, który się zawija zamiast ucinać; z listą stacji — rozwija ją */
+.leg-facts {
+  display: flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 8px; padding: 6px 8px 6px 12px;
+  border: 0; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); color: rgb(var(--v-theme-on-surface-variant));
+  font: inherit; font-size: 14px; line-height: 20px; text-align: left;
+}
+button.leg-facts { cursor: pointer; }
+button.leg-facts:hover { background: rgb(var(--v-theme-surface-container-high)); }
+button.leg-facts:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+.facts { display: flex; flex-wrap: wrap; gap: 2px 14px; min-width: 0; }
+.facts > span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.chev { flex: none; color: rgb(var(--v-theme-primary)); }
 .leg.mid .leg-t { font-weight: 400; padding-top: 6px; color: rgb(var(--v-theme-on-surface-variant)); }
 .leg.mid .leg-rail::before { top: 0; bottom: -14px; }
 .leg.mid .leg-rail i { left: 8px; top: 12px; width: 8px; height: 8px; border-width: 0; background: var(--leg); }
