@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { Connection, Leg } from '@/api/types'
+import { useNotices } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
@@ -8,6 +9,7 @@ import { agencyCode, agencyName, isIntercity, isPartner } from '@/utils/agency'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
 import { unitLabel, vehicleTitle } from '@/utils/vehicle'
+import NoticeStrip from './NoticeStrip.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
 import TrainChip from './TrainChip.vue'
@@ -15,6 +17,7 @@ import TrainChip from './TrainChip.vue'
 // now: odliczanie „za X min” (bez niego karta pokazuje same godziny); highlight: wyróżnienie najbliższego połączenia
 const props = defineProps<{ connection: Connection; now?: number; highlight?: boolean }>()
 const journeys = useJourneys()
+const notices = useNotices()
 const ui = useUi()
 const expanded = ref(false)
 /** odcinki z rozwiniętą listą stacji pośrednich */
@@ -25,6 +28,8 @@ function toggleLeg(key: string) {
   openLegs.value = next
 }
 const c = computed(() => props.connection)
+/** komunikaty o pociągach, stacjach lub liniach tego połączenia */
+const related = computed(() => notices.forConnection(c.value))
 const first = computed(() => c.value.legs[0])
 const last = computed(() => c.value.legs[c.value.legs.length - 1])
 const depDelay = computed(() => first.value.departureDelay ?? 0)
@@ -111,6 +116,7 @@ function watchJourney() {
           <StatusTag v-if="first.departureDelay !== null" :delay="first.departureDelay" />
         </span>
       </div>
+      <NoticeStrip :notices="related" />
     </div>
     <div class="conn-actions">
       <v-btn variant="text" :prepend-icon="expanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" :aria-expanded="expanded" @click="expanded = !expanded">Szczegóły</v-btn>

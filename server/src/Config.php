@@ -35,6 +35,8 @@ final class Config
             'storage' => $storage,
             'gtfs_db' => $storage . '/gtfs.sqlite',
             'app_db' => $storage . '/app.sqlite',
+            // punktualność kursów (bin/refresh-live.php co kwadrans) — poza codzienną kopią app.sqlite
+            'stats_db' => $storage . '/stats.sqlite',
             'live_file' => $storage . '/live.json',
             'rt_file' => $storage . '/rt.json',
             'rt_meta_file' => $storage . '/rt-meta.json',

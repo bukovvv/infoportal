@@ -10,6 +10,7 @@ import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle 
 import { clock, dayLabel } from '@/utils/format'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
+import PunctualityCard from './PunctualityCard.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
 import TrainTimeline from './TrainTimeline.vue'
@@ -150,6 +151,7 @@ defineExpose({ trip })
         </span>
       </p>
       <VehicleCard v-if="trip.vehicle" :vehicle="trip.vehicle" class="divider" />
+      <PunctualityCard :number="trip.number" :agency="trip.agency ?? 'KW'" :trimmed="trip.trimmed" class="divider" />
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />
       </div>

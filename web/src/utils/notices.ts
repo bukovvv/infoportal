@@ -1,4 +1,5 @@
-import type { Notice, Severity, StationRef } from '@/api/types'
+import type { Connection, Notice, Severity, StationRef } from '@/api/types'
+import { isPartner } from './agency'
 import { normalize, splitNumbers } from './format'
 import { LEGEND, PKM_LINES, type SchemeLine } from './scheme'
 
@@ -23,6 +24,15 @@ export function aboutTrip(n: Notice, numbers: string[], stops: Pick<StationRef, 
   if (stops.some((s) => n.stations.includes(s.id))) return true
   return noticeLines(n).some((l) => stops.filter((s) => l.stations.includes(s.name)).length >= 2)
 }
+
+/** Komunikat dotyczy połączenia: któregoś odcinka KW (POLREGIO i PKP Intercity pomijamy — komunikaty dotyczą KW, jak na stronie pociągu). */
+export function aboutConnection(n: Notice, c: Pick<Connection, 'legs'>): boolean {
+  return c.legs.some((leg) => !isPartner(leg.agency) && aboutTrip(n, splitNumbers(leg.number), [leg.from, ...(leg.stops ?? []), leg.to]))
+}
+
+/** Najpierw poważne utrudnienia, potem utrudnienia, na końcu informacje. */
+const RANK: Record<Severity, number> = { danger: 0, warning: 1, info: 2 }
+export const bySeverity = (a: Notice, b: Notice) => RANK[a.severity] - RANK[b.severity]
 
 /** „Dotyczy” ułożone z wybranych linii i stacji (podpowiedź pola „Linia lub odcinek” w panelu). */
 export function scopeText(lines: string[], stationNames: string[]): string {

@@ -18,6 +18,7 @@ use KwInfo\Http\RawResponse;
 use KwInfo\Http\Response;
 use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
+use KwInfo\Stats\PunctualityRepository;
 use KwInfo\Vehicles\VehicleRepository;
 
 final class PublicApi
@@ -488,6 +489,18 @@ final class PublicApi
     public function status(): Response
     {
         return new Response(StatusService::build());
+    }
+
+    /** Punktualność pociągu z ostatnich 30 dni (GET /punctuality?number=77610/1&agency=KW). */
+    public function punctuality(): Response
+    {
+        $number = trim((string) ($_GET['number'] ?? ''));
+        $agency = (string) ($_GET['agency'] ?? 'KW');
+        if (preg_match('/^\d{3,6}(\/\d{1,6})*$/', $number) !== 1 || preg_match('/^[A-Z]{2,4}$/', $agency) !== 1) {
+            throw new ApiException('Podaj numer pociągu, np. 77600.', 422);
+        }
+
+        return new Response((new PunctualityRepository())->summary($number, $agency), maxAge: 900);
     }
 
     public function notices(): Response

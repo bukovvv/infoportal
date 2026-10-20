@@ -2,12 +2,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Notice, Severity } from '@/api/types'
+import NoticeBody from '@/components/NoticeBody.vue'
+import NoticeItem from '@/components/NoticeItem.vue'
 import { useAdmin } from '@/stores/admin'
 import { useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { dateTime } from '@/utils/format'
+import { dateTime, plural } from '@/utils/format'
 import { buildNotice, requiredFields, templateKinds, type TemplateInput } from '@/utils/noticeTemplates'
-import { NOTICE_LINES, detectStations, detectTrains, lineTitle, noticeLines, scopeText } from '@/utils/notices'
+import { NOTICE_LINES, noticeIcon, noticeLabel, detectStations, detectTrains, lineTitle, noticeLines, scopeText } from '@/utils/notices'
 
 const admin = useAdmin()
 const ui = useUi()
@@ -48,6 +50,27 @@ watch(() => [form.lines.join(), form.stations.join(), stations.loaded], () => {
   if (!form.line.trim() || form.line === autoLine || form.line === NETWORK) form.line = auto
   autoLine = auto
 })
+
+// podgląd: komunikat z formularza tak, jak zobaczy go pasażer (skrót na starcie / tablicy i strona komunikatu)
+const previewOpen = ref(false)
+const preview = computed<Notice>(() => ({
+  id: 0, title: form.title.trim() || 'Tytuł komunikatu', body: form.body.trim() || 'Treść komunikatu', line: form.line.trim() || NETWORK,
+  severity: form.severity, trains: form.trains.map(String), stations: [...form.stations], lines: [...form.lines],
+  startsAt: form.startsAt || null, endsAt: form.endsAt || null, active: form.active,
+  createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+}))
+
+/** Nowy komunikat na wzór istniejącego (np. kolejny etap tych samych prac) — bez dat publikacji, do sprawdzenia przed publikacją. */
+function duplicate(n: Notice) {
+  reset()
+  Object.assign(form, {
+    title: n.title, body: n.body, line: n.line, severity: n.severity, trains: [...n.trains], stations: [...n.stations], lines: [...n.lines],
+    startsAt: '', endsAt: '', active: true,
+  })
+  autoLine = n.line
+  ui.notify('Skopiowano do formularza. Zmień daty i treść, potem opublikuj.')
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const detectMessage = ref<string | null>(null)
 /** Pociągi i stacje wymienione w tytule i treści (np. po wklejeniu aktualności przewoźnika) — dopisuje do wybranych. */
@@ -236,6 +259,7 @@ function generate() {
           <v-alert v-if="error" color="error-container" icon="error" density="compact">{{ error }}</v-alert>
           <div class="d-flex flex-wrap ga-2">
             <v-btn type="submit" prepend-icon="check" :loading="saving">{{ editingId ? 'Zapisz zmiany' : 'Opublikuj' }}</v-btn>
+            <v-btn variant="outlined" prepend-icon="visibility" :disabled="!form.title && !form.body" @click="previewOpen = true">Podgląd</v-btn>
             <v-btn v-if="editingId" variant="outlined" @click="reset">Anuluj</v-btn>
           </div>
         </v-form>
@@ -266,12 +290,40 @@ function generate() {
           </v-card-text>
           <v-card-actions>
             <v-btn variant="text" prepend-icon="edit" @click="edit(n)">Edytuj</v-btn>
+            <v-btn variant="text" prepend-icon="content_copy" @click="duplicate(n)">Duplikuj</v-btn>
             <v-btn variant="text" color="error" prepend-icon="delete" @click="toDelete = n">Usuń</v-btn>
           </v-card-actions>
         </v-card>
         <v-empty-state v-if="!list.length" icon="campaign" title="Brak komunikatów" text="Pierwszy komunikat przygotujesz w formularzu obok." />
       </div>
     </section>
+
+    <v-dialog v-model="previewOpen" max-width="640" scrollable>
+      <v-card color="surface-container-high">
+        <v-card-item prepend-icon="visibility">
+          <v-card-title>Podgląd komunikatu</v-card-title>
+          <v-card-subtitle>Tak zobaczy go pasażer{{ form.active ? '' : ' (komunikat ukryty — nie zostanie pokazany)' }}</v-card-subtitle>
+        </v-card-item>
+        <v-card-text class="d-grid">
+          <div class="text-label-large muted">Na starcie, tablicy odjazdów i przy pociągu</div>
+          <div class="preview-box"><NoticeItem :notice="preview" compact /></div>
+          <div class="text-label-large muted">Strona komunikatu</div>
+          <div class="preview-box preview-page">
+            <span class="preview-badge" :class="preview.severity"><v-icon :icon="noticeIcon[preview.severity]" size="18" />{{ noticeLabel[preview.severity] }}</span>
+            <h3 class="text-headline-small">{{ preview.title }}</h3>
+            <div class="text-body-medium muted"><v-icon icon="route" size="18" class="mr-1" />{{ preview.line }}</div>
+            <NoticeBody :body="preview.body" />
+            <div v-if="preview.trains.length || preview.lines.length || preview.stations.length" class="text-body-small muted">
+              Przypięty do: {{ [scopeOf(preview), preview.trains.length ? `${preview.trains.length} ${plural(preview.trains.length, 'pociąg', 'pociągi', 'pociągów')}` : ''].filter(Boolean).join(' · ') }}
+            </div>
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="previewOpen = false">Zamknij</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog :model-value="!!toDelete" max-width="420" @update:model-value="toDelete = null">
       <v-card color="surface-container-high">
@@ -302,6 +354,16 @@ function generate() {
 .tpl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .span-2 { grid-column: 1 / -1; }
 .pre { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.preview-box { overflow: hidden; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
+.preview-page { display: grid; gap: 12px; justify-items: start; padding: 20px; }
+.preview-page > * { justify-self: stretch; }
+.preview-page > .preview-badge { justify-self: start; }
+.preview-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 20px;
+  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
+}
+.preview-badge.warning { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
+.preview-badge.danger { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
 .swatch { width: 24px; height: 6px; margin-right: 12px; border-radius: 3px; }
 .notice-card { border-left: 4px solid rgb(var(--v-theme-outline-variant)); }
 .notice-card.danger { border-left-color: rgb(var(--v-theme-error)); }

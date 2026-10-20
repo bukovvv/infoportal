@@ -14,6 +14,7 @@ use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
 use KwInfo\Push\PushRepository;
 use KwInfo\Push\WebPush;
+use KwInfo\Stats\PunctualityRepository;
 
 $errors = [];
 $warnings = [];
@@ -90,6 +91,13 @@ if ($age !== null) {
         echo "[INFO]  GPS wyłączony — pozycje wyliczane z rozkładu i opóźnień PLK" . PHP_EOL;
     }
     $line('GTFS-RT (opóźnienia PKP PLK)', (bool) ($live['sources']['rt']['ok'] ?? false), 'GTFS-RT: ' . ($live['sources']['rt']['error'] ?? 'brak danych'), true);
+}
+
+try {
+    $stats = (new PunctualityRepository())->info();
+    echo '[INFO]  Punktualność: ' . $stats['count'] . ' kursów' . ($stats['since'] !== null ? ' od ' . Clock::isoDate($stats['since']) : ' (zapis co kwadrans z refresh-live.php)') . PHP_EOL;
+} catch (Throwable $e) {
+    $line('Statystyki punktualności (stats.sqlite)', false, 'SQLite: ' . $e->getMessage(), true);
 }
 
 $backups = glob(Config::path('storage') . '/backups/app-*.sqlite') ?: [];

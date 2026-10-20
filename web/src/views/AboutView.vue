@@ -17,6 +17,7 @@ type Part = string | [string, string]
 const sources: { title: string; parts: Part[] }[] = [
   { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Wyszukiwarka i tablice odjazdów uwzględniają też pociągi POLREGIO i PKP Intercity na stacjach w Wielkopolsce (bez mapy).'] },
   { title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
+  { title: 'Punktualność', parts: ['Liczona z tych samych opóźnień PKP PLK: na stronie pociągu odsetek kursów z ostatnich 30 dni, które dojechały na stację końcową z opóźnieniem do 5 min.'] },
   { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
   { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
   { title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] },

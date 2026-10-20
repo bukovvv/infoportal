@@ -26,6 +26,8 @@ use KwInfo\Live\Realtime;
 use KwInfo\Push\JourneyWatcher;
 use KwInfo\Push\RouteWatcher;
 use KwInfo\Push\WebPush;
+use KwInfo\Stats\PunctualityRecorder;
+use KwInfo\Stats\PunctualityRepository;
 use KwInfo\Vehicles\Vagonweb;
 use KwInfo\Vehicles\VehicleRepository;
 
@@ -423,6 +425,31 @@ check('push: adres bez sztuczek z hostem', WebPush::allowedEndpoint('https://wns
     && !WebPush::allowedEndpoint('https://evil.com\\@fcm.googleapis.com/x') && !WebPush::allowedEndpoint('https://u@fcm.googleapis.com/x')
     && !WebPush::allowedEndpoint('https://fcm.googleapis.com:8443/x') && !WebPush::allowedEndpoint('https://fcm.googleapis.com.evil.com/x')
     && !WebPush::allowedEndpoint("https://fcm.googleapis.com/x\ny") && !WebPush::allowedEndpoint('https://fcm.googleapis.com/a\\b'));
+
+// --- punktualność: wynik kursu po dojeździe, odwołanie, podsumowanie
+$pTrip = ['key' => 'T1@20261020', 'tripId' => 'T1', 'serviceDate' => 20261020, 'offset' => 0, 'number' => '77610/1', 'agency' => 'KW', 'routeId' => 'KW_PKM2',
+    'stops' => [[1, 'A', null, 36000, 0.0, null, null, 0, 0], [2, 'B', 36600, 36660, 9.0, null, null, 0, 0], [3, 'C', 37200, null, 18.0, null, null, 0, 0]]];
+$pRt = new Realtime(['T1@20261020' => ['s' => ['1' => [null, 60], '2' => [240, 300], '3' => [420, null]]]]);
+$early = PunctualityRecorder::outcome($pTrip, $pRt->apply($pTrip, 37500), 37500);
+$done = PunctualityRecorder::outcome($pTrip, $pRt->apply($pTrip, 38300), 38300);
+$cancelledRt = new Realtime(['T1@20261020' => ['c' => 1]]);
+check('punktualność: zapis dopiero 10 min po opóźnionym przyjeździe', $early === null && $done !== null && $done['arrival_delay'] === 420
+    && $done['departure_delay'] === 60 && $done['max_delay'] === 420 && $done['number'] === '77610/1' && $done['scheduled_departure'] === 36000);
+check('punktualność: odwołany kurs po planowym przyjeździe', PunctualityRecorder::outcome($pTrip, $cancelledRt->apply($pTrip, 37000), 37000) === null
+    && PunctualityRecorder::outcome($pTrip, $cancelledRt->apply($pTrip, 37900), 37900)['cancelled'] === 1);
+$pSum = PunctualityRepository::summarize([
+    ['service_date' => 20261018, 'arrival_delay' => 120, 'cancelled' => 0, 'skipped' => 0], ['service_date' => 20261019, 'arrival_delay' => 359, 'cancelled' => 0, 'skipped' => 0],
+    ['service_date' => 20261019, 'arrival_delay' => 600, 'cancelled' => 0, 'skipped' => 0], ['service_date' => 20261020, 'arrival_delay' => null, 'cancelled' => 1, 'skipped' => 0],
+    ['service_date' => 20261020, 'arrival_delay' => -60, 'cancelled' => 0, 'skipped' => 0], ['service_date' => 20261020, 'arrival_delay' => -3300, 'cancelled' => 0, 'skipped' => 0],
+], 30);
+check('punktualność: numer bez nazwy pociągu', PunctualityRecorder::number('1804/5 Bolesław Prus') === '1804/5' && PunctualityRecorder::number('77600') === '77600');
+check('punktualność: na czas do 5:59, odwołany liczy się jako nie na czas, przyjazd godzinę przed czasem pominięty', $pSum['runs'] === 5 && $pSum['onTime'] === 3 && $pSum['late'] === 1 && $pSum['cancelled'] === 1
+    && $pSum['share'] === 60 && $pSum['maxDelay'] === 10 && $pSum['avgDelay'] === 4 && $pSum['recent'][3] === ['date' => '2026-10-20', 'delay' => null, 'cancelled' => true]);
+$statsDb = sys_get_temp_dir() . '/kw-selftest-stats-' . bin2hex(random_bytes(4)) . '.sqlite';
+$statsRepo = new PunctualityRepository(PunctualityRepository::connect($statsDb));
+check('punktualność: bez podwójnego zapisu kursu', $statsRepo->insert([$done]) === 1 && $statsRepo->insert([$done]) === 0 && isset($statsRepo->recordedKeys(20261020)['T1@20261020']));
+unset($statsRepo);
+array_map(static fn (string $f) => @unlink($f), [$statsDb, $statsDb . '-wal', $statsDb . '-shm']);
 
 // --- komunikaty: czysty tekst, dziennik panelu, limit zapytań
 check('komunikat: bez znaczników HTML i znaków sterujących', NoticeRepository::plain("Opóźnienie <5 min <b>x</b><script>alert(1)</script> a < b\u{200B}\x07!\r\n\r\n\r\n\r\nDalej", 500, true) === "Opóźnienie <5 min xalert(1) a < b!\n\nDalej"

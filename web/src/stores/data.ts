@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { api } from '@/api/client'
-import type { Live, LiveTrain, Notice, Station, StationRef, Status } from '@/api/types'
+import type { Connection, Live, LiveTrain, Notice, Station, StationRef, Status } from '@/api/types'
 import { normalize } from '@/utils/format'
 import { stationByKurs90 } from '@/utils/kurs90'
-import { aboutStation, aboutTrip } from '@/utils/notices'
+import { aboutConnection, aboutStation, aboutTrip, bySeverity } from '@/utils/notices'
 
 /** Uruchamia funkcję od razu, potem cyklicznie — kolejne odświeżenia wstrzymuje, gdy karta jest w tle. */
 function poll(fn: () => Promise<void>, everyMs: number) {
@@ -97,10 +97,17 @@ export const useNotices = defineStore('notices', () => {
   const forStation = (station: Pick<StationRef, 'id' | 'name'>) => list.value.filter((n) => aboutStation(n, station))
   const forLine = (lineId: string) => list.value.filter((n) => n.lines.includes(lineId))
   const forTrip = (numbers: string[], stops: Pick<StationRef, 'id' | 'name'>[]) => list.value.filter((n) => aboutTrip(n, numbers, stops))
+  const forConnection = (c: Pick<Connection, 'legs'>) => list.value.filter((n) => aboutConnection(n, c)).sort(bySeverity)
+  /** komunikaty wymieniające pociąg z numerem (tablica odjazdów: znak przy rzędzie) */
+  const byTrain = computed(() => {
+    const map = new Map<string, Notice[]>()
+    for (const n of [...list.value].sort(bySeverity)) for (const t of n.trains) map.set(t, [...(map.get(t) ?? []), n])
+    return map
+  })
   function start() {
     if (started) return
     started = true
     poll(async () => { list.value = await api.notices(); loaded.value = true }, 120_000)
   }
-  return { list, loaded, alerts, forNumbers, forStation, forLine, forTrip, start }
+  return { list, loaded, alerts, forNumbers, forStation, forLine, forTrip, forConnection, byTrain, start }
 })

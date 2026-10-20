@@ -2,11 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTheme } from 'vuetify'
+import NoticeBody from '@/components/NoticeBody.vue'
 import TrainChip from '@/components/TrainChip.vue'
 import { useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { ago, clock, dateTime, dayLabel } from '@/utils/format'
-import { bodyBlocks, noticeIcon, noticeLabel, noticeLines, plainBody } from '@/utils/notices'
+import { noticeIcon, noticeLabel, noticeLines, plainBody } from '@/utils/notices'
 import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
@@ -16,7 +17,6 @@ const stations = useStations()
 const theme = useTheme()
 const colorOf = (l: { color: string; dark?: string }) => (theme.global.name.value === 'dark' && l.dark) || l.color
 const notice = computed(() => notices.list.find((n) => String(n.id) === route.params.id) ?? null)
-const blocks = computed(() => (notice.value ? bodyBlocks(notice.value.body) : []))
 const lines = computed(() => (notice.value ? noticeLines(notice.value) : []))
 const places = computed(() => (notice.value?.stations ?? []).flatMap((id) => stations.byId.get(id) ?? []))
 onMounted(() => { void stations.load() })
@@ -87,13 +87,8 @@ async function share() {
         </div>
       </dl>
 
-      <section class="card body">
-        <template v-for="(b, i) in blocks" :key="i">
-          <p v-if="b.kind === 'p'" class="text-body-large">{{ b.text }}</p>
-          <ul v-else class="text-body-large">
-            <li v-for="(item, j) in b.items" :key="j">{{ item }}</li>
-          </ul>
-        </template>
+      <section class="card">
+        <NoticeBody :body="notice.body" />
       </section>
 
       <section v-if="lines.length || places.length" class="card">
@@ -152,10 +147,6 @@ async function share() {
 .fact dd { margin: 0; overflow-wrap: anywhere; }
 .card { display: grid; gap: 8px; padding: 20px 24px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .trains { gap: 10px; }
-.body { gap: 12px; }
-.body p, .body li { white-space: pre-line; text-wrap: pretty; }
-.body ul { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
-.body li::marker { color: rgb(var(--v-theme-primary)); }
 .swatch { flex: none; width: 16px; height: 5px; margin-right: 8px; border-radius: 3px; }
 .line-badge { margin-right: 6px; padding: 0 6px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 800; line-height: 16px; }
 .empty { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; text-align: center; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }

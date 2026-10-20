@@ -19,6 +19,7 @@ $router->get('/connections', [$api, 'connections']);
 $router->get('/trains', [$api, 'searchTrains']);
 $router->get('/trains/{number}', [$api, 'trainByNumber']);
 $router->get('/trips/{key}', [$api, 'trip']);
+$router->get('/punctuality', [$api, 'punctuality']);
 $router->get('/network', [$api, 'network']);
 $router->get('/live', [$api, 'live']);
 $router->get('/status', [$api, 'status']);

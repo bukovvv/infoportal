@@ -285,6 +285,25 @@ export interface Notice {
   updatedAt: string
 }
 
+/** Punktualność pociągu z ostatnich dni (GET /punctuality) — opóźnienie na stacji końcowej, na czas = do 5 min. */
+export interface Punctuality {
+  number: string
+  agency: string
+  days: number
+  runs: number
+  onTime: number
+  late: number
+  cancelled: number
+  /** odsetek kursów na czas (odwołany = nie na czas); brak kursów — null */
+  share: number | null
+  avgDelay: number | null
+  maxDelay: number | null
+  /** ostatnie kursy od najstarszego; delay w minutach (przed czasem = 0), odwołany — null */
+  recent: { date: string; delay: number | null; cancelled: boolean }[]
+  /** od kiedy zbieramy dane (RRRR-MM-DD) */
+  since: string | null
+}
+
 export interface AdminLogEntry {
   id: number
   at: string

@@ -10,6 +10,7 @@ use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\LiveBuilder;
 use KwInfo\Push\JourneyWatcher;
 use KwInfo\Push\RouteWatcher;
+use KwInfo\Stats\PunctualityRecorder;
 
 if (PHP_SAPI !== 'cli') {
     exit(1);
@@ -39,6 +40,14 @@ try {
         (new RouteWatcher($tt, $log))->run();
     } catch (Throwable $exception) {
         fwrite(STDERR, '[BŁĄD powiadomień o trasach] ' . $exception->getMessage() . PHP_EOL);
+    }
+    // punktualność dojechanych kursów — co kwadrans (albo z --stats), bez osobnego CRON-a
+    if ((int) date('i') % 15 === 7 || in_array('--stats', $argv, true)) {
+        try {
+            (new PunctualityRecorder($tt, null, $log))->run();
+        } catch (Throwable $exception) {
+            fwrite(STDERR, '[BŁĄD punktualności] ' . $exception->getMessage() . PHP_EOL);
+        }
     }
     exit(0);
 } catch (Throwable $exception) {

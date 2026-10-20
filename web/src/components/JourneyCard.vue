@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { type Journey, useJourneys } from '@/stores/journeys'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow } from '@/utils/format'
+import { clock, dayLabel, minutesUntil, relative, warsawNow } from '@/utils/format'
+import NoticeStrip from './NoticeStrip.vue'
 import StatusTag from './StatusTag.vue'
 import TrainChip from './TrainChip.vue'
 
@@ -28,8 +29,8 @@ const state = computed(() => {
   return { label: 'Zakończona', lead: 'Przyjazd', big: clock(arrival.value), progress: null, done: true }
 })
 const otherDay = computed(() => props.journey.connection.departure.slice(0, 10) !== warsawNow(new Date(props.now)).date)
-const numbers = computed(() => props.journey.connection.legs.flatMap((l) => splitNumbers(l.number)))
-const related = computed(() => notices.alerts.filter((n) => n.trains.some((t) => numbers.value.includes(t))))
+// komunikaty o pociągach, stacjach lub liniach podróży (do zakończenia podróży)
+const related = computed(() => (state.value.done ? [] : notices.forConnection(props.journey.connection)))
 
 function remove() {
   const removed = journeys.remove(props.journey.id)
@@ -70,10 +71,7 @@ function remove() {
       </span>
       <StatusTag :delay="leg.delay" :cancelled="leg.cancelled" />
     </div>
-    <v-alert v-for="n in related" :key="n.id" color="error-container" density="compact" icon="warning" class="text-body-medium">
-      {{ n.title }}
-      <template #append><v-btn variant="text" size="small" to="/komunikaty">Szczegóły</v-btn></template>
-    </v-alert>
+    <NoticeStrip :notices="related" />
   </article>
 </template>
 

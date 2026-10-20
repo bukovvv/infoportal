@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api } from '@/api/client'
-import type { Board, TrainMatch } from '@/api/types'
+import type { Board, BoardRow, TrainMatch } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import DateField from '@/components/DateField.vue'
@@ -14,9 +14,10 @@ import TimeField from '@/components/TimeField.vue'
 import { useNotices, useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
-import { agencyCode, isIntercity } from '@/utils/agency'
-import { clock, dayLabel, minutesUntil, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
+import { agencyCode, isIntercity, isPartner } from '@/utils/agency'
+import { clock, dayLabel, minutesUntil, plural, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
+import { noticeIcon } from '@/utils/notices'
 import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
@@ -39,6 +40,8 @@ const locating = ref(false)
 const station = computed(() => (stationId.value ? stations.byId.get(stationId.value) : undefined))
 /** komunikaty i aktualności o tej stacji albo linii przez nią przechodzącej */
 const stationNotices = computed(() => (station.value ? notices.forStation(station.value) : []))
+/** Komunikaty wymieniające pociąg z rzędu (najważniejszy pierwszy); POLREGIO i PKP Intercity pomijamy — komunikaty dotyczą KW. */
+const rowNotices = (row: BoardRow) => (isPartner(row.agency) ? [] : [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(t) ?? []))])
 usePageMeta(() => station.value ? {
   title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
   description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: Koleje Wielkopolskie, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,
@@ -221,6 +224,9 @@ const when = (iso: string) => {
               <span class="text-label-medium number">{{ agencyCode(row.agency) }} {{ row.number }}</span>
               <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" title="Bilety KW i POLREGIO nie obowiązują">PKP Intercity · osobny bilet</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
+              <span v-for="n in rowNotices(row).slice(0, 1)" :key="n.id" class="n-tag text-label-small" :class="n.severity" :title="n.title">
+                <v-icon :icon="noticeIcon[n.severity]" size="14" />{{ rowNotices(row).length > 1 ? `${rowNotices(row).length} ${plural(rowNotices(row).length, '', 'komunikaty', 'komunikatów')}` : 'Komunikat' }}
+              </span>
             </span>
           </span>
           <span class="platform" :aria-label="row.platform ? `peron ${row.platform}${row.track ? ', tor ' + row.track : ''}` : 'peron nieznany'">
@@ -270,6 +276,13 @@ const when = (iso: string) => {
 .number { color: rgb(var(--v-theme-on-surface-variant)); font-weight: 700; }
 /* PKP Intercity: bilety KW i POLREGIO nie obowiązują */
 .ic-tag { padding: 1px 8px; border-radius: 999px; background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-weight: 700; }
+/* pociąg wymieniony w komunikacie — szczegóły po otwarciu pociągu */
+.n-tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px 1px 6px; border-radius: 999px; font-weight: 700;
+  background: rgb(var(--v-theme-surface-container-highest)); color: rgb(var(--v-theme-on-surface-variant));
+}
+.n-tag.warning { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
+.n-tag.danger { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
 .platform { display: grid; justify-items: center; min-width: 56px; padding: 6px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); }
 .platform strong { font-size: 20px; line-height: 24px; font-weight: 800; }
 .platform small { font-size: 11px; line-height: 14px; color: rgb(var(--v-theme-on-surface-variant)); white-space: nowrap; }

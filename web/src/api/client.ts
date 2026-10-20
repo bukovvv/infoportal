@@ -1,4 +1,4 @@
-import type { AdminLogEntry, AdminSession, Board, ConnectionsResult, Live, Notice, Station, Status, TrainMatch, Trip } from './types'
+import type { AdminLogEntry, AdminSession, Board, ConnectionsResult, Live, Notice, Punctuality, Station, Status, TrainMatch, Trip } from './types'
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -53,6 +53,7 @@ export const api = {
   live: () => request<Live>('GET', '/live'),
   status: () => request<Status>('GET', '/status'),
   notices: () => request<Notice[]>('GET', '/notices'),
+  punctuality: (number: string, agency = 'KW') => request<Punctuality>('GET', `/punctuality?${q({ number, agency })}`),
   push: {
     key: () => request<{ key: string }>('GET', '/push/key'),
     watch: (body: { subscription: PushSubscriptionJSON; journeyId: string; legs: { key: string; from: string; to: string }[] }) =>
