@@ -9,10 +9,14 @@ use KwInfo\Config;
 use KwInfo\Http\ApiException;
 use PDO;
 
-/** Komunikaty dla pasażerów (app.sqlite). Rozszerzenie wersji 0.2 o jawną listę numerów pociągów. */
+/**
+ * Komunikaty i aktualności dla pasażerów (app.sqlite): jawna lista numerów pociągów, stacji (id z rozkładu)
+ * i linii (id linii ze schematu połączeń, `web/src/utils/scheme.ts`) — przy nich komunikat się pokazuje.
+ */
 final class NoticeRepository
 {
     public const SEVERITIES = ['info', 'warning', 'danger'];
+    public const BODY_MAX = 5000;
 
     private PDO $pdo;
 
@@ -45,12 +49,16 @@ final class NoticeRepository
                 active INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
-                trains TEXT NOT NULL DEFAULT "[]"
+                trains TEXT NOT NULL DEFAULT "[]",
+                stations TEXT NOT NULL DEFAULT "[]",
+                lines TEXT NOT NULL DEFAULT "[]"
             )'
         );
         $columns = array_column($pdo->query('PRAGMA table_info(notices)')->fetchAll(), 'name');
-        if (!in_array('trains', $columns, true)) {
-            $pdo->exec('ALTER TABLE notices ADD COLUMN trains TEXT NOT NULL DEFAULT "[]"');
+        foreach (['trains', 'stations', 'lines'] as $column) {
+            if (!in_array($column, $columns, true)) {
+                $pdo->exec('ALTER TABLE notices ADD COLUMN ' . $column . ' TEXT NOT NULL DEFAULT "[]"');
+            }
         }
 
         return $pdo;
@@ -101,13 +109,13 @@ final class NoticeRepository
             $values['id'] = $id;
             $this->pdo->prepare(
                 'UPDATE notices SET title=:title, body=:body, line=:line, severity=:severity, starts_at=:starts_at,
-                 ends_at=:ends_at, active=:active, trains=:trains, updated_at=:updated_at WHERE id=:id'
+                 ends_at=:ends_at, active=:active, trains=:trains, stations=:stations, lines=:lines, updated_at=:updated_at WHERE id=:id'
             )->execute($values);
         } else {
             $values['created_at'] = $now;
             $this->pdo->prepare(
-                'INSERT INTO notices (title, body, line, severity, starts_at, ends_at, active, trains, created_at, updated_at)
-                 VALUES (:title, :body, :line, :severity, :starts_at, :ends_at, :active, :trains, :created_at, :updated_at)'
+                'INSERT INTO notices (title, body, line, severity, starts_at, ends_at, active, trains, stations, lines, created_at, updated_at)
+                 VALUES (:title, :body, :line, :severity, :starts_at, :ends_at, :active, :trains, :stations, :lines, :created_at, :updated_at)'
             )->execute($values);
             $id = (int) $this->pdo->lastInsertId();
         }
@@ -127,7 +135,7 @@ final class NoticeRepository
     private static function validate(array $data): array
     {
         $title = self::plain((string) ($data['title'] ?? ''), 160);
-        $body = self::plain((string) ($data['body'] ?? ''), 1200, true);
+        $body = self::plain((string) ($data['body'] ?? ''), self::BODY_MAX, true);
         $line = self::plain((string) ($data['line'] ?? ''), 120) ?: 'Cała sieć KW';
         if ($title === '' || $body === '') {
             throw new ApiException('Tytuł i treść komunikatu są wymagane.', 422);
@@ -148,13 +156,10 @@ final class NoticeRepository
         if ($starts !== null && $ends !== null && $ends < $starts) {
             throw new ApiException('Koniec publikacji nie może być wcześniejszy niż jej początek.', 422);
         }
-        $trains = [];
-        foreach ((array) ($data['trains'] ?? []) as $number) {
-            $number = trim((string) $number);
-            if (preg_match('/^\d{3,6}$/', $number) === 1) {
-                $trains[] = $number;
-            }
-        }
+        $trains = self::ids($data['trains'] ?? [], '/^\d{3,6}$/', 40);
+        // id stacji z rozkładu (GTFS) i linii ze schematu połączeń
+        $stations = self::ids($data['stations'] ?? [], '/^[A-Za-z0-9_.:-]{1,40}$/', 40);
+        $lines = self::ids($data['lines'] ?? [], '/^[a-z0-9-]{1,30}$/', 20);
 
         return [
             'title' => $title,
@@ -164,8 +169,24 @@ final class NoticeRepository
             'starts_at' => $starts,
             'ends_at' => $ends,
             'active' => !empty($data['active']) ? 1 : 0,
-            'trains' => json_encode(array_values(array_unique(array_slice($trains, 0, 10)))),
+            'trains' => json_encode($trains),
+            'stations' => json_encode($stations),
+            'lines' => json_encode($lines),
         ];
+    }
+
+    /** @return array<int, string> unikalne wartości pasujące do wzorca, najwyżej $max */
+    private static function ids(mixed $values, string $pattern, int $max): array
+    {
+        $out = [];
+        foreach (is_array($values) ? $values : [] as $value) {
+            $value = trim(is_scalar($value) ? (string) $value : '');
+            if (preg_match($pattern, $value) === 1 && !in_array($value, $out, true)) {
+                $out[] = $value;
+            }
+        }
+
+        return array_slice($out, 0, $max);
     }
 
     /**
@@ -197,6 +218,8 @@ final class NoticeRepository
             'line' => (string) $row['line'],
             'severity' => (string) $row['severity'],
             'trains' => $trains,
+            'stations' => json_decode((string) ($row['stations'] ?? '[]'), true) ?: [],
+            'lines' => json_decode((string) ($row['lines'] ?? '[]'), true) ?: [],
             'startsAt' => $row['starts_at'] ?: null,
             'endsAt' => $row['ends_at'] ?: null,
             'active' => (int) $row['active'] === 1,

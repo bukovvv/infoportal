@@ -1,24 +1,32 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTheme } from 'vuetify'
 import TrainChip from '@/components/TrainChip.vue'
-import { useNotices } from '@/stores/data'
+import { useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { ago, clock, dateTime, dayLabel } from '@/utils/format'
-import { noticeIcon, noticeLabel } from '@/utils/notices'
+import { bodyBlocks, noticeIcon, noticeLabel, noticeLines, plainBody } from '@/utils/notices'
 import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
 const notices = useNotices()
 const ui = useUi()
+const stations = useStations()
+const theme = useTheme()
+const colorOf = (l: { color: string; dark?: string }) => (theme.global.name.value === 'dark' && l.dark) || l.color
 const notice = computed(() => notices.list.find((n) => String(n.id) === route.params.id) ?? null)
+const blocks = computed(() => (notice.value ? bodyBlocks(notice.value.body) : []))
+const lines = computed(() => (notice.value ? noticeLines(notice.value) : []))
+const places = computed(() => (notice.value?.stations ?? []).flatMap((id) => stations.byId.get(id) ?? []))
+onMounted(() => { void stations.load() })
 const now = ref(Date.now())
 const timer = window.setInterval(() => (now.value = Date.now()), 60_000)
 onBeforeUnmount(() => window.clearInterval(timer))
 
 usePageMeta(() => notice.value ? {
   title: `${notice.value.title} | zanimwyjdziesz.pl`,
-  description: notice.value.body.replace(/\s+/g, ' ').slice(0, 160),
+  description: plainBody(notice.value.body).replace(/\s+/g, ' ').slice(0, 160),
 } : null)
 
 const facts = computed(() => {
@@ -79,8 +87,25 @@ async function share() {
         </div>
       </dl>
 
-      <section class="card">
-        <p class="text-body-large body">{{ notice.body }}</p>
+      <section class="card body">
+        <template v-for="(b, i) in blocks" :key="i">
+          <p v-if="b.kind === 'p'" class="text-body-large">{{ b.text }}</p>
+          <ul v-else class="text-body-large">
+            <li v-for="(item, j) in b.items" :key="j">{{ item }}</li>
+          </ul>
+        </template>
+      </section>
+
+      <section v-if="lines.length || places.length" class="card">
+        <h2 class="text-title-small">{{ lines.length && places.length ? 'Linie i stacje' : lines.length ? (lines.length === 1 ? 'Linia' : 'Linie') : (places.length === 1 ? 'Stacja' : 'Stacje') }}, których dotyczy</h2>
+        <p class="text-body-small muted">Linia prowadzi do schematu połączeń, stacja do tablicy odjazdów.</p>
+        <div class="d-flex flex-wrap ga-2">
+          <v-chip v-for="l in lines" :key="l.id" variant="outlined" size="small" :to="{ name: 'scheme', query: { linia: l.id } }">
+            <span v-if="l.badge" class="line-badge" :style="{ background: l.color }">{{ l.badge }}</span>
+            <span v-else class="swatch" :style="{ background: colorOf(l) }" />{{ l.name }}
+          </v-chip>
+          <v-chip v-for="s in places" :key="s.id" variant="outlined" size="small" prepend-icon="departure_board" :to="`/odjazdy/${s.id}`">{{ s.name }}</v-chip>
+        </div>
       </section>
 
       <section v-if="notice.trains.length" class="card trains">
@@ -127,7 +152,12 @@ async function share() {
 .fact dd { margin: 0; overflow-wrap: anywhere; }
 .card { display: grid; gap: 8px; padding: 20px 24px; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .trains { gap: 10px; }
-.body { white-space: pre-line; text-wrap: pretty; }
+.body { gap: 12px; }
+.body p, .body li { white-space: pre-line; text-wrap: pretty; }
+.body ul { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
+.body li::marker { color: rgb(var(--v-theme-primary)); }
+.swatch { flex: none; width: 16px; height: 5px; margin-right: 8px; border-radius: 3px; }
+.line-badge { margin-right: 6px; padding: 0 6px; border-radius: 999px; color: #fff; font-size: 11px; font-weight: 800; line-height: 16px; }
 .empty { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; text-align: center; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container-low)); }
 .empty-ic { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: rgb(var(--v-theme-secondary-container)); color: rgb(var(--v-theme-on-secondary-container)); margin-bottom: 4px; }
 @media (max-width: 480px) {

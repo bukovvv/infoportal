@@ -30,7 +30,7 @@ function summary(e: AdminLogEntry): string {
   if (e.detail.username !== undefined) return `Nazwa użytkownika: ${String(e.detail.username) || '(pusta)'}`
   const title = String((after ?? before)?.title ?? '')
   if (!before || !after) return title
-  const names: Record<string, string> = { title: 'tytuł', body: 'treść', line: 'linia', severity: 'waga', trains: 'pociągi', startsAt: 'początek', endsAt: 'koniec', active: 'widoczność' }
+  const names: Record<string, string> = { title: 'tytuł', body: 'treść', line: 'dotyczy', severity: 'waga', trains: 'pociągi', stations: 'stacje', lines: 'linie', startsAt: 'początek', endsAt: 'koniec', active: 'widoczność' }
   const changed = Object.keys(names).filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k])).map((k) => names[k])
   return changed.length ? `${title} · zmiany: ${changed.join(', ')}` : `${title} · bez zmian`
 }

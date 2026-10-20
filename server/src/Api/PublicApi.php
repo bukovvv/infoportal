@@ -398,9 +398,12 @@ final class PublicApi
                     'from' => $this->name($other['stops'][0][D::STATION]), 'to' => $this->name(end($other['stops'])[D::STATION])];
             }
         }
+        // pociągi z listy albo stacje na trasie (linie ze schematu dopasowuje przeglądarka — schemat jest tylko w web/)
+        $stationIds = array_map(static fn (array $s): string => (string) $s['station']['id'], $stops);
         $notices = $partner ? [] : array_values(array_filter(
             (new NoticeRepository())->published(),
             static fn (array $n): bool => array_intersect($n['trains'], $trip['numbers'] ?: [$trip['number']]) !== []
+                || array_intersect($n['stations'], $stationIds) !== []
         ));
 
         return new Response([

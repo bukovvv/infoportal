@@ -6,11 +6,12 @@ import type { Board, TrainMatch } from '@/api/types'
 import BandHero from '@/components/BandHero.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import DateField from '@/components/DateField.vue'
+import NoticeItem from '@/components/NoticeItem.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StationField from '@/components/StationField.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeField from '@/components/TimeField.vue'
-import { useStations, useStatus } from '@/stores/data'
+import { useNotices, useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { read, useUi, write } from '@/stores/ui'
 import { agencyCode, isIntercity } from '@/utils/agency'
@@ -24,6 +25,7 @@ const stations = useStations()
 const status = useStatus()
 const ui = useUi()
 const favorites = useFavorites()
+const notices = useNotices()
 const DEFAULT_STATION = '30601' // Poznań Główny
 
 const stationId = ref<string | null>((route.params.stationId as string) || read<string | null>('kw_board_station', null) || DEFAULT_STATION)
@@ -35,6 +37,8 @@ const now = ref(Date.now())
 const locating = ref(false)
 
 const station = computed(() => (stationId.value ? stations.byId.get(stationId.value) : undefined))
+/** komunikaty i aktualności o tej stacji albo linii przez nią przechodzącej */
+const stationNotices = computed(() => (station.value ? notices.forStation(station.value) : []))
 usePageMeta(() => station.value ? {
   title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
   description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: Koleje Wielkopolskie, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,
@@ -185,6 +189,10 @@ const when = (iso: string) => {
       <template v-else>na żywo, stan na {{ clock(board.generatedAt) }}</template>
     </span>
 
+    <section v-if="stationNotices.length" class="card station-notices" aria-label="Komunikaty dla tej stacji">
+      <NoticeItem v-for="n in stationNotices" :key="n.id" :notice="n" compact link />
+    </section>
+
     <div class="board card">
       <v-progress-linear v-if="loading" indeterminate absolute />
       <v-empty-state v-if="error" icon="error" :title="error">
@@ -249,6 +257,7 @@ const when = (iso: string) => {
 .when-fields :deep(.v-field--variant-solo-filled) { background: rgb(var(--v-theme-surface)); }
 .state-line { padding: 0 4px; }
 
+.station-notices { overflow: hidden; }
 .board { overflow: hidden; position: relative; }
 .dep { display: grid; grid-template-columns: 62px minmax(0, 1fr) auto; gap: 14px; align-items: center; width: 100%; padding: 12px 14px 12px 16px; border: 0; background: transparent; text-align: left; color: inherit; cursor: pointer; font: inherit; }
 .dep + .dep { border-top: 1px solid rgb(var(--v-theme-outline-variant)); }

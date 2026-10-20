@@ -2,11 +2,14 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import BandHero from '@/components/BandHero.vue'
 import NoticeCard from '@/components/NoticeCard.vue'
-import { useNotices } from '@/stores/data'
+import { useNotices, useStations } from '@/stores/data'
 import { normalize, plural } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
+import { lineTitle, noticeLines } from '@/utils/notices'
 
 const notices = useNotices()
+const stations = useStations()
+void stations.load().catch(() => undefined)
 const filter = ref<'all' | 'alert' | 'info'>('all')
 const query = ref('')
 const now = ref(Date.now())
@@ -24,11 +27,16 @@ const filters = computed(() => [
   { value: 'alert', label: 'Utrudnienia', count: counts.value.alert },
   { value: 'info', label: 'Informacje', count: counts.value.info },
 ] as const)
+/** linie i stacje komunikatu — do wyszukiwania (np. „Konin” znajdzie aktualność o linii Poznań – Kutno) */
+const about = (n: (typeof notices.list)[number]) => [
+  ...noticeLines(n).flatMap((l) => [lineTitle(l), ...l.stations]),
+  ...n.stations.map((id) => stations.byId.get(id)?.name ?? ''),
+].join(' ')
 const list = computed(() => {
   const q = normalize(query.value)
   return notices.list.filter((n) =>
     (filter.value === 'all' || (filter.value === 'alert') === isAlert(n.severity))
-    && (!q || normalize(`${n.title} ${n.body} ${n.line} ${n.trains.join(' ')}`).includes(q)))
+    && (!q || normalize(`${n.title} ${n.body} ${n.line} ${n.trains.join(' ')} ${about(n)}`).includes(q)))
 })
 const worst = computed(() => (notices.list.some((n) => n.severity === 'danger') ? 'danger' : counts.value.alert ? 'warning' : 'ok'))
 const summary = computed(() => {

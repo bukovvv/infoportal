@@ -57,7 +57,10 @@ const category = computed(() => {
 /** pociąg POLREGIO / PKP Intercity: bez pojazdu i komunikatów (dotyczą KW) */
 const partner = computed(() => isPartner(trip.value?.agency))
 const title = computed(() => (trip.value ? trainTitle(trip.value.number, trip.value.name) : null))
-const related = computed(() => (trip.value && !partner.value ? notices.forNumbers(trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
+// komunikaty o tym pociągu, stacjach na trasie albo linii, którą jedzie
+const related = computed(() => (trip.value && !partner.value
+  ? notices.forTrip(trip.value.numbers.length ? trip.value.numbers : [trip.value.number], trip.value.stops.map((s) => s.station))
+  : []))
 const progress = computed(() => {
   const t = trip.value
   if (!t?.position) return null
@@ -136,7 +139,7 @@ defineExpose({ trip })
         <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>
       <div v-if="related.length" class="notices divider">
-        <NoticeItem v-for="n in related" :key="n.id" :notice="n" compact link />
+        <NoticeItem v-for="n in related" :key="n.id" :notice="n" :first="trip.numbers.length ? trip.numbers : [trip.number]" compact link />
       </div>
       <p v-if="partner" class="partner-note text-body-medium divider" :class="{ ic: isIntercity(trip.agency) }">
         <v-icon :icon="isIntercity(trip.agency) ? 'confirmation_number' : 'info'" size="20" />

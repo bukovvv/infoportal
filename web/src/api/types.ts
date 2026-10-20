@@ -274,6 +274,10 @@ export interface Notice {
   line: string
   severity: Severity
   trains: string[]
+  /** id stacji z rozkładu, przy których komunikat się pokazuje */
+  stations: string[]
+  /** id linii ze schematu połączeń (`utils/scheme.ts`) */
+  lines: string[]
   startsAt: string | null
   endsAt: string | null
   active: boolean

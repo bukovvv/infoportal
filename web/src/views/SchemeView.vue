@@ -4,7 +4,8 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import MapSwitch from '@/components/MapSwitch.vue'
-import { useStations } from '@/stores/data'
+import NoticeItem from '@/components/NoticeItem.vue'
+import { useNotices, useStations } from '@/stores/data'
 import { plural } from '@/utils/format'
 import {
   LEGEND, LINES, NODES, PKM_LINES, REGION, edgeOffsets, linePoints, linesAt, roundedPath, stationMarkers,
@@ -14,6 +15,7 @@ import {
 const route = useRoute()
 const router = useRouter()
 const stations = useStations()
+const notices = useNotices()
 const theme = useTheme()
 const { mdAndUp } = useDisplay()
 
@@ -234,6 +236,9 @@ const listed = computed(() => (mode.value === 'pkm' ? PKM_SORTED : LEGEND))
 const nodeLines = computed(() => (node.value?.name ? linesAt(node.value.name, LEGEND) : []))
 const nodePkm = computed(() => (node.value?.name ? linesAt(node.value.name, PKM_SORTED) : []))
 const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.name) : undefined))
+// komunikaty i aktualności przypięte do wybranej linii albo stacji
+const lineNotices = computed(() => (line.value ? notices.forLine(line.value.id) : []))
+const nodeNotices = computed(() => (node.value?.name && nodeId.value ? notices.forStation({ id: nodeId.value, name: node.value.name }) : []))
 </script>
 
 <template>
@@ -348,6 +353,9 @@ const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.
             <v-btn variant="outlined" prepend-icon="trip_origin" :to="nodeId ? { name: 'start', query: { z: nodeId }, hash: '#szukaj' } : undefined" :disabled="!nodeId">Stąd</v-btn>
             <v-btn variant="outlined" prepend-icon="location_on" :to="nodeId ? { name: 'start', query: { do: nodeId }, hash: '#szukaj' } : undefined" :disabled="!nodeId">Dotąd</v-btn>
           </div>
+          <div v-if="nodeNotices.length" class="panel-notices">
+            <NoticeItem v-for="n in nodeNotices" :key="n.id" :notice="n" compact link />
+          </div>
           <v-list bg-color="transparent" density="comfortable" class="line-list">
             <v-list-subheader>Linie</v-list-subheader>
             <v-list-item v-for="l in nodeLines" :key="l.id" :title="l.name" @click="selectLine(l, true)">
@@ -376,6 +384,9 @@ const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.
             </div>
           </div>
           <p v-if="line.note" class="text-body-medium note">{{ line.note }}</p>
+          <div v-if="lineNotices.length" class="panel-notices">
+            <NoticeItem v-for="n in lineNotices" :key="n.id" :notice="n" compact link />
+          </div>
           <ol class="stops" :style="{ '--c': colorOf(line) }">
             <li v-for="(s, i) in line.stations" :key="s" :class="{ key: schemeNames.has(s), end: i === 0 || i === line.stations.length - 1 }">
               <router-link v-if="idByName.get(s)" :to="`/odjazdy/${idByName.get(s)}`" :title="`Odjazdy: ${s}`">{{ s }}</router-link>
@@ -451,6 +462,7 @@ const nodeId = computed(() => (node.value?.name ? idByName.value.get(node.value.
 .foot { padding: 8px; }
 .note { margin: 0 8px 8px; padding: 10px 12px; border-radius: var(--kw-r-s); background: rgb(var(--v-theme-surface-container-high)); }
 .line-list :deep(.v-list-item-title) { white-space: normal; }
+.panel-notices { margin: 8px 8px 4px; overflow: hidden; border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface-container)); }
 .swatch { flex: none; width: 28px; height: 6px; margin-right: 16px; border-radius: 3px; }
 .badge {
   display: inline-grid; place-items: center; flex: none; min-width: 48px; height: 22px; margin-right: 12px; padding: 0 6px;

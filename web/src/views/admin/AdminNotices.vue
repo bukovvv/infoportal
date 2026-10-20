@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Notice, Severity } from '@/api/types'
 import { useAdmin } from '@/stores/admin'
-import { useNotices } from '@/stores/data'
+import { useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { dateTime } from '@/utils/format'
 import { buildNotice, requiredFields, templateKinds, type TemplateInput } from '@/utils/noticeTemplates'
+import { NOTICE_LINES, detectStations, detectTrains, lineTitle, noticeLines, scopeText } from '@/utils/notices'
 
 const admin = useAdmin()
 const ui = useUi()
 const publicNotices = useNotices()
+const stations = useStations()
 const list = ref<Notice[]>([])
 const loading = ref(true)
 const saving = ref(false)
@@ -18,7 +20,11 @@ const error = ref<string | null>(null)
 const editingId = ref<number | null>(null)
 const toDelete = ref<Notice | null>(null)
 
-const empty = () => ({ title: '', body: '', line: 'Cała sieć KW', severity: 'warning' as Severity, trains: [] as string[], startsAt: '', endsAt: '', active: true })
+const NETWORK = 'Cała sieć KW'
+const empty = () => ({
+  title: '', body: '', line: NETWORK, severity: 'warning' as Severity, trains: [] as string[], stations: [] as string[], lines: [] as string[],
+  startsAt: '', endsAt: '', active: true,
+})
 const form = reactive(empty())
 const tpl = reactive<TemplateInput>({ kind: 'delay', train: '', delay: null, origin: '', departure: '', destination: '', arrival: '', newDestination: '', station: '', eventTime: '', platform: '', track: '', reason: 'z przyczyn technicznych', replacement: false })
 const tplMessage = ref<{ ok: boolean; text: string } | null>(null)
@@ -30,6 +36,32 @@ const severities = [
   { value: 'danger', title: 'Poważne utrudnienie' },
 ]
 const label = (s: Severity) => severities.find((x) => x.value === s)?.title ?? s
+const lineItems = NOTICE_LINES.map((l) => ({ value: l.id, title: lineTitle(l), color: l.color }))
+const stationItems = computed(() => [...stations.all].sort((a, b) => a.name.localeCompare(b.name, 'pl')).map((s) => ({ value: s.id, title: s.name })))
+const stationName = (id: string) => stations.byId.get(id)?.name ?? id
+const scopeOf = (n: Notice) => [...noticeLines(n).map(lineTitle), ...n.stations.map(stationName)].join(', ')
+
+// „Linia lub odcinek” podąża za wybranymi liniami i stacjami, dopóki nie zostanie wpisane ręcznie
+let autoLine = NETWORK
+watch(() => [form.lines.join(), form.stations.join(), stations.loaded], () => {
+  const auto = scopeText(form.lines, form.stations.map(stationName)) || NETWORK
+  if (!form.line.trim() || form.line === autoLine || form.line === NETWORK) form.line = auto
+  autoLine = auto
+})
+
+const detectMessage = ref<string | null>(null)
+/** Pociągi i stacje wymienione w tytule i treści (np. po wklejeniu aktualności przewoźnika) — dopisuje do wybranych. */
+function detect() {
+  const text = `${form.title}
+${form.body}`
+  const trains = detectTrains(text).filter((t) => !form.trains.includes(t))
+  const found = detectStations(text, stations.all).map((s) => s.id).filter((id) => !form.stations.includes(id))
+  form.trains = [...form.trains, ...trains].slice(0, 40)
+  form.stations = [...form.stations, ...found].slice(0, 40)
+  detectMessage.value = trains.length || found.length
+    ? `Dodano: ${trains.length} pociągów, ${found.length} stacji. Sprawdź listy i usuń zbędne.`
+    : 'Nie znaleziono nowych numerów pociągów ani nazw stacji.'
+}
 const counts = computed(() => ({ active: list.value.filter((n) => n.active).length, hidden: list.value.filter((n) => !n.active).length }))
 
 async function load() {
@@ -42,17 +74,24 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(load)
+onMounted(() => { void load(); void stations.load() })
 
 function edit(n: Notice) {
   editingId.value = n.id
-  Object.assign(form, { title: n.title, body: n.body, line: n.line, severity: n.severity, trains: [...n.trains], startsAt: n.startsAt ?? '', endsAt: n.endsAt ?? '', active: n.active })
+  Object.assign(form, {
+    title: n.title, body: n.body, line: n.line, severity: n.severity, trains: [...n.trains], stations: [...n.stations], lines: [...n.lines],
+    startsAt: n.startsAt ?? '', endsAt: n.endsAt ?? '', active: n.active,
+  })
+  autoLine = n.line
+  detectMessage.value = null
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 function reset() {
   editingId.value = null
   Object.assign(form, empty())
+  autoLine = NETWORK
   error.value = null
+  detectMessage.value = null
 }
 
 async function save() {
@@ -141,9 +180,51 @@ function generate() {
 
         <v-form class="d-grid" @submit.prevent="save">
           <v-text-field v-model="form.title" label="Tytuł" counter="160" maxlength="160" />
-          <v-textarea v-model="form.body" label="Treść" counter="1200" maxlength="1200" rows="4" auto-grow hint="Podaj odcinek, możliwe opóźnienie i alternatywę dla pasażera." persistent-hint />
+          <v-textarea
+            v-model="form.body"
+            label="Treść"
+            counter="5000"
+            maxlength="5000"
+            rows="5"
+            auto-grow
+            hint="Pusta linia zaczyna nowy akapit, wiersz od „- ” to punkt listy (np. kolejne pociągi ze zmienionym rozkładem)."
+            persistent-hint
+          />
+          <div class="d-flex align-center flex-wrap ga-3">
+            <v-btn variant="flat" color="secondary-container" prepend-icon="manage_search" :disabled="!form.title && !form.body" @click="detect">Wykryj pociągi i stacje z treści</v-btn>
+            <span v-if="detectMessage" class="text-body-small muted" role="status">{{ detectMessage }}</span>
+          </div>
+          <v-autocomplete
+            v-model="form.lines"
+            :items="lineItems"
+            label="Linie"
+            multiple
+            chips
+            closable-chips
+            clear-on-select
+            hint="Komunikat pojawi się na tablicach stacji tej linii, przy pociągach, które nią jadą, i na schemacie."
+            persistent-hint
+          >
+            <template #item="{ props: itemProps, item }">
+              <v-list-item v-bind="itemProps">
+                <template #prepend><span class="swatch" :style="{ background: item.color }" /></template>
+              </v-list-item>
+            </template>
+          </v-autocomplete>
+          <v-autocomplete
+            v-model="form.stations"
+            :items="stationItems"
+            label="Stacje"
+            multiple
+            chips
+            closable-chips
+            clear-on-select
+            :loading="!stations.loaded"
+            hint="Komunikat pojawi się na tablicy odjazdów stacji i przy pociągach, które się na niej zatrzymują."
+            persistent-hint
+          />
           <div class="two">
-            <v-text-field v-model="form.line" label="Linia lub odcinek" hide-details />
+            <v-text-field v-model="form.line" label="Dotyczy (opis)" hide-details />
             <v-select v-model="form.severity" :items="severities" label="Rodzaj" hide-details />
           </div>
           <v-combobox v-model="form.trains" label="Pociągi (numery)" multiple chips closable-chips hint="Wpisz numer i naciśnij Enter. Komunikat pojawi się przy tych pociągach." persistent-hint />
@@ -180,6 +261,7 @@ function generate() {
             <div class="text-body-small muted">
               Aktualizacja {{ dateTime(n.updatedAt) }}<template v-if="n.endsAt"> · do {{ dateTime(n.endsAt) }}</template>
               <template v-if="n.trains.length"> · pociągi: {{ n.trains.join(', ') }}</template>
+              <template v-if="n.lines.length || n.stations.length"> · przypięty do: {{ scopeOf(n) }}</template>
             </div>
           </v-card-text>
           <v-card-actions>
@@ -219,7 +301,8 @@ function generate() {
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .tpl-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .span-2 { grid-column: 1 / -1; }
-.pre { white-space: pre-line; }
+.pre { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 6; line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.swatch { width: 24px; height: 6px; margin-right: 12px; border-radius: 3px; }
 .notice-card { border-left: 4px solid rgb(var(--v-theme-outline-variant)); }
 .notice-card.danger { border-left-color: rgb(var(--v-theme-error)); }
 .notice-card.warning { border-left-color: rgb(var(--v-theme-warning)); }

@@ -173,7 +173,7 @@ final class AdminApi
     /** @param array<string, mixed> $n @return array<string, mixed> pola komunikatu zapisywane w dzienniku */
     private static function logged(array $n): array
     {
-        return array_intersect_key($n, array_flip(['title', 'body', 'line', 'severity', 'trains', 'startsAt', 'endsAt', 'active']));
+        return array_intersect_key($n, array_flip(['title', 'body', 'line', 'severity', 'trains', 'stations', 'lines', 'startsAt', 'endsAt', 'active']));
     }
 
     private static function id(array $p): int

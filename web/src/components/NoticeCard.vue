@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Notice } from '@/api/types'
-import { ago, clock, dateTime, dayLabel } from '@/utils/format'
-import { noticeIcon, noticeLabel } from '@/utils/notices'
+import { ago, clock, dateTime, dayLabel, plural } from '@/utils/format'
+import { noticeIcon, noticeLabel, plainBody } from '@/utils/notices'
 import TrainChip from './TrainChip.vue'
 
 // Karta komunikatu na liście: cała prowadzi do strony komunikatu (link rozciągnięty na kartę), chipy pociągów zostają osobnymi przyciskami.
-defineProps<{ notice: Notice; now: number }>()
+const props = defineProps<{ notice: Notice; now: number }>()
+// długa lista pociągów (np. zmiana rozkładu) — pełna na stronie komunikatu
+const MAX_TRAINS = 6
+const trains = computed(() => props.notice.trains.slice(0, MAX_TRAINS))
+const more = computed(() => props.notice.trains.length - trains.value.length)
 </script>
 
 <template>
@@ -17,13 +22,14 @@ defineProps<{ notice: Notice; now: number }>()
     <h2 class="text-title-large n-title">
       <router-link :to="{ name: 'notice', params: { id: notice.id } }" class="n-link">{{ notice.title }}</router-link>
     </h2>
-    <p class="text-body-medium muted n-text">{{ notice.body }}</p>
+    <p class="text-body-medium muted n-text">{{ plainBody(notice.body) }}</p>
     <div class="n-meta text-body-small">
       <span><v-icon icon="route" size="18" />{{ notice.line }}</span>
       <span v-if="notice.endsAt"><v-icon icon="event" size="18" />do {{ dayLabel(notice.endsAt) }}, {{ clock(notice.endsAt) }}</span>
     </div>
     <div v-if="notice.trains.length" class="n-trains">
-      <TrainChip v-for="n in notice.trains" :key="n" :number="n" />
+      <TrainChip v-for="n in trains" :key="n" :number="n" />
+      <span v-if="more > 0" class="n-more text-label-medium">+{{ more }} {{ plural(more, 'pociąg', 'pociągi', 'pociągów') }}</span>
     </div>
   </article>
 </template>
@@ -49,6 +55,8 @@ defineProps<{ notice: Notice; now: number }>()
 .n-text { text-wrap: pretty; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .n-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: rgb(var(--v-theme-on-surface-variant)); }
 .n-meta span { display: inline-flex; align-items: center; gap: 6px; }
-.n-trains { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
+.n-trains { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 2px; }
+.n-trains :deep(.train-chip) { position: relative; z-index: 1; }
+.n-more { color: rgb(var(--v-theme-on-surface-variant)); }
 @media (max-width: 480px) { .n-card { padding: 16px; } }
 </style>
