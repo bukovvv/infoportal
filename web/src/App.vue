@@ -4,9 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import BrandMark from '@/components/BrandMark.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
+import SettingsDialog from '@/components/SettingsDialog.vue'
 import TrainSheet from '@/components/TrainSheet.vue'
 import { shortTitles, titles } from '@/router'
 import { useLive, useNotices, useStatus } from '@/stores/data'
+import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock } from '@/utils/format'
 import logoOnBand from '@/assets/logo-na-ciemne.svg'
@@ -14,6 +16,7 @@ import logoOnBand from '@/assets/logo-na-ciemne.svg'
 const route = useRoute()
 const router = useRouter()
 const ui = useUi()
+const prefs = usePrefs()
 const live = useLive()
 const status = useStatus()
 const notices = useNotices()
@@ -102,12 +105,13 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
         </v-btn>
         <v-menu location="bottom end">
           <template #activator="{ props }">
-            <v-btn v-bind="props" :icon="mdAndUp ? themeIcon : 'more_vert'" variant="text" aria-label="Motyw i informacje" class="mr-1" />
+            <v-btn v-bind="props" :icon="mdAndUp ? themeIcon : 'more_vert'" variant="text" aria-label="Motyw, ustawienia i informacje" class="mr-1" />
           </template>
           <v-list density="compact" nav>
             <v-list-subheader>Motyw</v-list-subheader>
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
             <v-divider class="my-1" />
+            <v-list-item prepend-icon="tune" title="Ustawienia" @click="prefs.dialog = true" />
             <v-list-item prepend-icon="info" title="O nas" to="/o-nas" />
           </v-list>
         </v-menu>
@@ -151,6 +155,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 
     <TrainSheet />
     <InstallPrompt v-if="!isAdmin" />
+    <SettingsDialog v-if="!isAdmin" />
 
     <v-snackbar v-model="snackOpen" :timeout="4500" :key="ui.snack?.id" class="kw-snack">
       {{ ui.snack?.text }}

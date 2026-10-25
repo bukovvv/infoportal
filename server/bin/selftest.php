@@ -445,6 +445,9 @@ $pSum = PunctualityRepository::summarize([
 check('punktualność: numer bez nazwy pociągu', PunctualityRecorder::number('1804/5 Bolesław Prus') === '1804/5' && PunctualityRecorder::number('77600') === '77600');
 check('punktualność: na czas do 5:59, odwołany liczy się jako nie na czas, przyjazd godzinę przed czasem pominięty', $pSum['runs'] === 5 && $pSum['onTime'] === 3 && $pSum['late'] === 1 && $pSum['cancelled'] === 1
     && $pSum['share'] === 60 && $pSum['maxDelay'] === 10 && $pSum['avgDelay'] === 4 && $pSum['recent'][3] === ['date' => '2026-10-20', 'delay' => null, 'cancelled' => true]);
+$pStrict = PunctualityRepository::summarize([['service_date' => 20261020, 'arrival_delay' => 240, 'cancelled' => 0, 'skipped' => 0], ['service_date' => 20261020, 'arrival_delay' => 600, 'cancelled' => 0, 'skipped' => 0]], 7, 3);
+$pLoose = PunctualityRepository::summarize([['service_date' => 20261020, 'arrival_delay' => 240, 'cancelled' => 0, 'skipped' => 0], ['service_date' => 20261020, 'arrival_delay' => 600, 'cancelled' => 0, 'skipped' => 0]], 7, 10);
+check('punktualność: próg wybrany przez pasażera (do 3 / do 10 min)', $pStrict['onTime'] === 0 && $pStrict['threshold'] === 3 && $pLoose['onTime'] === 2 && $pLoose['share'] === 100);
 $statsDb = sys_get_temp_dir() . '/kw-selftest-stats-' . bin2hex(random_bytes(4)) . '.sqlite';
 $statsRepo = new PunctualityRepository(PunctualityRepository::connect($statsDb));
 check('punktualność: bez podwójnego zapisu kursu', $statsRepo->insert([$done]) === 1 && $statsRepo->insert([$done]) === 0 && isset($statsRepo->recordedKeys(20261020)['T1@20261020']));

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { type Journey, useJourneys } from '@/stores/journeys'
 import { useNotices } from '@/stores/data'
+import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock, dayLabel, minutesUntil, relative, warsawNow } from '@/utils/format'
 import NoticeStrip from './NoticeStrip.vue'
@@ -11,6 +12,7 @@ import TrainChip from './TrainChip.vue'
 const props = defineProps<{ journey: Journey; now: number }>()
 const journeys = useJourneys()
 const notices = useNotices()
+const prefs = usePrefs()
 const ui = useUi()
 
 const legs = computed(() => props.journey.connection.legs.map((_, i) => journeys.legState(props.journey, i)))
@@ -30,7 +32,7 @@ const state = computed(() => {
 })
 const otherDay = computed(() => props.journey.connection.departure.slice(0, 10) !== warsawNow(new Date(props.now)).date)
 // komunikaty o pociągach, stacjach lub liniach podróży (do zakończenia podróży)
-const related = computed(() => (state.value.done ? [] : notices.forConnection(props.journey.connection)))
+const related = computed(() => (state.value.done ? [] : notices.forConnection(props.journey.connection).filter(prefs.showsNotice)))
 
 function remove() {
   const removed = journeys.remove(props.journey.id)

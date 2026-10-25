@@ -290,6 +290,8 @@ export interface Punctuality {
   number: string
   agency: string
   days: number
+  /** na czas = opóźnienie do tylu minut (wybór pasażera, domyślnie 5) */
+  threshold: number
   runs: number
   onTime: number
   late: number

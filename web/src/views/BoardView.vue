@@ -13,6 +13,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeField from '@/components/TimeField.vue'
 import { useNotices, useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
+import { usePrefs } from '@/stores/prefs'
 import { read, useUi, write } from '@/stores/ui'
 import { agencyCode, isIntercity, isPartner } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
@@ -27,6 +28,7 @@ const status = useStatus()
 const ui = useUi()
 const favorites = useFavorites()
 const notices = useNotices()
+const prefs = usePrefs()
 const DEFAULT_STATION = '30601' // Poznań Główny
 
 const stationId = ref<string | null>((route.params.stationId as string) || read<string | null>('kw_board_station', null) || DEFAULT_STATION)
@@ -41,7 +43,7 @@ const station = computed(() => (stationId.value ? stations.byId.get(stationId.va
 /** komunikaty i aktualności o tej stacji albo linii przez nią przechodzącej */
 const stationNotices = computed(() => (station.value ? notices.forStation(station.value) : []))
 /** Komunikaty wymieniające pociąg z rzędu (najważniejszy pierwszy); POLREGIO i PKP Intercity pomijamy — komunikaty dotyczą KW. */
-const rowNotices = (row: BoardRow) => (isPartner(row.agency) ? [] : [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(t) ?? []))])
+const rowNotices = (row: BoardRow) => (isPartner(row.agency) ? [] : [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(t) ?? []))].filter(prefs.showsNotice))
 usePageMeta(() => station.value ? {
   title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
   description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: Koleje Wielkopolskie, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,

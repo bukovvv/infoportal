@@ -15,8 +15,10 @@ use PDO;
  */
 final class PunctualityRepository
 {
-    /** na czas = opóźnienie poniżej 6 min (jak w statystykach UTK: do 5 min 59 s) */
-    public const ON_TIME = 360;
+    /** na czas = do 5 min (opóźnienie poniżej 6 min, jak w statystykach UTK: do 5 min 59 s); pasażer może wybrać inny próg */
+    public const ON_TIME_MINUTES = 5;
+    public const THRESHOLDS = [3, 5, 10];
+    public const PERIODS = [7, 30, 90];
     public const KEEP_DAYS = 400;
     /**
      * Przyjazd przed czasem liczy się jako na czas (opóźnienie 0). Feed potrafi jednak podać przyjazd godzinę przed czasem
@@ -114,7 +116,7 @@ final class PunctualityRepository
      * Podsumowanie pociągu (numer jak w rozkładzie, np. „77610/1”) z ostatnich $days dni, z dzisiejszymi kursami, które już dojechały.
      * @return array<string, mixed>
      */
-    public function summary(string $number, string $agency, int $days = 30): array
+    public function summary(string $number, string $agency, int $days = 30, int $onTime = self::ON_TIME_MINUTES): array
     {
         $from = Clock::addDays(Clock::today(), -$days);
         $stmt = $this->pdo->prepare(
@@ -125,26 +127,28 @@ final class PunctualityRepository
 
         $since = $this->info()['since'];
 
-        return self::summarize($stmt->fetchAll(), $days) + ['number' => $number, 'agency' => $agency, 'since' => $since !== null ? Clock::isoDate($since) : null];
+        return self::summarize($stmt->fetchAll(), $days, $onTime) + ['number' => $number, 'agency' => $agency, 'since' => $since !== null ? Clock::isoDate($since) : null];
     }
 
     /** @param array<int, array<string, mixed>> $rows @return array<string, mixed> */
-    public static function summarize(array $rows, int $days): array
+    public static function summarize(array $rows, int $days, int $onTime = self::ON_TIME_MINUTES): array
     {
         $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['arrival_delay'] === null || (int) $r['arrival_delay'] >= self::IMPLAUSIBLE));
         $ran = array_values(array_filter($rows, static fn (array $r): bool => (int) $r['cancelled'] === 0 && $r['arrival_delay'] !== null));
         $delays = array_map(static fn (array $r): int => max(0, (int) $r['arrival_delay']), $ran);
-        $onTime = count(array_filter($delays, static fn (int $d): bool => $d < self::ON_TIME));
+        $limit = ($onTime + 1) * 60;
+        $punctual = count(array_filter($delays, static fn (int $d): bool => $d < $limit));
         $cancelled = count(array_filter($rows, static fn (array $r): bool => (int) $r['cancelled'] === 1));
 
         return [
             'days' => $days,
+            'threshold' => $onTime,
             'runs' => count($rows),
-            'onTime' => $onTime,
-            'late' => count($ran) - $onTime,
+            'onTime' => $punctual,
+            'late' => count($ran) - $punctual,
             'cancelled' => $cancelled,
             // odsetek kursów na czas spośród wszystkich (odwołany = nie na czas)
-            'share' => $rows !== [] ? (int) round($onTime / count($rows) * 100) : null,
+            'share' => $rows !== [] ? (int) round($punctual / count($rows) * 100) : null,
             'avgDelay' => $delays !== [] ? (int) round(array_sum($delays) / count($delays) / 60) : null,
             'maxDelay' => $delays !== [] ? (int) round(max($delays) / 60) : null,
             'recent' => array_map(static fn (array $r): array => [

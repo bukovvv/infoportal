@@ -2,23 +2,29 @@
 import { computed, ref, watch } from 'vue'
 import { api } from '@/api/client'
 import type { Punctuality } from '@/api/types'
+import { usePrefs } from '@/stores/prefs'
 import { plural } from '@/utils/format'
 
-// Punktualność pociągu z ostatnich 30 dni (opóźnienie na stacji końcowej, na czas = do 5 min). Pokazujemy od MIN_RUNS kursów.
+// Punktualność pociągu (opóźnienie na stacji końcowej). Okres, próg „na czas” i to, czy karta w ogóle jest, ustawia pasażer
+// (stores/prefs: domyślnie 30 dni, do 5 min). Pokazujemy od MIN_RUNS kursów.
 // trimmed: kurs POLREGIO / PKP Intercity przycięty do Wielkopolski — liczy się ostatnia stacja w województwie.
 const props = defineProps<{ number: string; agency?: string; trimmed?: boolean }>()
 const MIN_RUNS = 5
 /** pasek ostatnich kursów: wysokość do LATE_CAP min opóźnienia */
 const LATE_CAP = 30
 const data = ref<Punctuality | null>(null)
+const store = usePrefs()
+const prefs = store.prefs
 
 /** numer bez nazwy pociągu, jak zapisuje serwer: „1804/5 Bolesław Prus” → „1804/5” */
 const plainNumber = computed(() => /^\d+(?:\/\d+)*/.exec(props.number.trim())?.[0] ?? '')
-watch([plainNumber, () => props.agency], async ([number, agency]) => {
-  data.value = null
-  if (!number) return
+watch([plainNumber, () => props.agency, () => prefs.showPunctuality, () => prefs.punctualityDays, () => prefs.onTimeMinutes], async ([number, agency, show, days, onTime]) => {
+  if (!number || !show) {
+    data.value = null
+    return
+  }
   try {
-    data.value = await api.punctuality(number, agency ?? 'KW')
+    data.value = await api.punctuality(number, agency ?? 'KW', days, onTime)
   } catch {
     data.value = null
   }
@@ -26,7 +32,8 @@ watch([plainNumber, () => props.agency], async ([number, agency]) => {
 
 const p = computed(() => (data.value && data.value.runs >= MIN_RUNS ? data.value : null))
 type Kind = 'ok' | 'late' | 'bad' | 'cancelled'
-const kindOf = (r: Punctuality['recent'][number]): Kind => (r.cancelled ? 'cancelled' : (r.delay ?? 0) <= 5 ? 'ok' : (r.delay ?? 0) <= 20 ? 'late' : 'bad')
+const limit = computed(() => p.value?.threshold ?? prefs.onTimeMinutes)
+const kindOf = (r: Punctuality['recent'][number]): Kind => (r.cancelled ? 'cancelled' : (r.delay ?? 0) <= limit.value ? 'ok' : (r.delay ?? 0) <= 20 ? 'late' : 'bad')
 const day = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', timeZone: 'Europe/Warsaw' })
 const bars = computed(() => (p.value?.recent ?? []).map((r) => {
   const kind = kindOf(r)
@@ -49,19 +56,23 @@ const facts = computed(() => {
 })
 const legend = computed(() => {
   const kinds = new Set(bars.value.map((b) => b.kind))
-  return ([['ok', 'na czas'], ['late', '6–20 min'], ['bad', 'ponad 20 min'], ['cancelled', 'odwołany']] as const).filter(([k]) => kinds.has(k))
+  const items: [Kind, string][] = [['ok', 'na czas'], ['late', `${limit.value + 1}–20 min`], ['bad', 'ponad 20 min'], ['cancelled', 'odwołany']]
+  return items.filter(([k]) => kinds.has(k))
 })
 const summary = computed(() => (p.value ? `Ostatnie ${bars.value.length} kursów: ${bars.value.map((b) => b.label).join(', ')}` : ''))
 </script>
 
 <template>
   <section v-if="p" class="punct" aria-labelledby="punct-title">
-    <h3 id="punct-title" class="text-title-small">Punktualność <span class="muted">· ostatnie {{ p.days }} dni</span></h3>
+    <div class="head">
+      <h3 id="punct-title" class="text-title-small">Punktualność <span class="muted">· ostatnie {{ p.days }} dni</span></h3>
+      <v-btn icon="tune" variant="text" size="small" density="comfortable" aria-label="Ustawienia punktualności" title="Okres, próg „na czas”, ukrycie karty" @click="store.dialog = true" />
+    </div>
     <div class="hero">
       <span class="share tnum">{{ p.share }}%</span>
       <span class="hero-text">
         <span class="text-body-large">kursów na czas</span>
-        <span class="text-body-small muted">do 5 min opóźnienia na {{ trimmed ? 'ostatniej stacji w Wielkopolsce' : 'stacji końcowej' }}</span>
+        <span class="text-body-small muted">do {{ p.threshold }} min opóźnienia na {{ trimmed ? 'ostatniej stacji w Wielkopolsce' : 'stacji końcowej' }}</span>
       </span>
     </div>
     <p class="text-body-small muted tnum">{{ facts.join(' · ') }}</p>
@@ -80,7 +91,8 @@ const summary = computed(() => (p.value ? `Ostatnie ${bars.value.length} kursów
 </template>
 
 <style scoped>
-.punct { display: grid; gap: 8px; padding: 16px 24px 20px; }
+.punct { display: grid; gap: 8px; padding: 12px 16px 20px 24px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .hero { display: flex; align-items: center; gap: 14px; }
 .share { font-size: 40px; line-height: 44px; font-weight: 800; letter-spacing: -0.5px; }
 .hero-text { display: grid; }
@@ -103,5 +115,5 @@ const summary = computed(() => (p.value ? `Ostatnie ${bars.value.length} kursów
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 2px 0 0; padding: 0; list-style: none; color: rgb(var(--v-theme-on-surface-variant)); }
 .legend li { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 10px; height: 10px; border-radius: 3px; }
-@media (max-width: 480px) { .punct { padding: 16px; } }
+@media (max-width: 480px) { .punct { padding: 12px 8px 16px 16px; } }
 </style>

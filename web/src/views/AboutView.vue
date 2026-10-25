@@ -17,7 +17,7 @@ type Part = string | [string, string]
 const sources: { title: string; parts: Part[] }[] = [
   { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Wyszukiwarka i tablice odjazdów uwzględniają też pociągi POLREGIO i PKP Intercity na stacjach w Wielkopolsce (bez mapy).'] },
   { title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
-  { title: 'Punktualność', parts: ['Liczona z tych samych opóźnień PKP PLK: na stronie pociągu odsetek kursów z ostatnich 30 dni, które dojechały na stację końcową z opóźnieniem do 5 min.'] },
+  { title: 'Punktualność', parts: ['Liczona z tych samych opóźnień PKP PLK: na stronie pociągu odsetek kursów, które dojechały na stację końcową z opóźnieniem do 5 min (okres i próg zmienisz w Ustawieniach).'] },
   { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
   { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
   { title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] },
@@ -25,7 +25,7 @@ const sources: { title: string; parts: Part[] }[] = [
 
 const privacy = [
   'Bez kont, reklam i statystyk odwiedzin. Nie używamy ciasteczek (poza panelem administratora).',
-  'Ulubione stacje, obserwowane podróże i trasy, ostatnie wyszukiwanie i jego opcje, motyw i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
+  'Ulubione stacje, obserwowane podróże i trasy, ostatnie wyszukiwanie i jego opcje, motyw, ustawienia i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
   'Gdy włączysz powiadomienia o podróży, serwer zapisuje adres subskrypcji powiadomień Twojej przeglądarki i pociągi tej podróży. Usuwamy je po jej zakończeniu albo po wyłączeniu powiadomień. Przy powiadomieniach o trasie serwer zapisuje adres subskrypcji, obie stacje, opcje wyszukiwania i wybrane dni i godziny — do wyłączenia powiadomień, a jeśli przez 90 dni nie otworzysz strony, usuwamy je same. Powiadomienia dostarcza usługa producenta przeglądarki (Google, Mozilla, Apple, Microsoft).',
   'Lokalizacji używamy tylko po kliknięciu „Najbliższa stacja” albo „Moja lokalizacja”. Najbliższą stację wylicza Twoja przeglądarka.',
   'Podkład mapy pobierany jest z OpenFreeMap, więc ten serwis widzi Twój adres IP. Hosting może zapisywać standardowe logi serwera. Do ochrony przed nadużyciami serwer liczy zapytania z jednego adresu IP: zapisuje tylko jednokierunkowy skrót adresu, a liczniki usuwa po dobie.',

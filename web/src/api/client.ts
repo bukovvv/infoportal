@@ -53,7 +53,7 @@ export const api = {
   live: () => request<Live>('GET', '/live'),
   status: () => request<Status>('GET', '/status'),
   notices: () => request<Notice[]>('GET', '/notices'),
-  punctuality: (number: string, agency = 'KW') => request<Punctuality>('GET', `/punctuality?${q({ number, agency })}`),
+  punctuality: (number: string, agency = 'KW', days = 30, onTime = 5) => request<Punctuality>('GET', `/punctuality?${q({ number, agency, days, onTime })}`),
   push: {
     key: () => request<{ key: string }>('GET', '/push/key'),
     watch: (body: { subscription: PushSubscriptionJSON; journeyId: string; legs: { key: string; from: string; to: string }[] }) =>

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { Connection, Leg } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
+import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
 import { agencyCode, agencyName, isIntercity, isPartner } from '@/utils/agency'
@@ -18,6 +19,7 @@ import TrainChip from './TrainChip.vue'
 const props = defineProps<{ connection: Connection; now?: number; highlight?: boolean }>()
 const journeys = useJourneys()
 const notices = useNotices()
+const prefs = usePrefs()
 const ui = useUi()
 const expanded = ref(false)
 /** odcinki z rozwiniętą listą stacji pośrednich */
@@ -29,7 +31,7 @@ function toggleLeg(key: string) {
 }
 const c = computed(() => props.connection)
 /** komunikaty o pociągach, stacjach lub liniach tego połączenia */
-const related = computed(() => notices.forConnection(c.value))
+const related = computed(() => notices.forConnection(c.value).filter(prefs.showsNotice))
 const first = computed(() => c.value.legs[0])
 const last = computed(() => c.value.legs[c.value.legs.length - 1])
 const depDelay = computed(() => first.value.departureDelay ?? 0)

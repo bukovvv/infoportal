@@ -491,7 +491,7 @@ final class PublicApi
         return new Response(StatusService::build());
     }
 
-    /** Punktualność pociągu z ostatnich 30 dni (GET /punctuality?number=77610/1&agency=KW). */
+    /** Punktualność pociągu (GET /punctuality?number=77610/1&agency=KW&days=30&onTime=5 — okres 7/30/90 dni, na czas do 3/5/10 min). */
     public function punctuality(): Response
     {
         $number = trim((string) ($_GET['number'] ?? ''));
@@ -500,7 +500,10 @@ final class PublicApi
             throw new ApiException('Podaj numer pociągu, np. 77600.', 422);
         }
 
-        return new Response((new PunctualityRepository())->summary($number, $agency), maxAge: 900);
+        $days = in_array((int) ($_GET['days'] ?? 30), PunctualityRepository::PERIODS, true) ? (int) $_GET['days'] : 30;
+        $onTime = in_array((int) ($_GET['onTime'] ?? 5), PunctualityRepository::THRESHOLDS, true) ? (int) $_GET['onTime'] : PunctualityRepository::ON_TIME_MINUTES;
+
+        return new Response((new PunctualityRepository())->summary($number, $agency, $days, $onTime), maxAge: 900);
     }
 
     public function notices(): Response
