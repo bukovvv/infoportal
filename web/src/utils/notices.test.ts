@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Notice } from '@/api/types'
-import { aboutConnection, aboutStation, aboutTrip, bodyBlocks, detectStations, detectTrains, plainBody, scopeText } from './notices'
+import { aboutConnection, aboutStation, aboutTrip, bodyBlocks, plainBody, scopeText } from './notices'
 
 const notice = (over: Partial<Notice> = {}): Notice => ({
   id: 1, title: 'T', body: 'B', line: 'Cała sieć KW', severity: 'info', trains: [], stations: [], lines: [],
@@ -20,18 +20,6 @@ describe('treść komunikatu', () => {
   it('lista zaraz po akapicie bez pustej linii', () => {
     expect(bodyBlocks('Zmiany:\n• 77600\n• 77602')).toEqual([{ kind: 'p', text: 'Zmiany:' }, { kind: 'ul', items: ['77600', '77602'] }])
     expect(plainBody('Zmiany:\n- 77600')).toBe('Zmiany:\n77600')
-  })
-})
-
-describe('wykrywanie w treści', () => {
-  it('numery pociągów bez dat, godzin i lat', () => {
-    expect(detectTrains('W dniach 20.10.2026–23.10.2026 pociąg 77600 (Konin 05:12) i 3410 oraz KW 77600, rok 2026, 77610/1')).toEqual(['77600', '3410', '77610', '77611'])
-  })
-
-  it('stacje ze skrótami, dłuższa nazwa wygrywa', () => {
-    const stations = [{ id: '1', name: 'Konin' }, { id: '2', name: 'Konin Zachód' }, { id: '3', name: 'Poznań Główny' }, { id: '4', name: 'Kostrzyn Wielkopolski' }, { id: '5', name: 'Września' }]
-    expect(detectStations('relacji Konin Zachód – Poznań Gł., przez Kostrzyn Wlkp.', stations).map((s) => s.id)).toEqual(['2', '3', '4'])
-    expect(detectStations('Konin – Września', stations).map((s) => s.id).sort()).toEqual(['1', '5'])
   })
 })
 

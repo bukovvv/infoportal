@@ -7,6 +7,7 @@ import InstallPrompt from '@/components/InstallPrompt.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 import TrainSheet from '@/components/TrainSheet.vue'
 import { shortTitles, titles } from '@/router'
+import { useAdmin } from '@/stores/admin'
 import { useLive, useNotices, useStatus } from '@/stores/data'
 import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
@@ -17,6 +18,7 @@ const route = useRoute()
 const router = useRouter()
 const ui = useUi()
 const prefs = usePrefs()
+const admin = useAdmin()
 const live = useLive()
 const status = useStatus()
 const notices = useNotices()
@@ -103,6 +105,16 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
           <v-icon v-if="!mdAndUp" icon="confirmation_number" />
           <template v-else>Kup bilet</template>
         </v-btn>
+        <template v-if="isAdmin && admin.session?.loggedIn">
+          <v-btn variant="text" :icon="!mdAndUp" :prepend-icon="mdAndUp ? 'open_in_new' : undefined" to="/" target="_blank" aria-label="Portal (w nowej karcie)" class="mr-1">
+            <v-icon v-if="!mdAndUp" icon="open_in_new" />
+            <template v-else>Portal</template>
+          </v-btn>
+          <v-btn variant="text" :icon="!mdAndUp" :prepend-icon="mdAndUp ? 'logout' : undefined" aria-label="Wyloguj" class="mr-1" @click="admin.logout()">
+            <v-icon v-if="!mdAndUp" icon="logout" />
+            <template v-else>Wyloguj</template>
+          </v-btn>
+        </template>
         <v-menu location="bottom end">
           <template #activator="{ props }">
             <v-btn v-bind="props" :icon="mdAndUp ? themeIcon : 'more_vert'" variant="text" aria-label="Motyw, ustawienia i informacje" class="mr-1" />
@@ -111,7 +123,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
             <v-list-subheader>Motyw</v-list-subheader>
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
             <v-divider class="my-1" />
-            <v-list-item prepend-icon="tune" title="Ustawienia" @click="prefs.dialog = true" />
+            <v-list-item v-if="!isAdmin" prepend-icon="tune" title="Ustawienia" @click="prefs.dialog = true" />
             <v-list-item prepend-icon="info" title="O nas" to="/o-nas" />
           </v-list>
         </v-menu>

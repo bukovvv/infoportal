@@ -44,7 +44,11 @@ const router = createRouter({
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),
       children: [
-        { path: '', name: 'admin', component: () => import('@/views/admin/AdminNotices.vue') },
+        { path: '', name: 'admin', component: () => import('@/views/admin/AdminDashboard.vue') },
+        { path: 'komunikaty', name: 'admin-notices', component: () => import('@/views/admin/AdminNotices.vue') },
+        { path: 'komunikaty/nowy', name: 'admin-new', component: () => import('@/views/admin/AdminEditor.vue') },
+        { path: 'komunikaty/:id(\\d+)', name: 'admin-edit', component: () => import('@/views/admin/AdminEditor.vue') },
+        { path: 'wklej', name: 'admin-paste', component: () => import('@/views/admin/AdminPaste.vue') },
         { path: 'stan', name: 'admin-health', component: () => import('@/views/admin/AdminHealth.vue') },
         { path: 'dziennik', name: 'admin-log', component: () => import('@/views/admin/AdminLog.vue') },
       ],

@@ -1,6 +1,6 @@
 import type { Connection, Notice, Severity, StationRef } from '@/api/types'
 import { isPartner } from './agency'
-import { normalize, splitNumbers } from './format'
+import { splitNumbers } from './format'
 import { LEGEND, PKM_LINES, type SchemeLine } from './scheme'
 
 export const noticeIcon: Record<Severity, string> = { danger: 'cancel-fill', warning: 'warning-fill', info: 'info-fill' }
@@ -74,39 +74,3 @@ export function bodyBlocks(body: string): BodyBlock[] {
 
 /** Treść bez znaczników list i pustych linii — do skróconego podglądu i opisu strony. */
 export const plainBody = (body: string) => body.split('\n').map((l) => l.replace(BULLET, '').trim()).filter(Boolean).join('\n')
-
-// --- wykrywanie pociągów i stacji w treści (panel: „Wykryj z treści”, np. po wklejeniu aktualności przewoźnika)
-
-/** Numery pociągów (4–6 cyfr, także „77610/1”) poza datami, godzinami i latami. */
-export function detectTrains(text: string): string[] {
-  const out: string[] = []
-  for (const m of text.matchAll(/(?<![\d.:,/-])\d{4,6}(?:\/\d{1,6})?(?!\d|[.:,/-]\d)/g)) {
-    if (/^(19|20)\d\d$/.test(m[0])) continue
-    for (const n of splitNumbers(m[0])) if (!out.includes(n)) out.push(n)
-  }
-  return out
-}
-
-/** Klucz nazwy stacji: „Poznań Gł.” = „Poznań Główny”, „Wlkp.” = „Wielkopolski”. */
-export function stationTextKey(name: string): string {
-  return ` ${normalize(name)
-    .replace(/\bglown(y|a|e)\b|\bgl\./g, 'gl')
-    .replace(/\bwielkopolsk(i|a|ie)\b|\bwlkp\.?/g, 'wlkp')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()} `
-}
-
-/** Stacje wymienione w tekście (pełna nazwa jako osobne słowa); dłuższa nazwa wygrywa: „Konin Zachód” nie dodaje „Konin”. */
-export function detectStations<S extends Pick<StationRef, 'id' | 'name'>>(text: string, stations: S[]): S[] {
-  const full = stationTextKey(text)
-  let hay = full
-  const found: { s: S; at: number }[] = []
-  for (const s of [...stations].sort((a, b) => b.name.length - a.name.length)) {
-    const key = stationTextKey(s.name)
-    if (key.trim().length < 3 || !hay.includes(key)) continue
-    found.push({ s, at: full.indexOf(key) })
-    hay = hay.split(key).join(' | ')
-  }
-  // w kolejności z tekstu
-  return found.sort((a, b) => a.at - b.at).map((f) => f.s)
-}
