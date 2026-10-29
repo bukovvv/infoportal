@@ -7,7 +7,8 @@ $root = $PSScriptRoot
 Set-Location $root
 
 Write-Host '1/4 Testy backendu' -ForegroundColor Cyan
-php server/bin/selftest.php | Select-Object -Last 1
+# nieudane testy i wynik (bez listy [OK])
+php server/bin/selftest.php | Where-Object { $_ -notlike '`[OK`]*' }
 if ($LASTEXITCODE -ne 0) { throw 'Testy backendu nie przeszły.' }
 
 Write-Host '2/4 Testy i build frontendu' -ForegroundColor Cyan
