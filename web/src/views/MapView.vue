@@ -47,7 +47,8 @@ let map: MlMap | null = null
 const keyOf = (t: LiveTrain) => t.key ?? `gps:${t.number}`
 
 const visible = computed(() => {
-  const q = normalize(query.value)
+  // tekst z wyszukiwarki zawęża tylko otwartą listę — po jej zamknięciu mapa pokazuje wszystkie pociągi
+  const q = listOpen.value ? normalize(query.value) : ''
   return live.trains
     .filter((t) => filter.value === 'all' || (filter.value === 'late' ? (t.delay ?? 0) >= 2 : t.delay === null))
     .filter((t) => allAgencies.value || agencies.value.includes(agencyCode(t.agency)))
@@ -316,7 +317,7 @@ function locate() {
   )
 }
 
-watch([() => live.trains, filter, agencies, query, selectedKey], syncTrains)
+watch([() => live.trains, filter, agencies, query, listOpen, selectedKey], syncTrains)
 // pierwsze pozycje przyszły po wczytaniu mapy — dopasuj widok raz, jeśli pasażer jeszcze nie ruszał mapy
 let userMoved = false
 let fittedTrains = false
