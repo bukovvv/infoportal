@@ -9,7 +9,7 @@ import MourningRibbon from '@/components/MourningRibbon.vue'
     <div class="m-text">
       <h2 id="mourning-title" class="m-title">Żałoba narodowa</h2>
       <p>
-        Jestem właścicielem tej strony. Pochodzę z Krakowa — to moje rodzinne miasto. Jestem wstrząśnięty wydarzeniami,
+        Jestem właścicielem tej strony. Pochodzę z Krakowa. To moje rodzinne miasto. Jestem wstrząśnięty wydarzeniami,
         do których w nim doszło. Łączę się w bólu z rodzinami i bliskimi ofiar oraz ze wszystkimi mieszkańcami Krakowa.
       </p>
       <p class="m-sign">Właściciel zanimwyjdziesz.pl</p>

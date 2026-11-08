@@ -4,7 +4,7 @@ import { md3 } from 'vuetify/blueprints'
 import { pl } from 'vuetify/locale'
 import { h } from 'vue'
 import MsIcon from './MsIcon'
-import { MOURNING } from '@/utils/mourning'
+import { mourning } from '@/utils/mourning'
 
 // Kolory z logo: grafit #1A1111 (górny pasek „band”) i czerwień #D2232A (akcja; „brand-red” = strzałka w znaku),
 // ciepłe neutralne tła + kolory rozszerzone: planowo, opóźnienie, estymacja.
@@ -110,7 +110,8 @@ const dark: ThemeDefinition = {
 }
 
 // żałoba: górny pasek i menu boczne czarne (reszta strony w szarości — klasa kw-mourning w app.css)
-if (MOURNING) {
+const BAND = { light: light.colors!.band as string, dark: dark.colors!.band as string }
+if (mourning.value) {
   light.colors!.band = '#000000'
   dark.colors!.band = '#000000'
 }
@@ -127,7 +128,7 @@ const aliases: Record<string, string> = {
   arrowleft: 'arrow_back', arrowright: 'arrow_forward', enter: 'keyboard_return',
 }
 
-export default createVuetify({
+const vuetify = createVuetify({
   blueprint: md3,
   locale: { locale: 'pl', messages: { pl } },
   theme: { defaultTheme: 'system', themes: { light, dark } },
@@ -152,3 +153,11 @@ export default createVuetify({
     VProgressLinear: { color: 'primary' },
   },
 })
+
+/** Koniec żałoby w otwartej karcie: pasek wraca do grafitu. */
+export function endMourningTheme() {
+  const themes = vuetify.theme.themes.value
+  themes.light.colors.band = BAND.light
+  themes.dark.colors.band = BAND.dark
+}
+export default vuetify
