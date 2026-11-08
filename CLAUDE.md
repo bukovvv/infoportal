@@ -7,6 +7,7 @@ Stack: Vue 3 + Vuetify 4 (blueprint MD3) + Pinia + MapLibre (`web/`), PHP 8.1+ b
 Szczegóły: README.md (struktura, komendy), DEPLOYMENT.md (serwer, CRON).
 
 ## Decyzje użytkownika (nie zmieniać bez pytania)
+- **Żałoba** (od 2026-11-08, po strzelaninie w Krakowie; właściciel pochodzi z Krakowa): `MOURNING` w `web/src/utils/mourning.ts` — czarny górny pasek (`band` w `vuetify.ts`), cała strona w szarości (`html.kw-mourning` w `app.css`), wstążka `MourningRibbon.vue` przy logo w pasku, karta `MourningNote.vue` ze słowem od właściciela na starcie. Koniec żałoby: `MOURNING = false` i wdrożenie.
 - Rozkład: GTFS `polish_trains.zip` z mkuran.pl, filtr agencji KW, import CRON-em codziennie 03:30.
 - Opóźnienia: GTFS-RT mkuran.pl (`updates.pb`), pobierane przez PHP CRON co minutę (warunkowo, min. co ~2 min). Bez workera Cloudflare (plan darmowy).
 - **GPS wyłączony** (`gps_enabled` = false w `server/src/Config.php`): Mapa BILKOM od dawna nie zwraca pozycji, innych map nie używamy. Pozycje pociągów tylko estymowane z rozkładu + opóźnień PLK wzdłuż kształtu trasy. Kod GPS zostaje (`BilkomMapClient`, `BackupGpsClient`).
