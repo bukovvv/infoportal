@@ -14,6 +14,8 @@
   }
 
   html, body { font-family: var(--kw-font); }
+  /* żałoba (utils/mourning.ts): cała strona w odcieniach szarości; filtr na <html> nie psuje position: fixed */
+  html.kw-mourning { filter: grayscale(1); }
   .v-application, .v-application [class*='text-'] { font-family: var(--kw-font); }
   /* nagłówki grube jak napis w logo (800) — Figtree w grubości 400 wygląda w nich zbyt lekko */
   .text-headline-small, .text-headline-medium, .text-title-large, .v-app-bar-title { font-weight: 800; letter-spacing: 0; }

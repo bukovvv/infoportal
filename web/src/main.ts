@@ -6,5 +6,8 @@ import App from './App.vue'
 import vuetify from './plugins/vuetify'
 import router from './router'
 import './styles/app.css'
+import { MOURNING } from './utils/mourning'
+
+if (MOURNING) document.documentElement.classList.add('kw-mourning')
 
 createApp(App).use(createPinia()).use(router).use(vuetify).mount('#app')

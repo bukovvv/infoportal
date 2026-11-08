@@ -4,6 +4,7 @@ import { md3 } from 'vuetify/blueprints'
 import { pl } from 'vuetify/locale'
 import { h } from 'vue'
 import MsIcon from './MsIcon'
+import { MOURNING } from '@/utils/mourning'
 
 // Kolory z logo: grafit #1A1111 (górny pasek „band”) i czerwień #D2232A (akcja; „brand-red” = strzałka w znaku),
 // ciepłe neutralne tła + kolory rozszerzone: planowo, opóźnienie, estymacja.
@@ -106,6 +107,12 @@ const dark: ThemeDefinition = {
     'on-band': '#F0E6E6',
     'brand-red': '#D2232A',
   },
+}
+
+// żałoba: górny pasek i menu boczne czarne (reszta strony w szarości — klasa kw-mourning w app.css)
+if (MOURNING) {
+  light.colors!.band = '#000000'
+  dark.colors!.band = '#000000'
 }
 
 const aliases: Record<string, string> = {
