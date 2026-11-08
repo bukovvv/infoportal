@@ -4,7 +4,7 @@ defineProps<{ size?: number }>()
 </script>
 
 <template>
-  <svg class="ribbon" viewBox="0 0 32 48" :height="size ?? 36" :width="((size ?? 36) * 32) / 48" role="img" aria-label="Wstążka żałobna">
+  <svg class="ribbon" viewBox="-1 -3 34 52" :height="size ?? 36" :width="((size ?? 36) * 34) / 52" role="img" aria-label="Wstążka żałobna">
     <!-- cała wstążka: lewa noga → pętla → prawa noga; potem prawa noga jeszcze raz, żeby leżała na wierzchu -->
     <path class="edge" d="M5 45 L19.5 16 C23 8 19.5 3 15.5 3 C11.5 3 8.5 7 10.5 13 L27 45" />
     <path class="fill" d="M5 45 L19.5 16 C23 8 19.5 3 15.5 3 C11.5 3 8.5 7 10.5 13 L27 45" />
