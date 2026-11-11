@@ -4,7 +4,7 @@ import { md3 } from 'vuetify/blueprints'
 import { pl } from 'vuetify/locale'
 import { h } from 'vue'
 import MsIcon from './MsIcon'
-import { mourning } from '@/utils/mourning'
+import { region } from '@/utils/region'
 
 // Kolory z logo: grafit #1A1111 (górny pasek „band”) i czerwień #D2232A (akcja; „brand-red” = strzałka w znaku),
 // ciepłe neutralne tła + kolory rozszerzone: planowo, opóźnienie, estymacja.
@@ -55,6 +55,9 @@ const light: ThemeDefinition = {
     'on-info-container': '#001B3E',
     band: '#1A1111',
     'on-band': '#FFFFFF',
+    // przycisk „Kup bilet” na pasku: w Wielkopolsce jasny na grafitowym, w Małopolsce żółty KML
+    'band-accent': '#FFFFFF',
+    'on-band-accent': '#1A1111',
     'brand-red': '#D2232A',
   },
 }
@@ -105,15 +108,80 @@ const dark: ThemeDefinition = {
     'on-info-container': '#D6E3FF',
     band: '#231B1B',
     'on-band': '#F0E6E6',
+    'band-accent': '#F0E6E6',
+    'on-band-accent': '#231B1B',
     'brand-red': '#D2232A',
   },
 }
 
-// żałoba: górny pasek i menu boczne czarne (reszta strony w szarości — klasa kw-mourning w app.css)
-const BAND = { light: light.colors!.band as string, dark: dark.colors!.band as string }
-if (mourning.value) {
-  light.colors!.band = '#000000'
-  dark.colors!.band = '#000000'
+/**
+ * Małopolska (/malopolska) w spokojnych barwach Kolei Małopolskich — ten sam układ co w Wielkopolsce, inna temperatura:
+ * pasek granatowo-grafitowy (#141C29, ciemny kolor ze strony KMŁ) zamiast ciepłego grafitu, jedna akcja w stonowanym
+ * niebieskim zamiast czerwieni, chłodne szarości. Żółty KML (#FDC300) tylko na „Kup bilet”. Czerwony znak logo zostaje.
+ */
+const KML_LIGHT: Record<string, string> = {
+  background: '#F4F5F8',
+  'on-background': '#151A23',
+  'on-surface': '#151A23',
+  'surface-light': '#E6E9EF',
+  'surface-variant': '#E6E9EF',
+  'on-surface-variant': '#4A505C',
+  'surface-container': '#EEF0F4',
+  'surface-container-high': '#E6E9EF',
+  'surface-container-highest': '#E0E3EA',
+  primary: '#2A55B0',
+  'on-primary': '#FFFFFF',
+  'primary-container': '#DCE3F7',
+  'on-primary-container': '#0F1F45',
+  secondary: '#5B6170',
+  'on-secondary': '#FFFFFF',
+  'secondary-container': '#E1E5EE',
+  'on-secondary-container': '#181D28',
+  outline: '#777C88',
+  'outline-variant': '#D6DAE2',
+  'inverse-surface': '#2C313B',
+  'on-inverse-surface': '#EEF0F5',
+  'inverse-primary': '#B3C6F2',
+  band: '#141C29',
+  'on-band': '#FFFFFF',
+  'band-accent': '#FDC300',
+  'on-band-accent': '#141C29',
+}
+const KML_DARK: Record<string, string> = {
+  background: '#0E1117',
+  'on-background': '#E4E6EB',
+  surface: '#171B22',
+  'on-surface': '#E4E6EB',
+  'surface-bright': '#393F4A',
+  'surface-light': '#2A2F38',
+  'surface-variant': '#2A2F38',
+  'on-surface-variant': '#C3C7D0',
+  'surface-container-lowest': '#0A0C10',
+  'surface-container-low': '#171B22',
+  'surface-container': '#1F242C',
+  'surface-container-high': '#2A2F38',
+  'surface-container-highest': '#343A44',
+  primary: '#B3C6F2',
+  'on-primary': '#152B5C',
+  'primary-container': '#2D4478',
+  'on-primary-container': '#DCE3F7',
+  secondary: '#C1C6D2',
+  'on-secondary': '#2B303B',
+  'secondary-container': '#353B48',
+  'on-secondary-container': '#DDE2EE',
+  outline: '#8D929D',
+  'outline-variant': '#40454F',
+  'inverse-surface': '#E4E6EB',
+  'on-inverse-surface': '#2C313B',
+  'inverse-primary': '#2A55B0',
+  band: '#1B2230',
+  'on-band': '#ECEEF3',
+  'band-accent': '#FDC300',
+  'on-band-accent': '#141C29',
+}
+if (region.id === 'malopolska') {
+  Object.assign(light.colors!, KML_LIGHT)
+  Object.assign(dark.colors!, KML_DARK)
 }
 
 const aliases: Record<string, string> = {
@@ -154,10 +222,4 @@ const vuetify = createVuetify({
   },
 })
 
-/** Koniec żałoby w otwartej karcie: pasek wraca do grafitu. */
-export function endMourningTheme() {
-  const themes = vuetify.theme.themes.value
-  themes.light.colors.band = BAND.light
-  themes.dark.colors.band = BAND.dark
-}
 export default vuetify
