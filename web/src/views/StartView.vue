@@ -12,6 +12,8 @@ import NoticeItem from '@/components/NoticeItem.vue'
 import StationField from '@/components/StationField.vue'
 import BtkHint from '@/components/BtkHint.vue'
 import StatusBanner from '@/components/StatusBanner.vue'
+import MourningNote from '@/components/MourningNote.vue'
+import { mourning } from '@/utils/mourning'
 import SearchOptionsChip from '@/components/SearchOptionsChip.vue'
 import WhenChip from '@/components/WhenChip.vue'
 import { useNotices, useStatus } from '@/stores/data'
@@ -220,6 +222,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
       <v-btn type="submit" size="x-large" prepend-icon="search" :loading="searching" class="f-btn">Szukaj połączeń</v-btn>
       <v-alert v-if="error" color="error-container" icon="error" density="compact" class="f-error">{{ error }}</v-alert>
     </form>
+
+    <MourningNote v-if="mourning" />
 
     <StatusBanner />
 

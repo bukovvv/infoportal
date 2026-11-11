@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import BrandMark from '@/components/BrandMark.vue'
 import InstallPrompt from '@/components/InstallPrompt.vue'
+import MourningRibbon from '@/components/MourningRibbon.vue'
+import { mourning } from '@/utils/mourning'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 import TrainSheet from '@/components/TrainSheet.vue'
 import { shortTitles, titles } from '@/router'
@@ -84,6 +86,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       <template #prepend>
         <router-link v-if="(isStart || mdAndUp) && !isAdmin" to="/" class="brand-logo" aria-label="zanimwyjdziesz.pl – start"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" height="40"></router-link>
         <router-link v-else to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark on-band :size="36" /></router-link>
+        <MourningRibbon v-if="mourning" :size="mdAndUp ? 40 : 34" class="bar-ribbon" />
         <span v-if="mdAndUp && !isStart && !isAdmin" class="bar-divider" aria-hidden="true" />
       </template>
       <v-app-bar-title v-if="!isStart || isAdmin" class="text-title-large app-title">{{ title }}</v-app-bar-title>
@@ -218,6 +221,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 @media (min-width: 840px) { .brand-logo { margin-inline-start: 20px; } }
 .bar-divider { width: 1px; height: 28px; margin-inline: 16px 4px; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 28%, transparent); }
 .brand-logo img { display: block; height: 40px; width: auto; }
+.bar-ribbon { margin-inline-start: 10px; }
 .live-chip {
   display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 16px;
   background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); font-size: 13px; font-weight: 600; white-space: nowrap;
