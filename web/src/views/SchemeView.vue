@@ -3,7 +3,6 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
-import MapSwitch from '@/components/MapSwitch.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
 import { useNotices, useStations } from '@/stores/data'
 import { plural } from '@/utils/format'
@@ -322,7 +321,6 @@ const nodeNotices = computed(() => (node.value?.name && nodeId.value ? notices.f
       </g>
     </svg>
 
-    <div class="switch"><MapSwitch /></div>
     <div class="controls" :class="{ raised: !!node && !expanded }">
       <v-btn icon="add" color="surface-container-high" size="40" elevation="2" aria-label="Przybliż" @click="zoomButton(1.4)" />
       <v-btn icon="remove" color="surface-container-high" size="40" elevation="2" aria-label="Oddal" @click="zoomButton(1 / 1.4)" />
@@ -447,7 +445,6 @@ const nodeNotices = computed(() => (node.value?.name && nodeId.value ? notices.f
 .labels text.home { fill: rgb(var(--v-theme-primary)); font-weight: 900; }
 .labels text.dim { opacity: .3; }
 
-.switch { position: absolute; z-index: 2; top: 16px; left: 50%; transform: translateX(-50%); }
 .controls { position: absolute; z-index: 2; right: 16px; bottom: 32px; display: grid; gap: 12px; }
 
 .panel {

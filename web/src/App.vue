@@ -124,6 +124,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
             <v-divider class="my-1" />
             <v-list-item v-if="!isAdmin" prepend-icon="tune" title="Ustawienia" @click="prefs.dialog = true" />
+            <v-list-item v-if="!isAdmin" prepend-icon="route" title="Schemat połączeń KW" :to="{ name: 'scheme' }" />
             <v-list-item prepend-icon="info" title="O nas" to="/o-nas" />
           </v-list>
         </v-menu>

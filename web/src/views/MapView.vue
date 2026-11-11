@@ -1,21 +1,24 @@
 <script setup lang="ts">
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { type GeoJSONSource, type LngLatBoundsLike, Map as MlMap, Marker, setWorkerUrl } from 'maplibre-gl'
+import { type FilterSpecification, type GeoJSONSource, type LngLatBoundsLike, Map as MlMap, Marker, setWorkerUrl } from 'maplibre-gl'
 import maplibreWorker from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import { api } from '@/api/client'
-import type { LiveTrain } from '@/api/types'
+import type { LiveTrain, Notice, Station } from '@/api/types'
 import AgencyToggles from '@/components/AgencyToggles.vue'
-import MapSwitch from '@/components/MapSwitch.vue'
+import MapNoticeSheet from '@/components/MapNoticeSheet.vue'
+import MapStationSheet from '@/components/MapStationSheet.vue'
+import MapTrainSheet from '@/components/MapTrainSheet.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import { useLive, useStations } from '@/stores/data'
+import { useLive, useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { agencyCode } from '@/utils/agency'
 import { clock, normalize } from '@/utils/format'
 import { AGENCIES } from '@/utils/searchOptions'
 import type { Trip } from '@/api/types'
+import { alertMarks, colorNetwork, stationRank, trainLineColor } from '@/utils/mapLines'
 import { loadMapStyle, mapPalette } from '@/utils/mapStyle'
 import icons from 'virtual:material-symbols'
 
@@ -26,9 +29,11 @@ const route = useRoute()
 const router = useRouter()
 const live = useLive()
 const stations = useStations()
+const notices = useNotices()
 const ui = useUi()
 const theme = useTheme()
 const { mdAndUp } = useDisplay()
+const dark = computed(() => theme.global.name.value === 'dark')
 
 const container = ref<HTMLElement | null>(null)
 const selectedKey = ref<string | null>((route.query.kurs as string) || null)
@@ -42,6 +47,14 @@ const listOpen = ref(false)
 const mapError = ref<string | null>(null)
 const network = shallowRef<GeoJSON.FeatureCollection | null>(null)
 const routeTrip = shallowRef<Trip | null>(null)
+/** panel wybranego pociągu (MapTrainSheet): błąd wczytania, zwinięty do nagłówka, wysokość — mapa trzyma pociąg nad nim */
+const tripError = ref<string | null>(null)
+const panelCollapsed = ref(false)
+const sheetHeight = ref(0)
+const trainSheet = ref<InstanceType<typeof MapTrainSheet> | null>(null)
+/** panel po dotknięciu stacji albo znaczka utrudnienia (pociąg ma własny panel — MapTrainSheet) */
+const info = shallowRef<{ kind: 'station'; station: Station } | { kind: 'notice'; notice: Notice } | null>(null)
+const marks = computed(() => alertMarks(notices.list, stations.all))
 let map: MlMap | null = null
 
 const keyOf = (t: LiveTrain) => t.key ?? `gps:${t.number}`
@@ -61,7 +74,7 @@ function colors() {
   const p = mapPalette(theme.global.name.value === 'dark' ? 'dark' : 'light')
   return {
     primary: c.primary, ontime: p.ontime, delay: p.late, est: p.est, network: p.network,
-    surface: c['surface-container-lowest'], outline: c.outline, text: c['on-surface'], halo: c.surface,
+    surface: c['surface-container-lowest'], outline: c.outline, text: c['on-surface'], halo: c.surface, error: c.error,
   }
 }
 
@@ -100,8 +113,9 @@ function refreshRoute() {
   if (!map) return
   ;(map.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson())
   ;(map.getSource('kw-route-stops') as GeoJSONSource | undefined)?.setData(routeStopsGeoJson())
-  if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.35 : 0.9)
+  if (map.getLayer('kw-network')) map.setPaintProperty('kw-network', 'line-opacity', routeTrip.value ? 0.3 : 0.9)
   if (map.getLayer('kw-network-partner')) map.setPaintProperty('kw-network-partner', 'line-opacity', routeTrip.value ? 0.2 : 0.45)
+  if (map.getLayer('kw-alert')) map.setPaintProperty('kw-alert', 'line-opacity', routeTrip.value ? 0.3 : 1)
   // trasa wybranego kursu w kolorze jego linii (jak kółko w pastylce), autobus i brak koloru — kolor akcji
   const trip = routeTrip.value
   const color = trip && !trip.isBus && trip.route?.color ? trip.route.color : colors().primary
@@ -117,19 +131,28 @@ function refreshRoute() {
 const markers = new Map<string, { marker: Marker; el: HTMLButtonElement }>()
 const svg = (name: string, cls: string) => `<svg class="${cls}" viewBox="0 -960 960 960" aria-hidden="true"><path d="${icons[name] ?? ''}"/></svg>`
 const stateLabel = (t: LiveTrain) => (t.delay === null ? 'bez danych na żywo' : t.delay >= 2 ? `opóźnienie ${t.delay} min` : 'planowo')
-/** Kolory plakietki linii z rozkładu (autobus zastępczy i brak koloru — neutralnie). */
-const pillColor = (t: LiveTrain) => (t.isBus || !t.route?.color
-  ? { bg: 'rgb(var(--v-theme-inverse-surface))', fg: 'rgb(var(--v-theme-on-inverse-surface))' }
-  : { bg: t.route.color, fg: t.route.textColor ?? '#FFFFFF' })
+/** Jasne kolory linii (żółte, pomarańczowe) — ciemna strzałka. */
+const onColor = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16)
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170 ? '#1A1111' : '#FFFFFF'
+}
+/** Kolor kółka: linia KW ze schematu, PKM i inni przewoźnicy — z rozkładu (autobus zastępczy i brak koloru — neutralnie). */
+function pillColor(t: LiveTrain) {
+  const c = t.isBus ? null : trainLineColor(t, dark.value)
+  if (!c) return { bg: 'rgb(var(--v-theme-inverse-surface))', fg: 'rgb(var(--v-theme-on-inverse-surface))' }
+  return { bg: c, fg: c === t.route?.color && t.route.textColor ? t.route.textColor : onColor(c) }
+}
+/** strzałka kierunku: kreska z grotem (wcześniej wypełniona strzałka Material) */
+const ARROW = '<svg class="arr" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 12V2.5M3 6.5L7 2.5L11 6.5"/></svg>'
 
 function pill(key: string, bus: boolean): HTMLButtonElement {
   const el = document.createElement('button')
   el.type = 'button'
   el.className = 'train-pill'
-  el.innerHTML = `<span class="orbit"></span>${svg('arrow_upward', 'arr')}${svg(bus ? 'directions_bus' : 'train', 'veh')}<span class="no"></span><span class="late"></span>`
+  el.innerHTML = `<span class="orbit"></span>${ARROW}${svg(bus ? 'directions_bus' : 'train', 'veh')}<span class="no"></span><span class="late"></span>`
   el.addEventListener('click', (e) => {
     e.stopPropagation()
-    void select(key)
+    void select(key, true, 'train')
   })
   return el
 }
@@ -203,25 +226,53 @@ function layoutPills() {
   })
 }
 
+/** Stacje z ważnością (rank, `stationRank`): węzły widać od początku, przystanki dopiero po przybliżeniu. */
 function stationsGeoJson(): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: stations.all.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id, name: s.name, major: s.daily >= 60 } })),
+    features: stations.all.map((s) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [s.lon, s.lat] }, properties: { id: s.id, name: s.name, rank: stationRank(s) } })),
   }
 }
+
+const networkData = () => (network.value ? colorNetwork(network.value, stations.all, dark.value) : empty)
+
+/** Odcinki i stacje z komunikatami o utrudnieniach (żółte kreski; poważne — w kolorze błędu). */
+function alertsGeoJson(): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: marks.value.flatMap((m) => [
+      ...(m.segments.length ? [{ type: 'Feature' as const, geometry: { type: 'MultiLineString' as const, coordinates: m.segments }, properties: { id: m.notice.id, danger: m.notice.severity === 'danger' } }] : []),
+      ...m.points.map((p) => ({ type: 'Feature' as const, geometry: { type: 'Point' as const, coordinates: p }, properties: { id: m.notice.id, danger: m.notice.severity === 'danger' } })),
+    ]),
+  }
+}
+
+// stacja: rank ≥ 2 zawsze, rank 1 od przybliżenia 8, przystanki od 9,5
+const STATION_FILTER: FilterSpecification =['any', ['>=', ['get', 'rank'], 2], ['all', ['==', ['get', 'rank'], 1], ['>=', ['zoom'], 8]], ['>=', ['zoom'], 9.5]]
 
 function addOverlays() {
   if (!map || map.getSource('kw-network')) return
   const c = colors()
-  map.addSource('kw-network', { type: 'geojson', data: network.value ?? empty })
+  const warn = dark.value ? '#F5B83D' : '#E6A100'
+  map.addSource('kw-network', { type: 'geojson', data: networkData() })
+  map.addSource('kw-alerts', { type: 'geojson', data: alertsGeoJson() })
   map.addSource('kw-route', { type: 'geojson', data: routeGeoJson() })
   map.addSource('kw-route-stops', { type: 'geojson', data: routeStopsGeoJson() })
   map.addSource('kw-stations', { type: 'geojson', data: stationsGeoJson() })
   // linie tylko POLREGIO / PKP Intercity (przycięte do Wielkopolski) — cieńsze i bledsze, pod siecią KW
   map.addLayer({ id: 'kw-network-partner', type: 'line', source: 'kw-network', filter: ['all', ['!', ['get', 'bus']], ['==', ['get', 'partner'], true]], layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.2 : 0.45, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.2, 11, 2, 14, 3] } })
-  map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['all', ['!', ['get', 'bus']], ['!=', ['get', 'partner'], true]], layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': c.network, 'line-opacity': routeTrip.value ? 0.35 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2, 11, 3.5, 14, 5] } })
+  // sieć KW w kolorach linii (PKM na wierzchu)
+  map.addLayer({ id: 'kw-network', type: 'line', source: 'kw-network', filter: ['all', ['!', ['get', 'bus']], ['!=', ['get', 'partner'], true]],
+    layout: { 'line-cap': 'round', 'line-join': 'round', 'line-sort-key': ['get', 'rank'] },
+    paint: { 'line-color': ['coalesce', ['get', 'color'], c.network], 'line-opacity': routeTrip.value ? 0.3 : 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 2.5, 11, 4, 14, 6] } })
+  // utrudnienia: przerywana kreska na linii (pod spodem jasna obwódka), stacje — żółty pierścień
+  map.addLayer({ id: 'kw-alert-casing', type: 'line', source: 'kw-alerts', filter: ['!=', ['geometry-type'], 'Point'], layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': c.halo, 'line-opacity': 0.75, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 6, 12, 11] } })
+  map.addLayer({ id: 'kw-alert', type: 'line', source: 'kw-alerts', filter: ['!=', ['geometry-type'], 'Point'], layout: { 'line-join': 'round' },
+    paint: { 'line-color': ['case', ['get', 'danger'], c.error, warn], 'line-opacity': routeTrip.value ? 0.3 : 1, 'line-dasharray': [1.6, 1.2], 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 3, 12, 6] } })
+  map.addLayer({ id: 'kw-alert-points', type: 'circle', source: 'kw-alerts', filter: ['==', ['geometry-type'], 'Point'],
+    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 6, 12, 10], 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ['case', ['get', 'danger'], c.error, warn], 'circle-stroke-width': 3 } })
   map.addLayer({ id: 'kw-route-casing', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': c.halo, 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 7, 12, 11] } })
   map.addLayer({ id: 'kw-route', type: 'line', source: 'kw-route', layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -235,11 +286,27 @@ function addOverlays() {
       'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, ['case', ['get', 'terminal'], 4.5, 2.5], 12, ['case', ['get', 'terminal'], 7, 5]],
       'circle-color': c.surface, 'circle-stroke-color': c.primary, 'circle-stroke-width': ['case', ['get', 'terminal'], 3, 2],
     } })
-  map.addLayer({ id: 'kw-stations', type: 'circle', source: 'kw-stations', minzoom: 8,
-    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['case', ['get', 'major'], 3.5, 2], 13, 5], 'circle-color': c.surface, 'circle-stroke-color': c.outline, 'circle-stroke-width': 1.5 } })
-  map.addLayer({ id: 'kw-station-labels', type: 'symbol', source: 'kw-stations', minzoom: 8,
-    filter: ['any', ['get', 'major'], ['>=', ['zoom'], 10.5]],
-    layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': ['case', ['get', 'major'], 12, 11], 'text-offset': [0.8, 0], 'text-anchor': 'left', 'text-optional': true },
+  // stacje według ważności: węzły — biały środek z grafitową obwódką, przystanki — małe kropki
+  map.addLayer({ id: 'kw-stations', type: 'circle', source: 'kw-stations', filter: STATION_FILTER, layout: { 'circle-sort-key': ['get', 'rank'] },
+    paint: {
+      'circle-radius': ['interpolate', ['linear'], ['zoom'],
+        6, ['match', ['get', 'rank'], 3, 6, 2, 4.5, 1, 3, 2],
+        12, ['match', ['get', 'rank'], 3, 9, 2, 7, 1, 5.5, 4.5]],
+      'circle-color': c.surface,
+      'circle-stroke-color': ['case', ['>=', ['get', 'rank'], 2], c.text, c.outline],
+      'circle-stroke-width': ['case', ['>=', ['get', 'rank'], 2], 2.5, 1.5],
+    } })
+  // wybrana stacja: pierścień w kolorze akcji
+  map.addLayer({ id: 'kw-station-selected', type: 'circle', source: 'kw-stations', filter: ['==', ['get', 'id'], info.value?.kind === 'station' ? info.value.station.id : ''],
+    paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 9, 12, 14], 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': c.primary, 'circle-stroke-width': 3.5 } })
+  // większe pole dotyku (niewidoczne)
+  map.addLayer({ id: 'kw-stations-hit', type: 'circle', source: 'kw-stations', filter: STATION_FILTER, paint: { 'circle-radius': 14, 'circle-color': '#000', 'circle-opacity': 0 } })
+  map.addLayer({ id: 'kw-station-labels-major', type: 'symbol', source: 'kw-stations', filter: ['>=', ['get', 'rank'], 2],
+    layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': ['case', ['==', ['get', 'rank'], 3], 14, 12.5], 'text-offset': [0.9, 0], 'text-anchor': 'left', 'text-optional': true, 'symbol-sort-key': ['-', 3, ['get', 'rank']] },
+    paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 2 } })
+  map.addLayer({ id: 'kw-station-labels', type: 'symbol', source: 'kw-stations', minzoom: 8.5,
+    filter: ['any', ['==', ['get', 'rank'], 1], ['>=', ['zoom'], 11]],
+    layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Regular'], 'text-size': ['case', ['==', ['get', 'rank'], 1], 12, 11], 'text-offset': [0.8, 0], 'text-anchor': 'left', 'text-optional': true },
     paint: { 'text-color': c.text, 'text-halo-color': c.halo, 'text-halo-width': 1.5 } })
   map.addLayer({ id: 'kw-route-labels', type: 'symbol', source: 'kw-route-stops', minzoom: 8,
     layout: { 'text-field': ['get', 'name'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-offset': [0.9, 0], 'text-anchor': 'left', 'text-optional': true },
@@ -247,22 +314,86 @@ function addOverlays() {
   refreshRoute()
 }
 
-/** Marginesy na panel listy i arkusz pociągu, zmniejszane proporcjonalnie w małych oknach. */
+/** Znaczki ⚠ utrudnień (HTML jak pastylki): dotknięcie otwiera skrót komunikatu. */
+const alertMarkers = new Map<number, Marker>()
+function syncAlerts() {
+  ;(map?.getSource('kw-alerts') as GeoJSONSource | undefined)?.setData(alertsGeoJson())
+  if (!map) return
+  const ids = new Set(marks.value.map((m) => m.notice.id))
+  for (const [id, m] of alertMarkers) if (!ids.has(id)) { m.remove(); alertMarkers.delete(id) }
+  for (const mark of marks.value) {
+    let m = alertMarkers.get(mark.notice.id)
+    if (!m) {
+      const el = document.createElement('button')
+      el.type = 'button'
+      el.innerHTML = svg('warning-fill', 'ic')
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        const n = notices.list.find((x) => x.id === mark.notice.id)
+        if (n) openInfo({ kind: 'notice', notice: n })
+      })
+      m = new Marker({ element: el, anchor: 'center' }).setLngLat(mark.at).addTo(map)
+      alertMarkers.set(mark.notice.id, m)
+    } else {
+      m.setLngLat(mark.at)
+    }
+    const el = m.getElement()
+    el.className = `alert-badge ${mark.notice.severity}`
+    el.classList.toggle('selected', info.value?.kind === 'notice' && info.value.notice.id === mark.notice.id)
+    el.setAttribute('aria-label', `Utrudnienie: ${mark.notice.title}`)
+  }
+}
+
+/**
+ * Panel stacji / utrudnienia: zamyka listę (na telefonie), stację przybliża nad panelem.
+ * Wybrany pociąg zostaje: na komputerze jego panel jest dalej na dole, na telefonie chowa się pod panelem stacji i wraca po jego zamknięciu.
+ */
+let collapsedForInfo = false
+function openInfo(next: NonNullable<typeof info.value>) {
+  if (ui.sheet) ui.closeTrain()
+  if (!mdAndUp.value) listOpen.value = false
+  // na komputerze panel stacji jest nad panelem pociągu — ten zwija się do nagłówka, żeby stacja miała miejsce
+  if (mdAndUp.value && selectedKey.value && !panelCollapsed.value) {
+    panelCollapsed.value = true
+    collapsedForInfo = true
+  }
+  info.value = next
+  if (next.kind === 'station' && map) map.easeTo({ center: [next.station.lon, next.station.lat], zoom: Math.max(map.getZoom(), 11), padding: padding(), duration: 500 })
+}
+function closeInfo() {
+  info.value = null
+  if (collapsedForInfo && selectedKey.value) panelCollapsed.value = false
+  collapsedForInfo = false
+  // na telefonie wraca panel pociągu — mapa wraca do pociągu (po wysunięciu panelu, z jego wysokością)
+  if (selectedKey.value && !mdAndUp.value) void nextTick(() => keepTrainInView())
+}
+watch(info, (v) => {
+  if (map?.getLayer('kw-station-selected')) map.setFilter('kw-station-selected', ['==', ['get', 'id'], v?.kind === 'station' ? v.station.id : ''])
+  syncAlerts()
+})
+
+/** Panel pociągu widoczny: kurs wczytany (albo błąd); na telefonie ustępuje panelowi stacji. */
+const trainPanel = computed(() => !!selectedKey.value && !!(routeTrip.value || tripError.value) && (mdAndUp.value || !info.value))
+/** Widoczna wysokość panelu pociągu — mierzona wprost (świeża także zaraz po wysunięciu). */
+const trainSheetHeight = () => (trainPanel.value ? trainSheet.value?.visibleHeight() ?? sheetHeight.value : 0)
+
+/** Marginesy na panel listy, panel pociągu (na środku u dołu) i panel stacji, zmniejszane proporcjonalnie w małych oknach. */
 function padding() {
-  const p = mdAndUp.value
-    ? { left: listOpen.value ? 400 : 60, right: ui.sheet?.docked ? 460 : 80, top: 72, bottom: 40 }
-    : { left: 24, right: 72, top: 64, bottom: listOpen.value ? 360 : 40 }
   const w = container.value?.clientWidth ?? 800
   const h = container.value?.clientHeight ?? 600
+  const sheet = trainPanel.value ? trainSheetHeight() + 24 : 0
+  const p = mdAndUp.value
+    ? { left: listOpen.value ? 400 : 60, right: info.value ? 480 : 80, top: 72, bottom: Math.max(40, sheet) }
+    : { left: 24, right: 72, top: 64, bottom: info.value ? 420 : sheet || (listOpen.value ? 360 : 40) }
   const kx = Math.min(1, (w * 0.7) / (p.left + p.right))
-  const ky = Math.min(1, (h * 0.7) / (p.top + p.bottom))
+  const ky = Math.min(1, (h * 0.8) / (p.top + p.bottom))
   return { left: p.left * kx, right: p.right * kx, top: p.top * ky, bottom: p.bottom * ky }
 }
 
 function fitCoords(coords: [number, number][], maxZoom = 11) {
   if (!map || !coords.length) return
   const b = coords.reduce((acc, [x, y]) => [[Math.min(acc[0][0], x), Math.min(acc[0][1], y)], [Math.max(acc[1][0], x), Math.max(acc[1][1], y)]], [[Infinity, Infinity], [-Infinity, -Infinity]])
-  map.fitBounds(b as LngLatBoundsLike, { padding: padding(), maxZoom, duration: 600 })
+  map.fitBounds(b as LngLatBoundsLike, { padding: padding(), maxZoom, duration: 700 })
 }
 
 /** Widok na wszystkie jadące pociągi (sieć KW sięga daleko poza region, np. do Łodzi — na telefonie byłaby za mała); bez pociągów — sieć. */
@@ -272,33 +403,79 @@ function fitNetwork() {
   fitCoords(coords.length ? coords : stations.list.map((s) => [s.lon, s.lat]), 9)
 }
 
-/** Wybór kursu: trasa na mapie i panel szczegółów (na telefonie bez panelu, gdy pasażer chce zobaczyć mapę). */
-async function select(key: string, openSheet = true) {
+const tripCoords = (trip: Trip) => (trip.shape.length ? trip.shape : trip.stops.filter((s) => s.station.lat !== null).map((s) => [s.station.lat!, s.station.lon!]))
+  .map(([lat, lon]) => [lon, lat] as [number, number])
+
+/**
+ * Wybór kursu: trasa na mapie i panel pociągu na środku u dołu (zwinięty do nagłówka, gdy pasażer chce zobaczyć mapę).
+ * `frame`: `train` — dotknięta pastylka: mapa tylko dosuwa pociąg nad panel (bez oddalania), `route` — z listy, tablicy stacji,
+ * adresu: widok na całą trasę. Mapa rusza się raz — gdy panel już się wysuwa i znamy jego wysokość.
+ */
+async function select(key: string, openSheet = true, frame: 'train' | 'route' = 'route') {
+  info.value = null
+  collapsedForInfo = false
+  if (ui.sheet) ui.closeTrain()
+  if (selectedKey.value !== key) tripError.value = null
   selectedKey.value = key
+  panelCollapsed.value = !openSheet
   if (!mdAndUp.value) listOpen.value = false
-  const train = live.trains.find((t) => keyOf(t) === key)
-  if (key.startsWith('gps:')) {
-    ui.openTrain({ number: key.slice(4).split('/')[0] }, true)
-    if (train) map?.flyTo({ center: [train.lon, train.lat], zoom: Math.max(map.getZoom(), 11) })
-    return
-  }
-  if (openSheet) ui.openTrain({ key }, true)
-  void router.replace({ query: { kurs: key } })
+  if (!key.startsWith('gps:')) void router.replace({ query: { kurs: key } })
+  await loadTrip(key, frame)
+}
+
+/** Kurs do panelu i trasy; z `frame` — ustaw widok mapy (przy wyborze), bez — ciche odświeżenie co 30 s. */
+async function loadTrip(key: string, frame?: 'train' | 'route') {
   try {
-    const trip = await api.trip(key)
+    // pozycja GPS bez dopasowanego kursu — pociąg po numerze
+    const trip = key.startsWith('gps:') ? await api.train(key.slice(4).split('/')[0]) : await api.trip(key)
     if (selectedKey.value !== key) return
-    const coords = (trip.shape.length ? trip.shape : trip.stops.filter((s) => s.station.lat !== null).map((s) => [s.station.lat!, s.station.lon!])).map(([lat, lon]) => [lon, lat] as [number, number])
     routeTrip.value = trip
+    tripError.value = null
     refreshRoute()
-    fitCoords(coords)
+    if (!frame) return
+    await nextTick() // panel w DOM-ie — wysokość znana
+    if (selectedKey.value !== key) return
+    if (frame === 'train' && trainOnMap()) keepTrainInView(true)
+    else fitCoords(tripCoords(trip))
   } catch (e) {
-    ui.notify((e as Error).message)
+    if (selectedKey.value === key && (frame || !routeTrip.value)) tripError.value = (e as Error).message
   }
 }
+const tripTimer = window.setInterval(() => { if (selectedKey.value) void loadTrip(selectedKey.value) }, 30_000)
+
+function fitTrip() {
+  if (routeTrip.value) fitCoords(tripCoords(routeTrip.value))
+}
+
+const trainOnMap = () => live.trains.find((x) => keyOf(x) === selectedKey.value)
+
+/**
+ * Pociąg pod panelem albo poza widokiem — przesuwamy mapę (bez zmiany przybliżenia) tak, żeby był nad panelem.
+ * `always` — przy wyborze z pastylki: też gdy jest za blisko krawędzi.
+ */
+function keepTrainInView(always = false) {
+  const t = trainOnMap()
+  if (!map || !t) return
+  const w = container.value?.clientWidth ?? 0
+  const h = container.value?.clientHeight ?? 0
+  const free = h - trainSheetHeight() // wolna część mapy nad panelem
+  const p = map.project([t.lon, t.lat])
+  const margin = 56
+  const hidden = p.y > free - margin || p.y < margin || p.x < margin || p.x > w - margin
+  if (!hidden && !always) return
+  if (!hidden && p.y < free * 0.8) return
+  // pociąg na środku wolnej części (w poziomie zostaje, jeśli jest w widoku)
+  const x = p.x < margin || p.x > w - margin ? w / 2 : p.x
+  map.easeTo({ center: map.unproject([w / 2 + (p.x - x), h / 2 + (p.y - Math.max(margin, free / 2))]), duration: 450 })
+}
+// panel się rozwinął (z nagłówka do pełnej wysokości) — pociąg nie może zostać pod nim
+watch(sheetHeight, (now, before) => { if (before > 0 && now > before + 24) keepTrainInView() })
 
 function clearSelection() {
   selectedKey.value = null
   routeTrip.value = null
+  tripError.value = null
+  panelCollapsed.value = false
   refreshRoute()
   if (route.query.kurs) void router.replace({ query: {} })
 }
@@ -317,7 +494,8 @@ function locate() {
   )
 }
 
-watch([() => live.trains, filter, agencies, query, listOpen, selectedKey], syncTrains)
+watch([() => live.trains, filter, agencies, query, listOpen, selectedKey, dark], syncTrains)
+watch(marks, syncAlerts)
 // pierwsze pozycje przyszły po wczytaniu mapy — dopasuj widok raz, jeśli pasażer jeszcze nie ruszał mapy
 let userMoved = false
 let fittedTrains = false
@@ -328,15 +506,18 @@ watch(() => live.trains.length, (n) => {
 })
 // pociąg jedzie dalej — przesuwamy granicę odcinka przejechanego
 watch(() => live.trains, () => { if (routeTrip.value) (map?.getSource('kw-route') as GeoJSONSource | undefined)?.setData(routeGeoJson()) })
-watch(() => stations.all, () => (map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson()))
-watch(() => ui.sheet, (sheet) => { if (!sheet && selectedKey.value && !ui.mapFocus) clearSelection() })
-// „Pokaż na mapie” w panelu otwartym na mapie (panel na telefonie się chowa, kurs zostaje wybrany)
+watch(() => stations.all, () => {
+  ;(map?.getSource('kw-stations') as GeoJSONSource | undefined)?.setData(stationsGeoJson())
+  // kolory linii dopasowane po stacjach na końcach kształtów
+  ;(map?.getSource('kw-network') as GeoJSONSource | undefined)?.setData(networkData())
+})
+// „Pokaż na mapie” w ogólnym panelu pociągu otwartym na mapie (np. z komunikatu): kurs w panelu mapy, na telefonie zwiniętym
 ui.mapFocus = null
 watch(() => ui.mapFocus, (key) => {
   if (!key) return
   ui.mapFocus = null
   void select(key, mdAndUp.value)
-}, { flush: 'post' }) // po obserwatorze panelu — ten nie może skasować wyboru
+}, { flush: 'post' })
 watch(() => theme.global.name.value, async (name) => {
   if (!map) return
   try {
@@ -368,12 +549,27 @@ onMounted(async () => {
     m.on('style.load', addOverlays)
     m.on('move', layoutPills)
     m.on('movestart', (e) => { if (e.originalEvent) userMoved = true })
-    // dotknięcie mapy poza pociągiem kończy pokazywanie kursu bez panelu (telefon po „Pokaż na mapie”)
-    m.on('click', () => { if (selectedKey.value && !ui.sheet) clearSelection() })
+    // dotknięcie stacji otwiera jej panel; dotknięcie mapy poza pociągiem i stacją zamyka panel stacji (tylko),
+    // panel pociągu zwija do nagłówka, a zwinięty — kończy pokazywanie kursu
+    m.on('click', (e) => {
+      // dotknięcie pastylki / znaczka ⚠ dociera też tutaj — obsługuje je sam znacznik
+      if ((e.originalEvent.target as HTMLElement | null)?.closest?.('.train-marker, .alert-badge')) return
+      const id = m.getLayer('kw-stations-hit') ? m.queryRenderedFeatures(e.point, { layers: ['kw-stations-hit'] })[0]?.properties?.id : undefined
+      const station = id ? stations.byId.get(String(id)) : undefined
+      if (station) return openInfo({ kind: 'station', station })
+      if (info.value) return closeInfo()
+      if (selectedKey.value) {
+        if (panelCollapsed.value) clearSelection()
+        else panelCollapsed.value = true
+      }
+    })
+    m.on('mouseenter', 'kw-stations-hit', () => { m.getCanvas().style.cursor = 'pointer' })
+    m.on('mouseleave', 'kw-stations-hit', () => { m.getCanvas().style.cursor = '' })
     m.once('load', () => {
       // informacja o autorach mapy zwinięta do ikonki ⓘ (MapLibre rozwija ją na starcie)
       container.value?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show')
       syncTrains()
+      syncAlerts()
       if (selectedKey.value) void select(selectedKey.value, mdAndUp.value)
       else {
         fittedTrains = live.trains.length > 0
@@ -385,8 +581,9 @@ onMounted(async () => {
   }
 })
 onBeforeUnmount(() => {
-  if (ui.sheet?.docked) ui.closeTrain()
+  window.clearInterval(tripTimer)
   markers.clear()
+  alertMarkers.clear()
   cancelAnimationFrame(layoutFrame)
   map?.remove()
   map = null
@@ -409,11 +606,9 @@ function resetFilters() {
 </script>
 
 <template>
-  <div class="map-screen">
+  <div class="map-screen" :style="{ '--train-sheet': trainPanel && mdAndUp ? `${sheetHeight + 16}px` : '0px' }">
     <div ref="container" class="map" role="region" aria-label="Mapa pociągów w Wielkopolsce" />
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
-
-    <div class="switch"><MapSwitch /></div>
 
     <div class="fabs top">
       <v-btn icon="search" :color="listOpen ? 'primary-container' : 'surface-container-high'" size="48" elevation="3" :aria-pressed="listOpen" aria-label="Szukaj pociągu" @click="listOpen = !listOpen" />
@@ -433,10 +628,18 @@ function resetFilters() {
           <h3 class="mf-h">Przewoźnicy</h3>
           <AgencyToggles v-model="agencies" />
           <v-btn v-if="filter !== 'all' || !allAgencies" variant="text" prepend-icon="restart_alt" class="mt-2" @click="resetFilters">Pokaż wszystko</v-btn>
+          <v-divider class="my-3" />
+          <router-link :to="{ name: 'scheme' }" class="mf-link"><v-icon icon="route" size="20" /><span>Schemat połączeń KW</span><v-icon icon="chevron_right" size="20" class="ml-auto" /></router-link>
         </v-card>
       </v-menu>
     </div>
-    <div class="fabs bottom" :class="{ raised: listOpen && !mdAndUp }">
+    <!-- na telefonie nad zwiniętym panelem pociągu; przy panelu stacji i rozwiniętym pociągu schowane -->
+    <div
+      v-show="mdAndUp || (!info && (!selectedKey || panelCollapsed))"
+      class="fabs bottom"
+      :class="{ raised: listOpen && !mdAndUp }"
+      :style="!mdAndUp && trainPanel ? { bottom: `${sheetHeight + 16}px` } : undefined"
+    >
       <template v-if="mdAndUp">
         <v-btn icon="add" color="surface-container-high" size="44" elevation="3" aria-label="Przybliż" @click="zoom(1)" />
         <v-btn icon="remove" color="surface-container-high" size="44" elevation="3" aria-label="Oddal" @click="zoom(-1)" />
@@ -474,6 +677,28 @@ function resetFilters() {
         <v-list-item v-if="!visible.length" :title="live.data ? 'Żaden pociąg nie pasuje do wyszukiwania' : 'Wczytywanie pozycji…'" />
       </v-list>
     </aside>
+
+    <Transition name="sheet">
+      <MapTrainSheet
+        v-if="trainPanel"
+        ref="trainSheet"
+        :trip="routeTrip"
+        :error="tripError"
+        :collapsed="panelCollapsed"
+        :pending="!!routeTrip && routeTrip.key !== selectedKey && !selectedKey?.startsWith('gps:')"
+        :class="{ 'beside-list': listOpen && mdAndUp }"
+        @close="clearSelection"
+        @collapse="panelCollapsed = $event"
+        @fit="fitTrip"
+        @retry="loadTrip(selectedKey!, 'route')"
+        @leg="select"
+        @height="sheetHeight = $event"
+      />
+    </Transition>
+    <Transition name="pop" mode="out-in">
+      <MapStationSheet v-if="info?.kind === 'station'" :station="info.station" :dark="dark" @close="closeInfo" @train="select" />
+      <MapNoticeSheet v-else-if="info?.kind === 'notice'" :notice="info.notice" :dark="dark" @close="closeInfo" />
+    </Transition>
   </div>
 </template>
 
@@ -493,7 +718,22 @@ function resetFilters() {
 .map-screen { position: relative; height: calc(100dvh - 64px); overflow: hidden; background: rgb(var(--v-theme-surface-container-low)); }
 .map { position: absolute; inset: 0; }
 .map-error { position: absolute; z-index: 3; top: 72px; left: 50%; transform: translateX(-50%); }
-.switch { position: absolute; z-index: 2; top: 16px; left: 50%; transform: translateX(-50%); }
+.mf-link {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 6px; border-radius: var(--kw-r-m);
+  color: rgb(var(--v-theme-on-surface)); text-decoration: none; font-weight: 700;
+}
+.mf-link:hover { background: color-mix(in srgb, rgb(var(--v-theme-on-surface)) 6%, transparent); }
+.mf-link:focus-visible { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+/* panel stacji / utrudnienia (MapStationSheet, MapNoticeSheet): na komputerze karta po prawej, na telefonie od dołu */
+/* (komputer) nad panelem pociągu, który zostaje na dole (--train-sheet = jego wysokość) */
+.map-sheet {
+  position: absolute; z-index: 4; top: 16px; right: 80px; width: 380px; max-height: calc(100% - 32px - var(--train-sheet, 0px)); overflow: auto; box-sizing: border-box; padding: 16px;
+  border-radius: var(--kw-r-l); background: rgb(var(--v-theme-surface)); box-shadow: 0 2px 6px rgb(0 0 0 / .2), 0 8px 24px rgb(0 0 0 / .15);
+  transition: translate .3s cubic-bezier(.2, 0, 0, 1), opacity .2s;
+}
+/* panel stacji / utrudnienia: na komputerze wjeżdża lekko z góry, na telefonie wysuwa się od dołu */
+.map-sheet.pop-enter-from, .map-sheet.pop-leave-to { opacity: 0; translate: 0 -12px; }
+.map-sheet.pop-leave-active { transition-duration: .15s; }
 /* przyciski w rogach jak w aplikacjach z mapą na żywo */
 .fabs { position: absolute; z-index: 2; right: 16px; display: grid; gap: 12px; justify-items: end; }
 .fabs.top { top: 16px; }
@@ -521,7 +761,8 @@ function resetFilters() {
 .map :deep(.train-pill .arr), .map :deep(.train-pill.still .veh) {
   width: 20px; height: 20px; padding: 3px; border-radius: 50%; background: var(--c); fill: var(--on); box-sizing: border-box;
 }
-.map :deep(.train-pill .arr) { transform: rotate(var(--bearing)); }
+.map :deep(.train-pill .arr) { padding: 3.5px; transform: rotate(var(--bearing)); }
+.map :deep(.train-pill .arr path) { fill: none; stroke: var(--on); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .map :deep(.train-pill.still .arr) { display: none; }
 /* ikona pojazdu w pastylce tylko dla autobusu zastępczego (i w kółku stojącego pojazdu) */
 .map :deep(.train-pill .veh) { display: none; }
@@ -556,9 +797,22 @@ function resetFilters() {
 .map :deep(.train-pill.compact:hover .veh) { display: none; }
 .map :deep(.train-pill.compact:hover .orbit) { display: none; }
 
+/* znaczek utrudnienia na linii / stacji (syncAlerts) */
+.map :deep(.alert-badge) {
+  display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  background: #F5B83D; color: #2E1A00; box-shadow: 0 0 0 2px rgb(var(--v-theme-surface)), 0 2px 5px rgb(0 0 0 / .3); transition: transform .15s;
+}
+.map :deep(.alert-badge.danger) { background: rgb(var(--v-theme-error)); color: rgb(var(--v-theme-on-error)); }
+.map :deep(.alert-badge svg) { width: 16px; height: 16px; fill: currentColor; }
+.map :deep(.alert-badge:hover) { transform: scale(1.1); }
+.map :deep(.alert-badge:focus-visible) { outline: 3px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
+.map :deep(.alert-badge.selected) { transform: scale(1.25); box-shadow: 0 0 0 2.5px rgb(var(--v-theme-surface)), 0 0 0 5px rgb(var(--v-theme-primary)), 0 3px 8px rgb(0 0 0 / .35); }
+
 @media (max-width: 839px) {
   .map-screen { height: calc(100dvh - 64px - 80px - env(safe-area-inset-bottom, 0px)); }
-  .switch { top: 12px; }
+  .map-sheet { top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 70%; border-radius: var(--kw-r-xl) var(--kw-r-xl) 0 0; transition: translate .34s cubic-bezier(.2, 0, 0, 1); }
+  .map-sheet.pop-enter-from, .map-sheet.pop-leave-to { opacity: 1; translate: 0 100%; }
+  .map-sheet.pop-leave-active { transition-duration: .22s; }
   .fabs.top { top: 12px; right: 12px; }
   .fabs.bottom { right: 12px; bottom: 16px; }
   .fabs.bottom.raised { bottom: calc(65% + 12px); }
