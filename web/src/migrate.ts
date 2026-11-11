@@ -4,11 +4,13 @@ import { LAST_REGION_KEY, region, regionPath, REGIONS, type RegionId } from './u
 
 importMigratedSettings()
 
-// region: zapamiętany przy każdym wejściu; zainstalowana aplikacja (start pod /) otwiera ostatnio używany
+// region: zapamiętany przy każdym wejściu; zainstalowana aplikacja otwiera ostatnio używany — tylko przy uruchomieniu
+// (start pod /, bez przejścia z innej strony serwisu), żeby przełącznik regionu „Wielkopolska” nie wracał do Małopolski
 try {
   const last = localStorage.getItem(LAST_REGION_KEY) as RegionId | null
   const standalone = matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
-  if (standalone && location.pathname === '/' && !location.search && !location.hash && last && last !== region.id && REGIONS[last]) {
+  const fromSite = !!document.referrer && new URL(document.referrer).origin === location.origin
+  if (standalone && !fromSite && location.pathname === '/' && !location.search && !location.hash && last && last !== region.id && REGIONS[last]) {
     location.replace(regionPath('/', REGIONS[last]))
   } else {
     localStorage.setItem(LAST_REGION_KEY, region.id)

@@ -20,7 +20,7 @@ import { useJourneys } from '@/stores/journeys'
 import { useRoutes } from '@/stores/routes'
 import { read, useUi, write } from '@/stores/ui'
 import { clock, dayLabel, plural, warsawNow } from '@/utils/format'
-import { region, REGION_LIST, regionPath } from '@/utils/region'
+import { region, REGION_LIST, regionPath, rememberRegion } from '@/utils/region'
 import { changedCount, optionsFromQuery, optionsToApi, optionsToQuery, sanitize, type SearchOptions } from '@/utils/searchOptions'
 
 const route = useRoute()
@@ -203,6 +203,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           :class="{ on: r.id === region.id }"
           :href="regionPath('/', r)"
           :aria-current="r.id === region.id ? 'page' : undefined"
+          @click="rememberRegion(r.id)"
         ><v-icon :icon="r.id === region.id ? 'check' : 'location_on'" />{{ r.name }}</a>
       </nav>
     </div>

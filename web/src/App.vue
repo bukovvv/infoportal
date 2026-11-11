@@ -12,7 +12,7 @@ import { useLive, useNotices, useStatus } from '@/stores/data'
 import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock } from '@/utils/format'
-import { region, REGION_LIST, regionPath } from '@/utils/region'
+import { region, REGION_LIST, regionPath, rememberRegion } from '@/utils/region'
 import logoOnBand from '@/assets/logo-na-ciemne.svg'
 
 const route = useRoute()
@@ -140,6 +140,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
                 :subtitle="r.agencyName"
                 :active="r.id === region.id"
                 :href="r.id === region.id ? undefined : regionPath('/', r)"
+                @click="rememberRegion(r.id)"
               />
             </template>
           </v-list>

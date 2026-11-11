@@ -96,3 +96,11 @@ export const regionPath = (path: string, r: Region = region) => (r.base + (path.
 
 /** Ostatnio używany region (zainstalowana aplikacja startuje pod /, a mieszkaniec Krakowa chce od razu Małopolskę). */
 export const LAST_REGION_KEY = 'kw_region'
+
+/**
+ * Przełącznik regionu: zapamiętuje wybór przed przejściem pod nowy adres — inaczej zainstalowana aplikacja
+ * przy wejściu na / wracałaby do poprzedniego regionu (start aplikacji otwiera ostatni region, zob. migrate.ts).
+ */
+export function rememberRegion(id: RegionId) {
+  try { localStorage.setItem(LAST_REGION_KEY, id) } catch { /* pamięć przeglądarki jest opcjonalna */ }
+}
