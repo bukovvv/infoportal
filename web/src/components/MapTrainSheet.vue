@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Mapa: pociąg po dotknięciu pastylki — plan kursu: grafitowy nagłówek z godzinami (najbliższa stacja i cel), okrągłe akcje na pasku,
+// Mapa: pociąg po dotknięciu pastylki — plan kursu: zwarty nagłówek (numer i cel, linia stanu, małe pigułki akcji),
 // dalej stacje krok po kroku (przejechane i dalsze zwinięte). Panel wysuwa się od dołu na środku mapy.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -125,18 +125,18 @@ const nextBlock = computed(() => {
     const dep = p.phase === 'before' ? timeOf(p.next) : departureAfterDwell(s) ?? stopTime(s, true)
     if (!dep) return null
     const m = minutesUntil(dep.best, now.value)
-    return { label: `Odjazd · ${short(s.station.name)}${m >= 1 ? ` · ${relative(m)}` : ''}`, time: dep.best }
+    return { label: `odjazd ze stacji ${short(s.station.name)} ${m >= 1 ? relative(m) : 'zaraz'}`, time: dep.best }
   }
   const t = timeOf(p.next)
   if (!t) return null
   const m = minutesUntil(t.best, now.value)
-  return { label: `${short(s.station.name)} · ${m >= 1 ? relative(m) : 'zaraz'}`, time: t.best }
+  return { label: `${short(s.station.name)} ${m >= 1 ? relative(m) : 'zaraz'}`, time: t.best }
 })
 const destBlock = computed(() => {
   if (!stops.value.length) return null
   const t = timeOf(last.value)
   const s = stops.value[last.value]
-  return t ? { label: plan.value?.phase === 'done' ? `Dojechał · ${short(s.station.name)}` : short(s.station.name), time: t.best, platform: s.platform } : null
+  return t ? { label: plan.value?.phase === 'done' ? `dojechał · ${short(s.station.name)}` : short(s.station.name), time: t.best, platform: s.platform } : null
 })
 
 /** „Teraz” na osi: w drodze — między stacjami, na stacji — nazwa. */
@@ -198,41 +198,32 @@ function share() {
       <button type="button" class="handle" :aria-label="collapsed ? 'Rozwiń plan kursu' : 'Zwiń plan kursu'" :aria-expanded="!collapsed" @click="(e: MouseEvent) => { if (!e.detail) emit('collapse', !collapsed) }"><span /></button>
       <template v-if="trip">
         <div class="top">
-          <div class="grow">
-            <span class="label">
-              <RouteBadge :route="trip.route" :bus="trip.isBus" class="badge" />
-              <span class="label-text">{{ category }}<template v-if="day"> · {{ day }}</template><template v-if="trip.distanceKm"> · {{ trip.distanceKm }} km</template></span>
-              <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
-            </span>
-            <h2 class="title">{{ agencyCode(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="name"> „{{ title!.name }}”</span> → {{ trip.destination }}</h2>
-          </div>
-          <v-btn icon="close" variant="text" color="on-band" size="40" class="close" aria-label="Zamknij" @click="emit('close')" />
+          <RouteBadge :route="trip.route" :bus="trip.isBus" class="badge" />
+          <h2 class="title">{{ agencyCode(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="name"> „{{ title!.name }}”</span> → {{ trip.destination }}</h2>
+          <v-btn icon="close" variant="text" size="36" class="close" aria-label="Zamknij" @click="emit('close')" />
         </div>
-        <div class="times">
-          <div v-if="nextBlock" class="time">
-            <span class="time-label ellipsis">{{ nextBlock.label }}</span>
-            <span class="time-big">{{ clock(nextBlock.time) }}</span>
-          </div>
-          <v-icon v-if="nextBlock && destBlock" icon="arrow_forward" class="time-arrow" />
-          <div v-if="destBlock" class="time">
-            <span class="time-label ellipsis">{{ destBlock.label }}<template v-if="destBlock.platform"> · peron {{ destBlock.platform }}</template></span>
-            <span class="time-big">{{ clock(destBlock.time) }}</span>
-          </div>
-        </div>
+        <!-- najważniejsze w jednej linii: opóźnienie, najbliższa stacja, przyjazd do celu -->
+        <p class="status">
+          <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
+          <span class="status-text"><template v-if="day">{{ day }} · </template>{{ nextBlock?.label ?? destBlock?.label }}</span>
+          <!-- przyjazd do celu (nazwa jest w tytule) — nie ucina się -->
+          <span v-if="destBlock && nextBlock" class="arr">przyjazd <strong>{{ clock(destBlock.time) }}</strong></span>
+          <span v-else-if="destBlock" class="arr"><strong>{{ clock(destBlock.time) }}</strong><template v-if="destBlock.platform"> · peron {{ destBlock.platform }}</template></span>
+        </p>
         <div class="acts">
-          <button v-if="trip.shape.length || trip.stops.length > 1" type="button" class="act" @click="emit('fit')"><span class="act-c"><v-icon icon="route" /></span>Cała trasa</button>
-          <button type="button" class="act" @click="share"><span class="act-c"><v-icon icon="share" /></span>Udostępnij</button>
-          <button type="button" class="act" @click="fullView"><span class="act-c main"><v-icon icon="open_in_full" /></span>Pełny widok</button>
+          <button v-if="trip.shape.length || trip.stops.length > 1" type="button" class="act" @click="emit('fit')"><v-icon icon="route" size="18" />Cała trasa</button>
+          <button type="button" class="act" @click="share"><v-icon icon="share" size="18" />Udostępnij</button>
+          <button type="button" class="act" @click="fullView"><v-icon icon="open_in_full" size="18" />Szczegóły</button>
         </div>
       </template>
       <div v-else-if="error" class="top">
         <p class="grow">{{ error }}</p>
-        <v-btn variant="text" color="on-band" @click="emit('retry')">Spróbuj ponownie</v-btn>
-        <v-btn icon="close" variant="text" color="on-band" size="40" aria-label="Zamknij" @click="emit('close')" />
+        <v-btn variant="text" @click="emit('retry')">Spróbuj ponownie</v-btn>
+        <v-btn icon="close" variant="text" size="36" class="close" aria-label="Zamknij" @click="emit('close')" />
       </div>
       <div v-else class="top">
         <v-skeleton-loader type="heading, text" color="transparent" class="grow" />
-        <v-btn icon="close" variant="text" color="on-band" size="40" aria-label="Zamknij" @click="emit('close')" />
+        <v-btn icon="close" variant="text" size="36" class="close" aria-label="Zamknij" @click="emit('close')" />
       </div>
     </header>
 
@@ -284,6 +275,7 @@ function share() {
         </template>
       </ol>
       <p class="src text-body-small">
+        {{ category }}<template v-if="trip.distanceKm"> · {{ trip.distanceKm }} km</template>.
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
         <template v-if="trip.position?.source === 'gps' && trip.position.gpsProvider"> Pozycja GPS: {{ trip.position.gpsProvider }}.</template>
@@ -310,48 +302,44 @@ function share() {
 .map-train.pending .band > *:not(.handle), .map-train.pending .body { opacity: .55; transition: opacity .15s; }
 /* lista pociągów otwarta z lewej (komputer) — panel na środku pozostałej części mapy */
 .map-train.beside-list { left: calc(376px + (100% - 456px) / 2); width: min(560px, calc(100% - 488px)); }
+/* nagłówek (wariant A z makiet 2026-11-11, „kompakt”): na tle panelu, bez osobnego bloku; tytuł, linia stanu, małe pigułki */
 .band {
-  flex: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 4px 12px 16px 24px;
-  background: rgb(var(--v-theme-band)); color: rgb(var(--v-theme-on-band)); touch-action: none; user-select: none;
+  flex: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 2px 8px 12px 16px;
+  border-bottom: 1px solid rgb(var(--v-theme-outline-variant)); touch-action: none; user-select: none;
 }
-.collapsed .band { cursor: pointer; }
-.handle { justify-self: center; display: grid; place-items: center; width: 64px; height: 20px; margin: 0 0 -6px 12px; padding: 0; border: 0; background: none; cursor: pointer; }
-.handle span { width: 32px; height: 4px; border-radius: 2px; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 45%, transparent); }
-.handle:focus-visible { outline: 2px solid rgb(var(--v-theme-on-band)); border-radius: 10px; }
-.top { display: flex; align-items: flex-start; gap: 8px; }
+.collapsed .band { cursor: pointer; border-bottom-color: transparent; }
+.handle { justify-self: center; display: grid; place-items: center; width: 64px; height: 18px; margin: 0 0 -2px 8px; padding: 0; border: 0; background: none; cursor: pointer; }
+.handle span { width: 32px; height: 4px; border-radius: 2px; background: rgb(var(--v-theme-outline-variant)); }
+.handle:focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); border-radius: 10px; }
+.top { display: flex; align-items: center; gap: 8px; }
 .grow { flex: 1; min-width: 0; }
-.label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
-.label-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .9; }
-.label .tag { flex: none; }
-.badge { flex: none; box-shadow: 0 0 0 1.5px color-mix(in srgb, rgb(var(--v-theme-on-band)) 70%, transparent); }
-.title { margin-top: 4px; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.2px; }
-.name { opacity: .75; }
-.close { margin-top: -2px; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); }
-.times { display: flex; align-items: flex-end; gap: 12px; }
-.time { display: grid; gap: 2px; min-width: 0; }
-.time-label { font-size: 12px; font-weight: 600; opacity: .8; }
-.time-big { font-size: 32px; line-height: 1; font-weight: 800; font-variant-numeric: tabular-nums; }
-.time-arrow { flex: none; margin-bottom: 4px; opacity: .6; }
-.acts { display: flex; gap: 4px; }
+.badge { flex: none; }
+.title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 24px; font-weight: 800; letter-spacing: -0.1px; }
+.name { color: rgb(var(--v-theme-on-surface-variant)); font-weight: 700; }
+.close { flex: none; margin: -4px 0; color: rgb(var(--v-theme-on-surface-variant)); }
+.status { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 8px 0 0; font-size: 13px; line-height: 18px; color: rgb(var(--v-theme-on-surface-variant)); }
+.status .tag { flex: none; }
+.status-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status-text { flex: 0 1 auto; }
+.arr { flex: none; margin-left: auto; white-space: nowrap; }
+.arr strong { color: rgb(var(--v-theme-on-surface)); font-weight: 800; font-variant-numeric: tabular-nums; }
+.acts { display: flex; gap: 6px; margin: 4px 8px 0 0; }
 .act {
-  display: grid; justify-items: center; gap: 6px; width: 80px; padding: 0; border: 0; background: none; cursor: pointer;
-  color: rgb(var(--v-theme-on-band)); font: 600 12px/16px var(--kw-font);
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; height: 34px; padding: 0 10px;
+  border: 0; border-radius: 17px; background: rgb(var(--v-theme-surface-container-high)); color: rgb(var(--v-theme-on-surface));
+  font: 600 13px/16px var(--kw-font); white-space: nowrap; cursor: pointer; transition: background .15s;
 }
-.act-c { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 14%, transparent); transition: background .15s; }
-.act-c.main { background: rgb(var(--v-theme-primary)); color: rgb(var(--v-theme-on-primary)); }
-.act:hover .act-c:not(.main) { background: color-mix(in srgb, rgb(var(--v-theme-on-band)) 22%, transparent); }
-.act:hover .act-c.main { filter: brightness(1.08); }
-.act:focus-visible { outline: none; }
-.act:focus-visible .act-c { outline: 3px solid rgb(var(--v-theme-on-band)); outline-offset: 2px; }
+.act:hover { background: rgb(var(--v-theme-surface-container-highest)); }
+.act:focus-visible { outline: 2px solid rgb(var(--v-theme-primary)); outline-offset: 2px; }
 
-.body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px 12px 16px; }
+.body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 16px 12px 16px; }
 .note { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; padding: 8px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); font-size: 13px; line-height: 18px; }
 .note.ic { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); font-weight: 600; }
 .note a { color: inherit; font-weight: 700; margin-left: 4px; }
 
 /* oś kursu: pionowa kreska w kolorze linii, przejechany odcinek wyszarzony */
 .plan { position: relative; margin: 0; padding: 0; list-style: none; }
-.row { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 32px; align-items: center; column-gap: 10px; min-height: 44px; }
+.row { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto 32px; align-items: center; column-gap: 10px; min-height: 40px; }
 .row::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 0; width: 4px; background: var(--line); }
 .row.passed::before, .row.fold:first-child::before { background: rgb(var(--v-theme-outline-variant)); }
 .plan > .row.stop:first-child::before { top: 50%; }
@@ -386,12 +374,10 @@ function share() {
 .src { margin-top: 8px; color: rgb(var(--v-theme-on-surface-variant)); }
 
 @media (max-width: 839px) {
-  .map-train { left: 0; right: 0; transform: none; width: auto; max-height: 72%; }
-  .band { gap: 10px; padding: 4px 8px 12px 20px; }
-  .title { font-size: 20px; line-height: 26px; }
-  .time-big { font-size: 28px; }
-  .act-c { width: 44px; height: 44px; }
-  .acts { justify-content: space-between; }
-  .act { width: auto; flex: 1; }
+  .map-train { left: 0; right: 0; transform: none; width: auto; max-height: 62%; }
+  .band { padding: 2px 6px 10px 14px; }
+  /* na telefonie bez nazwy pociągu w tytule — miejsce na cel (nazwa jest na pełnym widoku) */
+  .name { display: none; }
+  .act { padding: 0 8px; }
 }
 </style>
