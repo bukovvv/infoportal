@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import type { Connection, StationRef } from '@/api/types'
 import { ends, type SavedRoute, useRoutes } from '@/stores/routes'
 import { useUi } from '@/stores/ui'
-import { agencyCode, isIntercity } from '@/utils/agency'
+import { agencyLabel, isIntercity, shortNumber } from '@/utils/agency'
 import { clock, minutesUntil, plural, relative } from '@/utils/format'
 import { expectedDeparture, optionsSummary, upcoming, windowLabel } from '@/utils/routes'
 import type { SearchOptions } from '@/utils/searchOptions'
@@ -38,7 +38,7 @@ const transfers = (c: Connection) => (c.transfers
   ? `${c.transfers} ${plural(c.transfers, 'przesiadka', 'przesiadki', 'przesiadek')} (${c.via.map((v) => v.name).join(', ')})`
   : 'bezpośrednio')
 /** „IC 262” — numer bez nazwy pociągu, żeby wiersz się nie rozjeżdżał */
-const trainLabel = (agency: string | undefined, number: string) => `${agencyCode(agency)} ${number.split(' ')[0]}`
+const trainLabel = (agency: string | undefined, number: string) => `${agencyLabel(agency)} ${shortNumber(number)}`
 const intercity = (c: Connection) => c.legs.some((l) => isIntercity(l.agency))
 function countdown(c: Connection) {
   const m = minutesUntil(expectedDeparture(c), props.now)

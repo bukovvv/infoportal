@@ -316,7 +316,7 @@ final class PublicApi
     /** „KW 77600”, „PR 85724”, „TLK 45102”, „77610/1” → „77600”, „85724”, „45102”, „77610”; null — to nie numer pociągu. */
     public static function trainQuery(string $value): ?string
     {
-        if (preg_match('/^\s*(?:(?:kw|pr|ic|tlk|eic|eip|ec|en)\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
+        if (preg_match('/^\s*(?:(?:kw|km[lł]|pr|ic|tlk|eic|eip|ec|en)\s*)?(\d{3,6})(?:\s*\/\s*\d{1,3})?(?:\s+\pL[\pL\s]*)?\s*$/iu', $value, $m) !== 1) {
             return null;
         }
 

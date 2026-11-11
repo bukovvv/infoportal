@@ -6,7 +6,7 @@ import { useJourneys } from '@/stores/journeys'
 import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
-import { agencyCode, agencyName, isIntercity, isPartner } from '@/utils/agency'
+import { agencyLabel, agencyName, isIntercity, isPartner, shortNumber } from '@/utils/agency'
 import { region } from '@/utils/region'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
@@ -52,7 +52,7 @@ const legColor = (leg: Leg) => (leg.isBus ? 'rgb(var(--v-theme-outline))' : leg.
 /** Bilety na odcinku POLREGIO: KW (KML) honorowane na odcinkach wspólnych z przewoźnikiem regionu. W PKP Intercity — osobny bilet. */
 function partnerTickets(leg: Leg) {
   const name = agencyName(leg.agency)
-  const own = region.agency
+  const own = region.agencyLabel
   if (isIntercity(leg.agency)) return `Pociąg ${name}: bilety ${own} i POLREGIO nie obowiązują, potrzebny bilet ${name}`
   if (leg.kwTickets === true) return `Pociąg ${name}: bilety ${own} są tu honorowane`
   if (leg.kwTickets === false) return `Pociąg ${name}: na tym odcinku nie jeżdżą pociągi ${own}, potrzebny bilet ${name}`
@@ -148,7 +148,7 @@ function watchJourney() {
               <div class="leg-name">{{ leg.from.name }}</div>
               <div class="text-body-small muted d-flex flex-wrap align-center ga-1">
                 <RouteBadge :route="leg.route" :bus="leg.isBus" />
-                <strong class="leg-no">{{ agencyCode(leg.agency) }} {{ leg.number }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
+                <strong class="leg-no">{{ agencyLabel(leg.agency) }} {{ shortNumber(leg.number) }}</strong> do {{ leg.headsign }}<template v-if="leg.platform"> · peron {{ leg.platform }}<template v-if="leg.track">, tor {{ leg.track }}</template></template>
               </div>
               <div v-if="isPartner(leg.agency)" class="partner-note text-body-small" :class="{ ic: isIntercity(leg.agency) }">
                 <v-icon :icon="isIntercity(leg.agency) ? 'confirmation_number' : 'info'" size="16" />{{ partnerTickets(leg) }}

@@ -15,7 +15,7 @@ import { useNotices, useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { usePrefs } from '@/stores/prefs'
 import { read, useUi, write } from '@/stores/ui'
-import { agencyCode, isIntercity, isPartner } from '@/utils/agency'
+import { agencyLabel, isIntercity, isPartner, shortNumber } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
 import { noticeIcon } from '@/utils/notices'
@@ -224,8 +224,8 @@ const when = (iso: string) => {
             <span v-if="row.via.length" class="text-body-small muted ellipsis">przez {{ row.via.join(', ') }}</span>
             <span class="d-flex align-center flex-wrap ga-2">
               <RouteBadge :route="row.route" :bus="row.isBus" />
-              <span class="text-label-medium number">{{ agencyCode(row.agency) }} {{ row.number }}</span>
-              <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" :title="`Bilety ${region.agency} i POLREGIO nie obowiązują`">PKP Intercity · osobny bilet</span>
+              <span class="text-label-medium number">{{ agencyLabel(row.agency) }} {{ shortNumber(row.number) }}</span>
+              <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" :title="`Bilety ${region.agencyLabel} i POLREGIO nie obowiązują`">PKP Intercity · osobny bilet</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
               <span v-for="n in rowNotices(row).slice(0, 1)" :key="n.id" class="n-tag text-label-small" :class="n.severity" :title="n.title">
                 <v-icon :icon="noticeIcon[n.severity]" size="14" />{{ rowNotices(row).length > 1 ? `${rowNotices(row).length} ${plural(rowNotices(row).length, '', 'komunikaty', 'komunikatów')}` : 'Komunikat' }}

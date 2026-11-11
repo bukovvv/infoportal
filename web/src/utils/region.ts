@@ -15,8 +15,9 @@ export interface Region {
   inName: string
   /** „po Wielkopolsce” */
   overName: string
-  /** przewoźnik regionu: skrót przed numerem pociągu i pełna nazwa */
+  /** przewoźnik regionu: identyfikator w rozkładzie (KW, KML), skrót dla pasażera (KW, KMŁ) i pełna nazwa */
   agency: string
+  agencyLabel: string
   agencyName: string
   /** „Kolei Wielkopolskich” */
   agencyOf: string
@@ -43,6 +44,7 @@ export const REGIONS: Record<RegionId, Region> = {
     inName: 'w Wielkopolsce',
     overName: 'po Wielkopolsce',
     agency: 'KW',
+    agencyLabel: 'KW',
     agencyName: 'Koleje Wielkopolskie',
     agencyOf: 'Kolei Wielkopolskich',
     hub: { id: '30601', name: 'Poznań Główny' },
@@ -59,6 +61,7 @@ export const REGIONS: Record<RegionId, Region> = {
     inName: 'w Małopolsce',
     overName: 'po Małopolsce',
     agency: 'KML',
+    agencyLabel: 'KMŁ',
     agencyName: 'Koleje Małopolskie',
     agencyOf: 'Kolei Małopolskich',
     hub: { id: '80416', name: 'Kraków Główny' },

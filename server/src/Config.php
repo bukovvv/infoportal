@@ -127,6 +127,8 @@ final class Config
             'partner_agencies' => ['PR' => 'PLK_PR_', 'IC' => 'PLK_IC_'],
             // partnerzy honorujący bilety przewoźnika na odcinkach wspólnych z nim (POLREGIO tak, PKP Intercity nie)
             'kw_ticket_agencies' => ['PR'],
+            // skróty przewoźników w tekstach dla pasażerów (powiadomienia): w rozkładzie KML, pasażerom KMŁ
+            'agency_labels' => ['KML' => 'KMŁ'],
             // granica województwa (server/src/Gtfs/…) i stacje w nim, które przez uproszczenie granicy wypadają tuż za nią
             'region_file' => 'wielkopolskie.json',
             'region_inside' => ['Wydartowo'],

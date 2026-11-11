@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import type { Trip } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
+import { agencyLabel, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
 import { region, regionPath } from '@/utils/region'
 import { shareLink } from '@/utils/share'
@@ -116,7 +116,7 @@ defineExpose({ trip })
           </span>
           <v-btn v-if="inSheet" icon="close" variant="text" color="on-band" aria-label="Zamknij" @click="emit('close')" />
         </div>
-        <h2 class="head-title">{{ agencyCode(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="head-name"> „{{ title!.name }}”</span></h2>
+        <h2 class="head-title">{{ agencyLabel(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="head-name"> „{{ title!.name }}”</span></h2>
         <p class="head-route">{{ trip.origin }} → {{ trip.destination }}</p>
         <div class="d-flex flex-wrap ga-2">
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
@@ -146,8 +146,8 @@ defineExpose({ trip })
       <p v-if="partner" class="partner-note text-body-medium divider" :class="{ ic: isIntercity(trip.agency) }">
         <v-icon :icon="isIntercity(trip.agency) ? 'confirmation_number' : 'info'" size="20" />
         <span>
-          <template v-if="isIntercity(trip.agency)">Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agency }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</template>
-          <template v-else>Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agency }} są honorowane na odcinkach, na których jeżdżą też pociągi {{ region.agency }}.</template>
+          <template v-if="isIntercity(trip.agency)">Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agencyLabel }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</template>
+          <template v-else>Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agencyLabel }} są honorowane na odcinkach, na których jeżdżą też pociągi {{ region.agencyLabel }}.</template>
           <template v-if="trip.trimmed"> Pokazujemy stacje {{ region.inName }}.</template>
         </span>
       </p>

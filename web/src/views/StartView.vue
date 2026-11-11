@@ -255,7 +255,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           v-if="!result.connections.length"
           icon="search_off"
           title="Brak połączeń w ciągu 12 godzin"
-          :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : `Zmień godzinę. Szukamy pociągów ${region.agency}, POLREGIO i PKP Intercity ${region.inName}.`"
+          :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : `Zmień godzinę. Szukamy pociągów ${region.agencyLabel}, POLREGIO i PKP Intercity ${region.inName}.`"
           class="card"
         />
         <nav v-else class="pager" aria-label="Kolejne połączenia">

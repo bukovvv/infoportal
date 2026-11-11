@@ -132,7 +132,11 @@ final class JourneyWatcher
         $messages = [];
         $hm = static fn (int $ts): string => date('H:i', $ts);
         // „KW 77600”, „KML 30121”, „PR 85724” — odcinek bez przewoźnika: przewoźnik regionu
-        $label = static fn (array $leg): string => ($leg['agency'] ?? Config::get('agency_id')) . ' ' . $leg['number'];
+        $label = static function (array $leg): string {
+            $agency = (string) ($leg['agency'] ?? Config::get('agency_id'));
+
+            return (((array) Config::get('agency_labels'))[$agency] ?? $agency) . ' ' . $leg['number'];
+        };
         $trip = $legs[0]['from'] . ' → ' . end($legs)['to'];
         foreach ($legs as $i => $leg) {
             $expected = $leg['dep'] + (int) ($leg['depDelay'] ?? 0) * 60;

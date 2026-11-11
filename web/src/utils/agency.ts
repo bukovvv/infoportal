@@ -14,8 +14,15 @@ export const agencyCode = (agency?: string | null) => agency || region.agency
 
 export const agencyName = (agency?: string | null) => NAMES[agencyCode(agency)] ?? agencyCode(agency)
 
+/** Skrót przewoźnika do wyświetlenia: w rozkładzie i API „KML”, pasażerom „KMŁ” (jak w nazwie spółki). */
+const LABELS: Record<string, string> = { KML: 'KMŁ' }
+export const agencyLabel = (agency?: string | null) => LABELS[agencyCode(agency)] ?? agencyCode(agency)
+
 /** Numer z przewoźnikiem, np. do udostępniania i kalendarza. */
-export const trainLabel = (leg: { agency?: string | null; number: string }) => `${agencyCode(leg.agency)} ${leg.number}`
+export const trainLabel = (leg: { agency?: string | null; number: string }) => `${agencyLabel(leg.agency)} ${leg.number}`
+
+/** Krótki numer do ciasnych miejsc (tablica, karty, mapa): „33126/7 Dunajec” → „33126”. Pełny — na stronie pociągu. */
+export const shortNumber = (number: string) => number.trim().split(/[\s/]+/)[0]
 
 /**
  * Numer i nazwa pociągu osobno do nagłówka. Rozkład podaje nazwę już w numerze („71214 Powstaniec Wielkopolski”)

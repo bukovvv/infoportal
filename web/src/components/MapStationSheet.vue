@@ -7,7 +7,7 @@ import NoticeStrip from '@/components/NoticeStrip.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNotices } from '@/stores/data'
-import { agencyCode } from '@/utils/agency'
+import { agencyLabel, shortNumber } from '@/utils/agency'
 import { clock } from '@/utils/format'
 import { lineTitle, NOTICE_LINES } from '@/utils/notices'
 import { linesAt } from '@/utils/scheme'
@@ -54,7 +54,7 @@ watch(() => props.station.id, async (id) => {
           <span class="time" :class="{ gone: r.cancelled }">{{ clock(r.scheduled) }}</span>
           <span class="what">
             <span class="dest ellipsis">{{ r.destination }}</span>
-            <span class="no text-body-small muted"><RouteBadge :route="r.route" :bus="r.isBus" />{{ agencyCode(r.agency) }} {{ r.number }}<template v-if="r.platform"> · peron {{ r.platform }}</template></span>
+            <span class="no text-body-small muted"><RouteBadge :route="r.route" :bus="r.isBus" />{{ agencyLabel(r.agency) }} {{ shortNumber(r.number) }}<template v-if="r.platform"> · peron {{ r.platform }}</template></span>
           </span>
           <StatusTag :delay="r.delay" :source="r.delaySource" :cancelled="r.cancelled" :skipped="r.skipped" />
         </button>

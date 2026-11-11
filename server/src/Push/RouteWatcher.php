@@ -184,7 +184,8 @@ final class RouteWatcher
             if ($now > $expected + 60) {
                 continue;
             }
-            $train = ($leg['agency'] ?: Config::get('agency_id')) . ' ' . $leg['number'];
+            $agency = (string) ($leg['agency'] ?: Config::get('agency_id'));
+            $train = (((array) Config::get('agency_labels'))[$agency] ?? $agency) . ' ' . $leg['number'];
             $tag = 'trasa-' . substr(hash('sha256', $id), 0, 16);
             if ($leg['cancelled']) {
                 if (empty($state['c'][$id])) {

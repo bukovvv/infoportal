@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from './agency'
+import { agencyCode, agencyLabel, agencyName, isIntercity, isPartner, shortNumber, trainLabel, trainTitle } from './agency'
 
 describe('agency', () => {
   it('rozróżnia KW i POLREGIO (brak pola = KW)', () => {
@@ -26,5 +26,19 @@ describe('agency', () => {
     expect(trainTitle('77600', 'PKM1')).toEqual({ number: '77600', name: null })
     expect(trainTitle('77600/1', null)).toEqual({ number: '77600/1', name: null })
     expect(trainTitle('85724', 'Kopernik')).toEqual({ number: '85724', name: 'Kopernik' })
+  })
+
+  it('KML pasażerom jako KMŁ, w danych bez zmian', () => {
+    expect(agencyLabel('KML')).toBe('KMŁ')
+    expect(agencyCode('KML')).toBe('KML')
+    expect(agencyLabel('PR')).toBe('PR')
+    expect(trainLabel({ agency: 'KML', number: '33423' })).toBe('KMŁ 33423')
+  })
+
+  it('krótki numer: bez pary i nazwy', () => {
+    expect(shortNumber('33126/7 Dunajec')).toBe('33126')
+    expect(shortNumber('77610/1')).toBe('77610')
+    expect(shortNumber('33423')).toBe('33423')
+    expect(shortNumber('43610 Bolek i Lolek')).toBe('43610')
   })
 })

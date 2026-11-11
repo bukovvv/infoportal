@@ -8,7 +8,7 @@ import NoticeStrip from '@/components/NoticeStrip.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNotices, useStations } from '@/stores/data'
-import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
+import { agencyLabel, agencyName, isIntercity, isPartner, shortNumber, trainLabel } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, warsawNow } from '@/utils/format'
 import { region, regionPath } from '@/utils/region'
 import { stationRank } from '@/utils/mapLines'
@@ -94,7 +94,6 @@ const category = computed(() => {
   if (t.route?.id === 'PR_IR') return 'interREGIO'
   return t.route?.id === 'KW_P' || t.route?.id === 'PR_RP' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
 })
-const title = computed(() => (props.trip ? trainTitle(props.trip.number, props.trip.name) : null))
 /** dzień kursu tylko, gdy nie dzisiejszy (nocne kursy z wczoraj, jutrzejsze z tablicy stacji) */
 const day = computed(() => {
   const d = props.trip?.serviceDate
@@ -125,7 +124,8 @@ const nextBlock = computed(() => {
     const dep = p.phase === 'before' ? timeOf(p.next) : departureAfterDwell(s) ?? stopTime(s, true)
     if (!dep) return null
     const m = minutesUntil(dep.best, now.value)
-    return { label: `odjazd ze stacji ${short(s.station.name)} ${m >= 1 ? relative(m) : 'zaraz'}`, time: dep.best }
+    // stacja odjazdu jest w planie pod spodem — tu krótko
+    return { label: `odjazd ${m >= 1 ? relative(m) : 'zaraz'}`, time: dep.best }
   }
   const t = timeOf(p.next)
   if (!t) return null
@@ -199,7 +199,7 @@ function share() {
       <template v-if="trip">
         <div class="top">
           <RouteBadge :route="trip.route" :bus="trip.isBus" class="badge" />
-          <h2 class="title">{{ agencyCode(trip.agency) }} {{ title!.number }}<span v-if="title!.name" class="name"> „{{ title!.name }}”</span> → {{ trip.destination }}</h2>
+          <h2 class="title">{{ agencyLabel(trip.agency) }} {{ shortNumber(trip.number) }} → {{ trip.destination }}</h2>
           <v-btn icon="close" variant="text" size="36" class="close" aria-label="Zamknij" @click="emit('close')" />
         </div>
         <!-- najważniejsze w jednej linii: opóźnienie, najbliższa stacja, przyjazd do celu -->
@@ -230,7 +230,7 @@ function share() {
     <div v-if="trip" class="body" :style="{ '--line': color }" :inert="collapsed || undefined">
       <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact" class="mb-2">Ten kurs dziś nie jedzie.</v-alert>
       <NoticeStrip v-if="related.length" :notices="related" :max="1" class="mb-2" />
-      <p v-if="isIntercity(trip.agency)" class="note ic"><v-icon icon="confirmation_number" size="18" />Bilety {{ region.agency }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</p>
+      <p v-if="isIntercity(trip.agency)" class="note ic"><v-icon icon="confirmation_number" size="18" />Bilety {{ region.agencyLabel }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</p>
       <p v-if="trip.otherLegs.length" class="note">
         <v-icon icon="info" size="18" />
         <span>Ten kurs ma też odcinek:
@@ -315,7 +315,6 @@ function share() {
 .grow { flex: 1; min-width: 0; }
 .badge { flex: none; }
 .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 24px; font-weight: 800; letter-spacing: -0.1px; }
-.name { color: rgb(var(--v-theme-on-surface-variant)); font-weight: 700; }
 .close { flex: none; margin: -4px 0; color: rgb(var(--v-theme-on-surface-variant)); }
 .status { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 8px 0 0; font-size: 13px; line-height: 18px; color: rgb(var(--v-theme-on-surface-variant)); }
 .status .tag { flex: none; }
@@ -376,8 +375,6 @@ function share() {
 @media (max-width: 839px) {
   .map-train { left: 0; right: 0; transform: none; width: auto; max-height: 62%; }
   .band { padding: 2px 6px 10px 14px; }
-  /* na telefonie bez nazwy pociągu w tytule — miejsce na cel (nazwa jest na pełnym widoku) */
-  .name { display: none; }
   .act { padding: 0 8px; }
 }
 </style>

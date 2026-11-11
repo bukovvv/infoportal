@@ -85,7 +85,7 @@ function reset() {
 
         <section>
           <h3 class="opt-h">Przewoźnicy</h3>
-          <AgencyToggles v-model="agencies" :notes="{ PR: `Bilety ${region.agency} honorowane na odcinkach wspólnych`, IC: 'Osobny bilet PKP Intercity' }" />
+          <AgencyToggles v-model="agencies" :notes="{ PR: `Bilety ${region.agencyLabel} honorowane na odcinkach wspólnych`, IC: 'Osobny bilet PKP Intercity' }" />
         </section>
       </v-card-text>
       <v-card-actions class="opt-actions">

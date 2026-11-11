@@ -14,7 +14,7 @@ import MapTrainSheet from '@/components/MapTrainSheet.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useLive, useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
-import { agencyCode } from '@/utils/agency'
+import { agencyCode, agencyLabel, shortNumber } from '@/utils/agency'
 import { clock, normalize } from '@/utils/format'
 import { AGENCIES } from '@/utils/searchOptions'
 import { region } from '@/utils/region'
@@ -195,7 +195,7 @@ function syncTrains() {
     m.el.classList.toggle('bus', t.isBus)
     m.el.querySelector('.no')!.textContent = number
     m.el.querySelector('.late')!.textContent = late ? `+${t.delay}` : ''
-    m.el.setAttribute('aria-label', `${agencyCode(t.agency)} ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
+    m.el.setAttribute('aria-label', `${agencyLabel(t.agency)} ${t.number}${t.destination ? ` do ${t.destination}` : ''}, ${stateLabel(t)}`)
     m.el.dataset.priority = selected ? '3' : late ? '2' : '1'
   }
   layoutPills()
@@ -666,7 +666,7 @@ function resetFilters() {
             <span class="lead" :style="{ background: pillColor(t).bg, color: pillColor(t).fg }"><v-icon :icon="t.isBus ? 'directions_bus' : 'train'" size="20" /></span>
           </template>
           <v-list-item-title class="text-title-small">
-            {{ agencyCode(t.agency) }} {{ t.number }} <span v-if="t.destination" class="muted font-weight-regular">→ {{ t.destination }}</span>
+            {{ agencyLabel(t.agency) }} {{ shortNumber(t.number) }} <span v-if="t.destination" class="muted font-weight-regular">→ {{ t.destination }}</span>
           </v-list-item-title>
           <v-list-item-subtitle class="text-body-small">
             {{ whereText(t) }}<template v-if="t.next?.expected && !t.dwelling"> · {{ clock(t.next.expected) }}</template>

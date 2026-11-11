@@ -4,7 +4,7 @@ import { api } from '@/api/client'
 import type { Station, TrainMatch } from '@/api/types'
 import { useStations } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
-import { agencyCode } from '@/utils/agency'
+import { agencyLabel } from '@/utils/agency'
 import { clock, warsawNow, weekdayShort } from '@/utils/format'
 
 const model = defineModel<string | null>({ default: null })
@@ -17,8 +17,8 @@ const query = ref('')
 
 onMounted(() => { void stations.load() })
 
-/** Numer pociągu w polu: co najmniej 3 cyfry, opcjonalnie „KW” albo „PR” przed. */
-const TRAIN_QUERY = /^\s*((kw|pr)\s*)?\d{3,6}(\s*\/\s*\d{1,3})?\s*$/i
+/** Numer pociągu w polu: co najmniej 3 cyfry, opcjonalnie „KW”, „KMŁ” albo „PR” przed. */
+const TRAIN_QUERY = /^\s*((kw|km[lł]|pr)\s*)?\d{3,6}(\s*\/\s*\d{1,3})?\s*$/i
 const trainResults = ref<TrainMatch[]>([])
 const trainError = ref<string | null>(null)
 let seq = 0
@@ -38,7 +38,7 @@ watch(query, (q) => {
 })
 
 type Item = Station | (TrainMatch & { id: string; name: string; train: true })
-const trainItems = computed<Item[]>(() => trainResults.value.map((t) => ({ ...t, id: `train:${t.key}`, name: `${agencyCode(t.agency)} ${t.number}`, train: true })))
+const trainItems = computed<Item[]>(() => trainResults.value.map((t) => ({ ...t, id: `train:${t.key}`, name: `${agencyLabel(t.agency)} ${t.number}`, train: true })))
 
 const items = computed<Item[]>(() => {
   const selected = model.value ? stations.byId.get(model.value) : undefined
