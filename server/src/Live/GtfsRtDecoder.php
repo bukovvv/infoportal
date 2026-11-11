@@ -47,6 +47,76 @@ final class GtfsRtDecoder
         return ['timestamp' => $timestamp, 'trips' => $trips];
     }
 
+    /**
+     * Pozycje pojazdów (FeedEntity.vehicle) — np. GPS pociągów Kolei Małopolskich. Pojazdy bez współrzędnych są pomijane.
+     * @return array{timestamp: int|null, vehicles: array<int, array{tripId: string|null, routeId: string|null, vehicleId: string|null, label: string|null, lat: float, lon: float, bearing: float|null, speed: float|null, timestamp: int|null, stopSeq: int|null}>}
+     */
+    public static function vehicles(string $buf): array
+    {
+        $timestamp = null;
+        $vehicles = [];
+        foreach (self::fields($buf) as [$field, $value]) {
+            if ($field === 1 && is_string($value)) {
+                $timestamp = self::header($value);
+            } elseif ($field === 2 && is_string($value)) {
+                foreach (self::fields($value) as [$f, $v]) {
+                    if ($f === 4 && is_string($v) && ($vehicle = self::vehiclePosition($v)) !== null) {
+                        $vehicles[] = $vehicle;
+                    }
+                }
+            }
+        }
+
+        return ['timestamp' => $timestamp, 'vehicles' => $vehicles];
+    }
+
+    /** @return array<string, mixed>|null */
+    private static function vehiclePosition(string $buf): ?array
+    {
+        $out = ['tripId' => null, 'routeId' => null, 'vehicleId' => null, 'label' => null, 'lat' => null, 'lon' => null, 'bearing' => null, 'speed' => null, 'timestamp' => null, 'stopSeq' => null];
+        foreach (self::fields($buf, true) as [$field, $value]) {
+            if ($field === 1 && is_string($value)) {
+                foreach (self::fields($value) as [$f, $v]) {
+                    if ($f === 1) {
+                        $out['tripId'] = (string) $v;
+                    } elseif ($f === 5) {
+                        $out['routeId'] = (string) $v;
+                    }
+                }
+            } elseif ($field === 2 && is_string($value)) {
+                // Position: szerokość, długość, kierunek i prędkość (m/s) jako float
+                foreach (self::fields($value, true) as [$f, $v]) {
+                    if (is_float($v)) {
+                        match ($f) {
+                            1 => $out['lat'] = $v,
+                            2 => $out['lon'] = $v,
+                            3 => $out['bearing'] = $v,
+                            5 => $out['speed'] = $v,
+                            default => null,
+                        };
+                    }
+                }
+            } elseif ($field === 3 && is_int($value)) {
+                $out['stopSeq'] = $value;
+            } elseif ($field === 5 && is_int($value)) {
+                $out['timestamp'] = $value;
+            } elseif ($field === 8 && is_string($value)) {
+                foreach (self::fields($value) as [$f, $v]) {
+                    if ($f === 1) {
+                        $out['vehicleId'] = (string) $v;
+                    } elseif ($f === 2) {
+                        $out['label'] = (string) $v;
+                    }
+                }
+            }
+        }
+        if ($out['lat'] === null || $out['lon'] === null || ($out['lat'] == 0.0 && $out['lon'] == 0.0)) {
+            return null;
+        }
+
+        return $out;
+    }
+
     /** @param array<int, string>|null $prefixes */
     private static function matches(string $value, ?array $prefixes, bool $atStart): bool
     {
@@ -134,8 +204,11 @@ final class GtfsRtDecoder
         return $trip;
     }
 
-    /** @return iterable<int, array{0: int, 1: int|string}> */
-    private static function fields(string $buf): iterable
+    /**
+     * @param bool $fixed true — pola fixed32/fixed64 jako float/double (Position), inaczej pomijane
+     * @return iterable<int, array{0: int, 1: int|string|float}>
+     */
+    private static function fields(string $buf, bool $fixed = false): iterable
     {
         $pos = 0;
         $len = strlen($buf);
@@ -147,6 +220,12 @@ final class GtfsRtDecoder
                 $size = self::varint($buf, $pos);
                 yield [$field, substr($buf, $pos, $size)];
                 $pos += $size;
+            } elseif ($fixed && $wire === 5 && $pos + 4 <= $len) {
+                yield [$field, (float) unpack('g', substr($buf, $pos, 4))[1]];
+                $pos += 4;
+            } elseif ($fixed && $wire === 1 && $pos + 8 <= $len) {
+                yield [$field, (float) unpack('e', substr($buf, $pos, 8))[1]];
+                $pos += 8;
             } else {
                 self::skip($buf, $pos, $wire);
             }

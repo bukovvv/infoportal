@@ -124,6 +124,25 @@ $entityPr = field(1, 'U_4') . field(3, field(1, field(1, 'PLK_PR_2026_7') . fiel
 $both = GtfsRtDecoder::decode($feed . field(2, $entityPr), ['PLK_KW_', 'PLK_PR_']);
 check('RT: kilku przewoźników (KW + POLREGIO)', array_column($both['trips'], 'tripId') === ['PLK_KW_2026_1', 'PLK_KW_2026_2', 'PLK_PR_2026_7']);
 
+// --- pozycje pojazdów (GPS Kolei Małopolskich): float32 w Position, pojazd bez współrzędnych pominięty
+$f32 = static fn (int $no, float $v): string => varint(($no << 3) | 5) . pack('g', $v);
+$vehicle = field(1, field(1, '51397284_454329') . field(5, '364951')) . field(2, $f32(1, 50.0672) . $f32(2, 19.9475) . $f32(5, 10.0))
+    . field(3, 21) . field(5, 1790000050) . field(8, field(1, '10742'));
+$noPosition = field(8, field(1, '10738')) . field(5, 1790000050);
+$vfeed = field(1, field(1, '2.0') . field(3, 1790000060)) . field(2, field(1, 'v-10742') . field(4, $vehicle)) . field(2, field(1, 'v-10738') . field(4, $noPosition));
+$vehicles = GtfsRtDecoder::vehicles($vfeed);
+$v = $vehicles['vehicles'][0] ?? [];
+check('RT: pozycje pojazdów (kurs, współrzędne, prędkość, czas)', $vehicles['timestamp'] === 1790000060 && count($vehicles['vehicles']) === 1
+    && ($v['tripId'] ?? null) === '51397284_454329' && abs($v['lat'] - 50.0672) < 1e-4 && abs($v['lon'] - 19.9475) < 1e-4
+    && abs($v['speed'] - 10.0) < 1e-6 && $v['timestamp'] === 1790000050 && $v['vehicleId'] === '10742' && $v['stopSeq'] === 21);
+check('RT: dekoder kursów nie widzi pozycji pojazdów', GtfsRtDecoder::decode($vfeed)['trips'] === []);
+$kmlDir = sys_get_temp_dir() . '/kw-selftest-kml-' . bin2hex(random_bytes(3));
+mkdir($kmlDir);
+file_put_contents($kmlDir . '/trips.txt', "route_id,service_id,trip_id,trip_headsign,direction_id,block_id\n364951,1_1,51397284_454329,OŚWIĘCIM,,39527\n364954,2_2,51397346_454391,KRAKÓW LOTNISKO,,33356/7\n364954,3_3,51397999_1,X,,\n");
+check('GPS KMŁ: numer pociągu z block_id', KwInfo\Live\KmlTripMap::build(new KwInfo\Gtfs\GtfsSource($kmlDir)) === ['51397284_454329' => '39527', '51397346_454391' => '33356/7']);
+@unlink($kmlDir . '/trips.txt');
+@rmdir($kmlDir);
+
 // --- propagacja opóźnień
 $trip = ['key' => 'T@20261001', 'stops' => [[0, 'A', 1000, 1000], [1, 'B', 1600, 1660], [2, 'C', 2200, 2200], [3, 'D', 2800, 2800]]];
 $rt = new Realtime(['T@20261001' => ['c' => 0, 's' => ['1' => [120, 180, 0]]]]);

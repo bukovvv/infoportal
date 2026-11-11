@@ -35,6 +35,11 @@ final class Config
             'site_path' => '/malopolska',
             // komunikaty i panel administratora na razie tylko w Wielkopolsce
             'admin_enabled' => false,
+            // GPS pociągów KML z otwartych danych przewoźnika (gtfs.kolejemalopolskie.com.pl; warunek: podanie źródła)
+            'gps_enabled' => true,
+            'gps_source' => 'kml',
+            'kml_rt_url' => 'https://gtfs.kolejemalopolskie.com.pl/?download=L2hvbWUva21sL3JvemtsYWR5X2phemR5L2tvbGVqL3JlYWx0aW1lLnBi',
+            'kml_gtfs_url' => 'https://gtfs.kolejemalopolskie.com.pl/?download=L2hvbWUva21sL3JvemtsYWR5X2phemR5L2tvbGVqL2d0ZnMuemlw',
         ],
     ];
 

@@ -19,7 +19,8 @@ const sources: { title: string; parts: Part[] }[] = [
   { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Obejmuje Koleje Wielkopolskie (zanimwyjdziesz.pl) i Koleje Małopolskie (zanimwyjdziesz.pl/malopolska), a także pociągi POLREGIO i PKP Intercity na stacjach w tych województwach.'] },
   { title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
   { title: 'Punktualność', parts: ['Liczona z tych samych opóźnień PKP PLK: na stronie pociągu odsetek kursów, które dojechały na stację końcową z opóźnieniem do 5 min (okres i próg zmienisz w Ustawieniach).'] },
-  { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
+  { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS. Wyjątek: pociągi Kolei Małopolskich, które nadają pozycję GPS.'] },
+  { title: 'GPS Kolei Małopolskich', parts: ['Dane: Koleje Małopolskie sp. z o.o., ', ['otwarte dane GTFS', 'https://gtfs.kolejemalopolskie.com.pl/'], ' (GTFS-Realtime), pobierane co minutę. Łączymy je z rozkładem i opóźnieniami PKP PLK: pozycja pochodzi od przewoźnika, opóźnienie z PKP PLK. To nasze opracowanie, nie oficjalna informacja przewoźnika.'] },
   { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
   ...(region.features.btk ? [{ title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] as Part[] }] : []),
 ]

@@ -77,7 +77,7 @@ final class LiveBuilder
                     continue;
                 }
                 $trip = $day->trips[$key];
-                $delayed = new Realtime($rtTrips, [$key => $train->delay]);
+                $delayed = new Realtime($rtTrips, $train->delay !== null ? [$key => $train->delay] : []);
                 $pos = PositionEstimator::estimate($this->estimatorStops($trip, $delayed->apply($trip, $nowSec)), $nowSec, $this->tt->shape($trip['shapeId']));
                 $distance = $pos ? PositionEstimator::distanceKm($pos['lat'], $pos['lon'], $train->lat, $train->lon) : 500.0;
                 if ($distance < $bestDistance) {
@@ -94,7 +94,7 @@ final class LiveBuilder
 
         $gpsDelays = [];
         foreach ($matched as $key => $train) {
-            if (!isset($rtTrips[$key])) {
+            if (!isset($rtTrips[$key]) && $train->delay !== null) {
                 $gpsDelays[$key] = $train->delay;
             }
         }
@@ -156,7 +156,7 @@ final class LiveBuilder
                 'headsign' => null, 'origin' => null, 'destination' => null,
                 'lat' => round($train->lat, 6), 'lon' => round($train->lon, 6), 'bearing' => $train->heading, 'speed' => $train->speed,
                 'source' => 'gps', 'gpsProvider' => $train->provider, 'observedAt' => date(DATE_ATOM, $train->observedAt),
-                'delay' => $train->delay, 'delaySource' => 'gps', 'dwelling' => false, 'prev' => null, 'next' => null, 'progress' => 0,
+                'delay' => $train->delay, 'delaySource' => $train->delay !== null ? 'gps' : null, 'dwelling' => false, 'prev' => null, 'next' => null, 'progress' => 0,
             ];
         }
         usort($trains, static fn (array $a, array $b): int => strnatcmp((string) $a['number'], (string) $b['number']));
@@ -220,6 +220,15 @@ final class LiveBuilder
     {
         if (!Config::get('gps_enabled')) {
             return [[], ['enabled' => false, 'ok' => false, 'provider' => null, 'count' => 0, 'fetchedAt' => null, 'error' => null]];
+        }
+        // Małopolska: GPS z otwartych danych Kolei Małopolskich (bez zapasu — gdy feed milczy, pozycje z rozkładu)
+        if (Config::get('gps_source') === 'kml') {
+            try {
+                $trains = (new KmlGpsClient())->trains($this->log);
+                return [$trains, ['enabled' => true, 'ok' => true, 'provider' => KmlGpsClient::PROVIDER, 'count' => count($trains), 'fetchedAt' => Clock::now()->format(DATE_ATOM), 'error' => null]];
+            } catch (Throwable $e) {
+                return [[], ['enabled' => true, 'ok' => false, 'provider' => KmlGpsClient::PROVIDER, 'count' => 0, 'fetchedAt' => null, 'error' => $e->getMessage()]];
+            }
         }
         $errors = [];
         foreach ([new BilkomMapClient(), new BackupGpsClient()] as $client) {

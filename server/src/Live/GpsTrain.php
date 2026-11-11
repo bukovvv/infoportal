@@ -11,9 +11,11 @@ final class GpsTrain
         public readonly string $number,
         public readonly float $lat,
         public readonly float $lon,
-        public readonly int $speed,
+        /** km/h; null — źródło nie podaje (GPS KMŁ) */
+        public readonly ?int $speed,
         public readonly ?int $heading,
-        public readonly int $delay,
+        /** minuty; null — źródło podaje samą pozycję, opóźnienie z PKP PLK */
+        public readonly ?int $delay,
         public readonly int $observedAt,
         public readonly string $provider,
     ) {

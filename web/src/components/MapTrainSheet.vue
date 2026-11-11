@@ -286,6 +286,7 @@ function share() {
       <p class="src text-body-small">
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
+        <template v-if="trip.position?.source === 'gps' && trip.position.gpsProvider"> Pozycja GPS: {{ trip.position.gpsProvider }}.</template>
         <template v-if="trip.trimmed"> Pokazujemy stacje {{ region.inName }}.</template>
       </p>
     </div>

@@ -120,7 +120,7 @@ defineExpose({ trip })
         <p class="head-route">{{ trip.origin }} → {{ trip.destination }}</p>
         <div class="d-flex flex-wrap ga-2">
           <StatusTag :delay="trip.realtime.delay" :source="trip.realtime.source" :cancelled="trip.realtime.cancelled" :estimated="trip.position?.source === 'est'" />
-          <span v-if="trip.position?.source === 'gps'" class="tag tag-band"><v-icon icon="satellite_alt" />GPS · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</span>
+          <span v-if="trip.position?.source === 'gps'" class="tag tag-band"><v-icon icon="satellite_alt" />GPS<template v-if="trip.position.speed !== null"> · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</template></span>
           <span class="tag tag-band tnum"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
           <span v-if="trip.distanceKm" class="tag tag-band tnum"><v-icon icon="straighten" />{{ trip.distanceKm }} km</span>
         </div>
@@ -160,6 +160,7 @@ defineExpose({ trip })
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else-if="trip.realtime.source === 'gps'">Opóźnienie według pozycji GPS.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
+        <template v-if="trip.position?.source === 'gps' && trip.position.gpsProvider"> Pozycja GPS: {{ trip.position.gpsProvider }}.</template>
         Rozkład: PKP PLK, GTFS mkuran.pl.<template v-if="trip.vehicle?.url"> Pojazd: <a :href="trip.vehicle.url" target="_blank" rel="noopener noreferrer" class="text-primary">vagonWEB.cz</a>.</template>
       </p>
     </template>
