@@ -495,13 +495,15 @@ final class PublicApi
     public function punctuality(): Response
     {
         $number = trim((string) ($_GET['number'] ?? ''));
-        $agency = (string) ($_GET['agency'] ?? 'KW');
+        $agency = (string) ($_GET['agency'] ?? $this->tt()->agency());
         if (preg_match('/^\d{3,6}(\/\d{1,6})*$/', $number) !== 1 || preg_match('/^[A-Z]{2,4}$/', $agency) !== 1) {
             throw new ApiException('Podaj numer pociągu, np. 77600.', 422);
         }
 
-        $days = in_array((int) ($_GET['days'] ?? 30), PunctualityRepository::PERIODS, true) ? (int) $_GET['days'] : 30;
-        $onTime = in_array((int) ($_GET['onTime'] ?? 5), PunctualityRepository::THRESHOLDS, true) ? (int) $_GET['onTime'] : PunctualityRepository::ON_TIME_MINUTES;
+        $days = (int) ($_GET['days'] ?? 30);
+        $days = in_array($days, PunctualityRepository::PERIODS, true) ? $days : 30;
+        $onTime = (int) ($_GET['onTime'] ?? PunctualityRepository::ON_TIME_MINUTES);
+        $onTime = in_array($onTime, PunctualityRepository::THRESHOLDS, true) ? $onTime : PunctualityRepository::ON_TIME_MINUTES;
 
         return new Response((new PunctualityRepository())->summary($number, $agency, $days, $onTime), maxAge: 900);
     }
@@ -511,7 +513,7 @@ final class PublicApi
         return new Response((new NoticeRepository())->published());
     }
 
-    /** Mapa strony dla wyszukiwarek: strony stałe, tablice odjazdów wszystkich stacji, opublikowane komunikaty. */
+    /** Mapa strony dla wyszukiwarek: strony stałe, tablice odjazdów wszystkich stacji (w każdym regionie), opublikowane komunikaty. */
     public function sitemap(): RawResponse
     {
         $base = rtrim((string) Config::get('site_url'), '/');
@@ -522,6 +524,23 @@ final class PublicApi
         foreach ((new NoticeRepository())->published() as $notice) {
             $urls[] = ['/komunikaty/' . $notice['id'], substr((string) $notice['updatedAt'], 0, 10)];
         }
+        // pozostałe regiony (/malopolska…): start, mapa i tablice stacji — o ile mają już zaimportowany rozkład
+        $current = Config::region();
+        foreach (Config::regions() as $region) {
+            if ($region === Config::DEFAULT_REGION) {
+                continue;
+            }
+            Config::useRegion($region);
+            $prefix = (string) Config::get('site_path');
+            if (is_file(Config::path('gtfs_db'))) {
+                $urls[] = [$prefix, null];
+                $urls[] = [$prefix . '/mapa', null];
+                foreach ((new Timetable())->stations() as $station) {
+                    $urls[] = [$prefix . '/odjazdy/' . rawurlencode((string) $station['id']), null];
+                }
+            }
+        }
+        Config::useRegion($current);
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         foreach ($urls as [$path, $modified]) {
             $xml .= '  <url><loc>' . htmlspecialchars($base . $path, ENT_XML1) . '</loc>' . ($modified ? '<lastmod>' . $modified . '</lastmod>' : '') . "</url>\n";

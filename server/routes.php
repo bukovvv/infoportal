@@ -5,6 +5,7 @@ declare(strict_types=1);
 use KwInfo\Api\AdminApi;
 use KwInfo\Api\PublicApi;
 use KwInfo\Api\PushApi;
+use KwInfo\Config;
 use KwInfo\Http\Router;
 
 $api = new PublicApi();
@@ -32,6 +33,10 @@ $router->post('/push/unwatch', [$push, 'unwatch']);
 $router->post('/push/route-watch', [$push, 'watchRoute']);
 $router->post('/push/route-unwatch', [$push, 'unwatchRoute']);
 
+// panel administratora (komunikaty) tylko w regionach z komunikatami — dziś Wielkopolska
+if (!Config::get('admin_enabled')) {
+    return $router;
+}
 $router->get('/admin/session', [$admin, 'session']);
 $router->post('/admin/login', [$admin, 'login']);
 $router->post('/admin/logout', [$admin, 'logout']);

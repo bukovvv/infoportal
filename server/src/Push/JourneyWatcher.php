@@ -6,6 +6,7 @@ namespace KwInfo\Push;
 
 use Closure;
 use KwInfo\Clock;
+use KwInfo\Config;
 use KwInfo\Gtfs\DayTimetable as D;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\Realtime;
@@ -54,7 +55,7 @@ final class JourneyWatcher
                 foreach ($messages as $message) {
                     $status = ($this->sender ?? WebPush::send(...))(
                         ['endpoint' => $w['endpoint'], 'p256dh' => $w['p256dh'], 'auth' => $w['auth']],
-                        $message + ['tag' => 'podroz-' . $w['journey_id'], 'url' => '/#moje-podroze']
+                        $message + ['tag' => 'podroz-' . $w['journey_id'], 'url' => Config::get('site_path') . '/#moje-podroze']
                     );
                     if ($status === 404 || $status === 410) {
                         // subskrypcja wygasła (np. wyczyszczone dane przeglądarki) — usuwamy wszystkie jej podróże
@@ -98,6 +99,7 @@ final class JourneyWatcher
             $s = $trip['stops'];
             $out[] = [
                 'number' => (string) $trip['number'],
+                'agency' => (string) ($trip['agency'] ?? $this->tt->agency()),
                 'from' => (string) ($this->tt->station($s[$from][D::STATION])['name'] ?? $s[$from][D::STATION]),
                 'to' => (string) ($this->tt->station($s[$to][D::STATION])['name'] ?? $s[$to][D::STATION]),
                 'dep' => Clock::at($date, (int) ($s[$from][D::DEP] ?? $s[$from][D::ARR]))->getTimestamp(),
@@ -129,6 +131,8 @@ final class JourneyWatcher
     {
         $messages = [];
         $hm = static fn (int $ts): string => date('H:i', $ts);
+        // „KW 77600”, „KML 30121”, „PR 85724” — odcinek bez przewoźnika: przewoźnik regionu
+        $label = static fn (array $leg): string => ($leg['agency'] ?? Config::get('agency_id')) . ' ' . $leg['number'];
         $trip = $legs[0]['from'] . ' → ' . end($legs)['to'];
         foreach ($legs as $i => $leg) {
             $expected = $leg['dep'] + (int) ($leg['depDelay'] ?? 0) * 60;
@@ -139,7 +143,7 @@ final class JourneyWatcher
                 if (empty($state['c'][$i])) {
                     $state['c'][$i] = true;
                     $messages[] = [
-                        'title' => 'KW ' . $leg['number'] . ' odwołany',
+                        'title' => $label($leg) . ' odwołany',
                         'body' => $leg['from'] . ', odjazd ' . $hm($leg['dep']) . ': ten pociąg dziś nie jedzie. Znajdź inne połączenie (' . $trip . ').',
                     ];
                 }
@@ -153,13 +157,13 @@ final class JourneyWatcher
             if ($delay >= 3 && abs($delay - $last) >= 3) {
                 $state['d'][$i] = $delay;
                 $messages[] = [
-                    'title' => 'KW ' . $leg['number'] . ': opóźnienie +' . $delay . ' min',
+                    'title' => $label($leg) . ': opóźnienie +' . $delay . ' min',
                     'body' => $leg['from'] . ': odjazd o ' . $hm($expected) . ' zamiast ' . $hm($leg['dep']) . '. Podróż ' . $trip . '.',
                 ];
             } elseif ($last >= 3 && $delay <= 1) {
                 $state['d'][$i] = $delay;
                 $messages[] = [
-                    'title' => 'KW ' . $leg['number'] . ' jedzie planowo',
+                    'title' => $label($leg) . ' jedzie planowo',
                     'body' => $leg['from'] . ': odjazd o ' . $hm($expected) . '. Podróż ' . $trip . '.',
                 ];
             }
@@ -176,7 +180,7 @@ final class JourneyWatcher
                 $state['t'][$i] = true;
                 $messages[] = [
                     'title' => 'Przesiadka zagrożona: ' . $a['to'],
-                    'body' => 'KW ' . $a['number'] . ' przyjedzie o ' . $hm($arrive) . ', a KW ' . $b['number'] . ' odjeżdża o ' . $hm($leave) . '.',
+                    'body' => $label($a) . ' przyjedzie o ' . $hm($arrive) . ', a ' . $label($b) . ' odjeżdża o ' . $hm($leave) . '.',
                 ];
             }
         }

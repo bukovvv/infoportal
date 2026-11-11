@@ -11,9 +11,10 @@ use PDO;
 use RuntimeException;
 
 /**
- * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy przewoźnika (KW) i buduje gtfs.sqlite.
- * Kursy przewoźników partnerskich (POLREGIO, PKP Intercity) trafiają do bazy obcięte do stacji w Wielkopolsce,
+ * Pobiera polish_trains.zip (mkuran.pl), wybiera kursy przewoźnika regionu (KW, KML) i buduje gtfs.sqlite regionu.
+ * Kursy przewoźników partnerskich (POLREGIO, PKP Intercity) trafiają do bazy obcięte do stacji w województwie,
  * a ich kształty — do odcinka między pierwszym a ostatnim zachowanym postojem.
+ * Archiwum jest wspólne dla regionów (jedno pobranie); region przebudowuje bazę, gdy archiwum jest nowsze od niej.
  * Nowa baza zastępuje starą dopiero po pozytywnej walidacji.
  */
 final class GtfsImporter
@@ -30,37 +31,43 @@ final class GtfsImporter
         };
     }
 
-    /** @return array<string, mixed> */
-    public function run(bool $force = false, ?string $localFile = null): array
+    /**
+     * @param bool $fetch false — bez pobierania (archiwum pobrał już poprzedni region w tym samym uruchomieniu)
+     * @return array<string, mixed>
+     */
+    public function run(bool $force = false, ?string $localFile = null, bool $fetch = true): array
     {
         $storage = Config::path('storage');
-        if (!is_dir($storage)) {
-            mkdir($storage, 0775, true);
+        $regionStorage = Config::path('region_storage');
+        foreach ([$storage, $regionStorage] as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0775, true);
+            }
         }
         $zipPath = $localFile ?? $storage . '/polish_trains.zip';
-        $download = null;
         if ($localFile === null) {
-            $download = $this->download($zipPath, $force);
-            if ($download === null && !$force && is_file(Config::path('gtfs_db')) && self::schemaOf(Config::path('gtfs_db')) === self::SCHEMA) {
+            $download = $fetch || !is_file($zipPath) ? $this->download($zipPath, $force) : null;
+            // znacznik pobrania jest wspólny; region, którego import się nie udał, ma bazę starszą od archiwum i spróbuje znowu
+            if ($download !== null) {
+                file_put_contents($this->downloadMetaFile(), json_encode($download));
+            }
+            $db = Config::path('gtfs_db');
+            if (!$force && is_file($db) && self::schemaOf($db) === self::SCHEMA && filemtime($db) >= filemtime($zipPath)) {
                 ($this->log)('Rozkład bez zmian od ostatniego importu.');
                 return ['skipped' => true];
             }
         }
 
         $started = microtime(true);
-        $tmp = $storage . '/gtfs.building.sqlite';
+        $tmp = $regionStorage . '/gtfs.building.sqlite';
         @unlink($tmp);
         $stats = $this->build(new GtfsSource($zipPath), $tmp);
         $this->validate($stats);
         $this->swap($tmp, Config::path('gtfs_db'));
-        // znacznik pobrania zapisujemy dopiero po udanej podmianie — nieudany import zostanie powtórzony
-        if ($download !== null) {
-            file_put_contents($this->downloadMetaFile(), json_encode($download));
-        }
         $stats['seconds'] = round(microtime(true) - $started, 1);
         ($this->log)(sprintf(
-            'Zaimportowano: %d kursów KW (+ %d partnerów w Wielkopolsce), %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
-            $stats['trips'], $stats['partnerTrips'], $stats['stations'], $stats['shapes'], $stats['validFrom'], $stats['validUntil'], $stats['seconds']
+            '%s: %d kursów %s (+ %d partnerów w województwie), %d stacji, %d kształtów, rozkład %s – %s (%.1f s).',
+            Config::get('region_name'), $stats['trips'], Config::get('agency_id'), $stats['partnerTrips'], $stats['stations'], $stats['shapes'], $stats['validFrom'], $stats['validUntil'], $stats['seconds']
         ));
 
         return $stats;
@@ -152,7 +159,7 @@ final class GtfsImporter
             }
             $id = $t['trip_id'];
             $tripAgency = $routes[$t['route_id']];
-            // kursy partnerów: true = obcinane do Wielkopolski (kształt też)
+            // kursy partnerów: true = obcinane do województwa (kształt też)
             $trips[$id] = $tripAgency !== $agency;
             $services[$t['service_id']] = true;
             $shape = $t['shape_id'] ?: null;
@@ -170,7 +177,7 @@ final class GtfsImporter
                 $insNumber->execute([$number, $id]);
             }
         }
-        ($this->log)('Kursy: ' . count($trips) . ' (przed obcięciem partnerów do Wielkopolski)');
+        ($this->log)('Kursy: ' . count($trips) . ' (przed obcięciem partnerów do województwa)');
 
         // stops → stacje (poziom stacji nadrzędnej)
         $stops = [];

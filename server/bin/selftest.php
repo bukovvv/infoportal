@@ -53,6 +53,19 @@ check('region: Poznań, Piła, Kalisz w środku', $region->contains(52.4019, 16.
 check('region: Łódź, Zbąszynek, Głogów poza', !$region->contains(51.7570, 19.4310) && !$region->contains(52.2433, 15.8183) && !$region->contains(51.6573, 16.0866));
 check('region: wyjątki przy granicy', $region->contains(52.5900, 17.9000, 'Wydartowo'));
 
+// --- regiony: Małopolska z własnymi plikami i granicą, Wielkopolska bez zmian w ścieżkach
+$storage = Config::path('storage');
+Config::useRegion('malopolska');
+$mp = new Region();
+check('regiony: Małopolska — KML, pliki w storage/malopolska, bez panelu', Config::get('agency_id') === 'KML' && Config::get('rt_trip_prefix') === 'PLK_KML_'
+    && Config::path('gtfs_db') === $storage . '/malopolska/gtfs.sqlite' && Config::path('app_db') === $storage . '/malopolska/app.sqlite'
+    && Config::get('site_path') === '/malopolska' && Config::get('admin_enabled') === false && Config::path('storage') === $storage);
+check('regiony: Kraków, Tarnów, Zakopane w Małopolsce; Katowice, Kielce, Poznań poza', $mp->contains(50.0677, 19.9476) && $mp->contains(50.0060, 20.9740)
+    && $mp->contains(49.2995, 19.9497) && !$mp->contains(50.2577, 19.0175) && !$mp->contains(50.8746, 20.6300) && !$mp->contains(52.4019, 16.9113));
+Config::useRegion(Config::DEFAULT_REGION);
+check('regiony: Wielkopolska — KW, pliki jak dotąd w storage/', Config::get('agency_id') === 'KW' && Config::path('gtfs_db') === $storage . '/gtfs.sqlite'
+    && Config::get('site_path') === '' && Config::get('admin_enabled') === true && Config::regions() === ['wielkopolska', 'malopolska']);
+
 // --- upraszczanie kształtu zachowuje końce i odległości
 $line = [[52.0, 16.0, 0.0], [52.00001, 16.5, 5.0], [52.0, 17.0, 10.0], [52.5, 17.0, 20.0]];
 $simple = GtfsImporter::simplify($line, 0.001);

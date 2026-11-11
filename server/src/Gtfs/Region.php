@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace KwInfo\Gtfs;
 
+use KwInfo\Config;
+
 /**
- * Granica województwa wielkopolskiego (wielkopolskie.json, PRG uproszczone do ok. 50 m) —
- * do obcinania kursów innych przewoźników do stacji w Wielkopolsce.
+ * Granica województwa regionu (wielkopolskie.json, malopolskie.json — PRG uproszczone do ok. 50 m) —
+ * do obcinania kursów innych przewoźników do stacji w województwie.
  */
 final class Region
 {
-    /** Stacje w województwie, które przez uproszczenie granicy wypadają tuż za nią. */
-    private const INSIDE = ['Wydartowo'];
-
     /** @var array<int, array{0: float, 1: float}> [lon, lat] */
     private array $ring;
     /** @var array{0: float, 1: float, 2: float, 3: float} minLon, minLat, maxLon, maxLat */
     private array $box;
+    /** @var list<string> stacje w województwie, które przez uproszczenie granicy wypadają tuż za nią */
+    private array $inside;
 
-    public function __construct(?string $file = null)
+    /** @param list<string>|null $inside */
+    public function __construct(?string $file = null, ?array $inside = null)
     {
-        $data = json_decode((string) file_get_contents($file ?? __DIR__ . '/wielkopolskie.json'), true);
+        $data = json_decode((string) file_get_contents($file ?? __DIR__ . '/' . Config::path('region_file')), true);
+        $this->inside = $inside ?? (array) Config::get('region_inside');
         $this->ring = $data['coordinates'] ?? [];
         $lons = array_column($this->ring, 0);
         $lats = array_column($this->ring, 1);
@@ -29,7 +32,7 @@ final class Region
 
     public function contains(float $lat, float $lon, string $name = ''): bool
     {
-        if (in_array($name, self::INSIDE, true)) {
+        if (in_array($name, $this->inside, true)) {
             return true;
         }
         if ($lon < $this->box[0] || $lat < $this->box[1] || $lon > $this->box[2] || $lat > $this->box[3]) {

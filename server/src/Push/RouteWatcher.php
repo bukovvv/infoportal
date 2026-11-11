@@ -7,6 +7,7 @@ namespace KwInfo\Push;
 use Closure;
 use DateTimeImmutable;
 use KwInfo\Clock;
+use KwInfo\Config;
 use KwInfo\Gtfs\ConnectionFinder;
 use KwInfo\Gtfs\DayTimetable as D;
 use KwInfo\Gtfs\Timetable;
@@ -71,7 +72,7 @@ final class RouteWatcher
                 foreach ($messages as $message) {
                     $status = ($this->sender ?? WebPush::send(...))(
                         ['endpoint' => $r['endpoint'], 'p256dh' => $r['p256dh'], 'auth' => $r['auth']],
-                        $message + ['url' => '/#moje-trasy']
+                        $message + ['url' => Config::get('site_path') . '/#moje-trasy']
                     );
                     if ($status === 404 || $status === 410) {
                         // subskrypcja wygasła — usuwamy jej trasy i podróże
@@ -183,7 +184,7 @@ final class RouteWatcher
             if ($now > $expected + 60) {
                 continue;
             }
-            $train = ($leg['agency'] ?: 'KW') . ' ' . $leg['number'];
+            $train = ($leg['agency'] ?: Config::get('agency_id')) . ' ' . $leg['number'];
             $tag = 'trasa-' . substr(hash('sha256', $id), 0, 16);
             if ($leg['cancelled']) {
                 if (empty($state['c'][$id])) {

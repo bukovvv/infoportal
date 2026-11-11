@@ -2,6 +2,7 @@
 // O nas jak ekran „O aplikacji”: logo na grafitowym pasku, wsparcie, lista skrótów; źródła danych i prywatność rozwijane.
 import BandHero from '@/components/BandHero.vue'
 import logoOnBand from '@/assets/logo-na-ciemne.svg'
+import { region } from '@/utils/region'
 
 const SUPPORT_URL = 'https://buycoffee.to/zanimwyjdziesz'
 
@@ -9,23 +10,23 @@ const links = [
   { icon: 'search', title: 'Wyszukiwarka połączeń', to: { name: 'start', hash: '#szukaj' } },
   { icon: 'departure_board', title: 'Odjazdy i przyjazdy', to: '/odjazdy' },
   { icon: 'map', title: 'Mapa pociągów', to: '/mapa' },
-  { icon: 'commute', title: 'Bilet Bus-Tramwaj-Kolej', to: '/bus-tramwaj-kolej' },
+  ...(region.features.btk ? [{ icon: 'commute', title: 'Bilet Bus-Tramwaj-Kolej', to: '/bus-tramwaj-kolej' }] : []),
 ]
 
 /** Opis źródła jako fragmenty: tekst albo link [etykieta, adres]. */
 type Part = string | [string, string]
 const sources: { title: string; parts: Part[] }[] = [
-  { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Wyszukiwarka i tablice odjazdów uwzględniają też pociągi POLREGIO i PKP Intercity na stacjach w Wielkopolsce (bez mapy).'] },
+  { title: 'Rozkład jazdy', parts: ['Dane GTFS ', ['Mikołaja Kuranowskiego', 'https://mkuran.pl/gtfs/'], ' na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Obejmuje Koleje Wielkopolskie (zanimwyjdziesz.pl) i Koleje Małopolskie (zanimwyjdziesz.pl/malopolska), a także pociągi POLREGIO i PKP Intercity na stacjach w tych województwach.'] },
   { title: 'Opóźnienia', parts: ['Z systemu PKP PLK (GTFS-RT, mkuran.pl), odświeżane co ok. 2 minuty. Gdy źródło milczy, pokazujemy sam rozkład.'] },
   { title: 'Punktualność', parts: ['Liczona z tych samych opóźnień PKP PLK: na stronie pociągu odsetek kursów, które dojechały na stację końcową z opóźnieniem do 5 min (okres i próg zmienisz w Ustawieniach).'] },
   { title: 'Pozycje pociągów', parts: ['Wyliczane z rozkładu i opóźnień wzdłuż trasy, więc to szacunek, nie GPS.'] },
   { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
-  { title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] },
+  ...(region.features.btk ? [{ title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] as Part[] }] : []),
 ]
 
 const privacy = [
   'Bez kont, reklam i statystyk odwiedzin. Nie używamy ciasteczek (poza panelem administratora).',
-  'Ulubione stacje, obserwowane podróże i trasy, ostatnie wyszukiwanie i jego opcje, motyw, ustawienia i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
+  'Ulubione stacje, obserwowane podróże i trasy, ostatnie wyszukiwanie i jego opcje, ostatnio wybrany region, motyw, ustawienia i ukryte komunikaty zapisują się tylko w Twojej przeglądarce i nie trafiają na serwer (wyjątek: powiadomienia, opisane niżej). Usuniesz je, czyszcząc dane tej strony.',
   'Gdy włączysz powiadomienia o podróży, serwer zapisuje adres subskrypcji powiadomień Twojej przeglądarki i pociągi tej podróży. Usuwamy je po jej zakończeniu albo po wyłączeniu powiadomień. Przy powiadomieniach o trasie serwer zapisuje adres subskrypcji, obie stacje, opcje wyszukiwania i wybrane dni i godziny — do wyłączenia powiadomień, a jeśli przez 90 dni nie otworzysz strony, usuwamy je same. Powiadomienia dostarcza usługa producenta przeglądarki (Google, Mozilla, Apple, Microsoft).',
   'Lokalizacji używamy tylko po kliknięciu „Najbliższa stacja” albo „Moja lokalizacja”. Najbliższą stację wylicza Twoja przeglądarka.',
   'Podkład mapy pobierany jest z OpenFreeMap, więc ten serwis widzi Twój adres IP. Hosting może zapisywać standardowe logi serwera. Do ochrony przed nadużyciami serwer liczy zapytania z jednego adresu IP: zapisuje tylko jednokierunkowy skrót adresu, a liczniki usuwa po dobie.',
@@ -37,7 +38,7 @@ const privacy = [
     <div class="hero">
       <h1 class="logo-h"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" class="logo"></h1>
       <p class="motto">Już wiesz, jak pojedziesz.</p>
-      <p class="intro">Nieoficjalny serwis dla pasażerów kolei w Wielkopolsce. Bez reklam i bez konta.</p>
+      <p class="intro">Nieoficjalny serwis dla pasażerów kolei w Wielkopolsce i Małopolsce. Bez reklam i bez konta.</p>
     </div>
   </BandHero>
 

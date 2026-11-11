@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { storageKey } from '@/utils/region'
 
 export interface SnackAction {
   label: string
@@ -8,16 +9,17 @@ export interface SnackAction {
 
 type ThemeMode = 'system' | 'light' | 'dark'
 
+// klucze zależne od regionu (ulubione, podróże, trasy…) mają w Małopolsce osobne wpisy — utils/region
 const read = <T>(key: string, fallback: T): T => {
   try {
-    const v = localStorage.getItem(key)
+    const v = localStorage.getItem(storageKey(key))
     return v === null ? fallback : (JSON.parse(v) as T)
   } catch {
     return fallback
   }
 }
 export const write = (key: string, value: unknown) => {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* pamięć przeglądarki jest opcjonalna */ }
+  try { localStorage.setItem(storageKey(key), JSON.stringify(value)) } catch { /* pamięć przeglądarki jest opcjonalna */ }
 }
 export { read }
 

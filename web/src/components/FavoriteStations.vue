@@ -6,6 +6,7 @@ import { useStations } from '@/stores/data'
 import { useFavorites } from '@/stores/favorites'
 import { useUi } from '@/stores/ui'
 import { clock, minutesUntil, relative } from '@/utils/format'
+import { region } from '@/utils/region'
 import { vHscroll } from '@/utils/hscroll'
 import StatusTag from './StatusTag.vue'
 
@@ -50,7 +51,7 @@ watch(() => favorites.ids.join(), () => void refresh())
       </router-link>
       <v-skeleton-loader v-if="!s.rows" type="text@2" color="transparent" class="px-4" />
       <p v-else-if="s.rows === 'error'" class="text-body-small muted fav-note">Nie udało się wczytać odjazdów.</p>
-      <p v-else-if="!s.rows.length" class="text-body-small muted fav-note">Brak odjazdów KW w najbliższym czasie.</p>
+      <p v-else-if="!s.rows.length" class="text-body-small muted fav-note">Brak odjazdów {{ region.agency }} w najbliższym czasie.</p>
       <template v-else>
         <button
           v-for="r in s.rows"
@@ -63,7 +64,7 @@ watch(() => favorites.ids.join(), () => void refresh())
           <span class="t tnum" :class="{ late: late(r) }">{{ clock(late(r) ? r.expected : r.scheduled) }}</span>
           <span class="fav-main">
             <span class="dest ellipsis">{{ r.destination }}</span>
-            <span class="text-body-small muted ellipsis">{{ r.isBus ? 'ZKA' : r.route?.short ?? 'KW' }}<template v-if="r.platform"> · peron {{ r.platform }}</template></span>
+            <span class="text-body-small muted ellipsis">{{ r.isBus ? 'ZKA' : r.route?.short ?? region.agency }}<template v-if="r.platform"> · peron {{ r.platform }}</template></span>
           </span>
           <StatusTag v-if="r.cancelled || late(r)" :delay="r.delay" :source="r.delaySource" :cancelled="r.cancelled" />
           <span v-else class="countdown text-body-small">{{ soon(r) }}</span>

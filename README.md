@@ -15,6 +15,8 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 
 Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
 
+**Regiony.** Wielkopolska (Koleje Wielkopolskie, `/`) i Małopolska (Koleje Małopolskie, `/malopolska`, API `/api/malopolska/…`). Region = ustawienia w `server/src/Config.php` (`REGIONS`: przewoźnik, prefiks GTFS-RT, granica województwa, pliki w `server/storage/<region>/`) i `web/src/utils/region.ts` (base routera, prefiks API, nazwy, części serwisu). `import-gtfs.php` i `refresh-live.php` obsługują po kolei wszystkie regiony (`--region=malopolska` — tylko jeden); archiwum rozkładu i feed GTFS-RT pobierane raz.
+
 ## Struktura
 
 ```text

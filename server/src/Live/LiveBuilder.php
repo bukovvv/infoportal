@@ -259,26 +259,17 @@ final class LiveBuilder
         if (time() - (int) ($meta['checkedAt'] ?? 0) < (int) Config::get('rt_min_interval')) {
             return [$feedFresh ? ($existing['trips'] ?? []) : [], $source($feedFresh, $feedFresh ? null : 'dane GTFS-RT są nieaktualne', true)];
         }
-        $headers = [];
-        if (!empty($meta['etag']) && $existing !== []) {
-            $headers[] = 'If-None-Match: ' . $meta['etag'];
-        }
-        if (!empty($meta['lastModified']) && $existing !== []) {
-            $headers[] = 'If-Modified-Since: ' . $meta['lastModified'];
-        }
         try {
-            $response = HttpClient::get((string) Config::get('gtfs_rt_url'), $headers, 30);
+            // surowy feed wspólny dla regionów (RtFeed); region dekoduje go tylko po zmianie wersji
+            $feed = RtFeed::fetch($existing !== [] ? ($meta['feedVersion'] ?? null) : null);
             $meta['checkedAt'] = time();
-            if ($response['status'] === 304) {
+            if ($feed['body'] === null) {
                 Storage::writeJson($metaFile, $meta);
                 return [$feedFresh ? ($existing['trips'] ?? []) : [], $source($feedFresh, $feedFresh ? null : 'dane GTFS-RT są nieaktualne', true)];
             }
-            if ($response['status'] !== 200) {
-                throw new \RuntimeException('HTTP ' . $response['status']);
-            }
-            // KW i partnerzy (POLREGIO); convertRt zostawia tylko kursy z naszej bazy (partnerzy obcięci do Wielkopolski)
+            // przewoźnik regionu i partnerzy; convertRt zostawia tylko kursy z naszej bazy (partnerzy obcięci do województwa)
             $prefixes = [(string) Config::get('rt_trip_prefix'), ...array_values((array) Config::get('partner_agencies'))];
-            $decoded = GtfsRtDecoder::decode($response['body'], $prefixes);
+            $decoded = GtfsRtDecoder::decode($feed['body'], $prefixes);
             $trips = $this->convertRt($decoded['trips']);
             $existing = [
                 'fetchedAt' => Clock::now()->format(DATE_ATOM),
@@ -286,8 +277,8 @@ final class LiveBuilder
                 'trips' => $trips,
             ];
             Storage::writeJson($rtFile, $existing);
-            $meta['etag'] = $response['headers']['etag'] ?? null;
-            $meta['lastModified'] = $response['headers']['last-modified'] ?? null;
+            $meta['feedVersion'] = $feed['version'];
+            unset($meta['etag'], $meta['lastModified']);
             Storage::writeJson($metaFile, $meta);
             $feedFresh = $existing['feedTime'] !== null && strtotime($existing['feedTime']) > time() - 1800;
 

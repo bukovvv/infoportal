@@ -53,7 +53,7 @@ export function upcoming(list: Connection[], now: number, count = 3) {
     .slice(0, count)
 }
 
-const SHORT_AGENCY: Record<string, string> = { KW: 'KW', PR: 'POLREGIO', IC: 'PKP Intercity' }
+const SHORT_AGENCY: Record<string, string> = { KW: 'KW', KML: 'KML', PR: 'POLREGIO', IC: 'PKP Intercity' }
 
 /** Opcje inne niż domyślne w kilku słowach: „bez przesiadek · tylko KW, POLREGIO”; domyślne — pusty napis. */
 export function optionsSummary(o: SearchOptions) {

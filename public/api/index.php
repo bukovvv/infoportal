@@ -20,9 +20,14 @@ if ($server === null) {
 }
 
 require $server . '/bootstrap.php';
-/** @var KwInfo\Http\Router $router */
-$router = require $server . '/routes.php';
 
 $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
 $path = preg_replace('#^.*?/api(?=/|$)#', '', $path) ?? '/';
+// region inny niż domyślny: /api/malopolska/stations → /stations z danymi Małopolski
+if (preg_match('#^/([a-z]+)(?=/|$)#', $path, $m) === 1 && $m[1] !== KwInfo\Config::DEFAULT_REGION && KwInfo\Config::isRegion($m[1])) {
+    KwInfo\Config::useRegion($m[1]);
+    $path = substr($path, strlen($m[0])) ?: '/';
+}
+/** @var KwInfo\Http\Router $router */
+$router = require $server . '/routes.php';
 $router->dispatch((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), $path)->send();

@@ -3,6 +3,7 @@ import type { Connection } from '@/api/types'
 import { useUi } from '@/stores/ui'
 import { trainLabel } from './agency'
 import { clock } from './format'
+import { regionPath } from './region'
 
 export async function shareLink(data: { title: string; text: string; url: string }) {
   const ui = useUi()
@@ -29,7 +30,7 @@ export function connectionUrl(c: Connection) {
   const params = new URLSearchParams({ z: first.from.id, do: last.to.id, data: c.departure.slice(0, 10), godz: clock(c.departure) })
   // opcje w adresie (nie te zapamiętane u odbiorcy), żeby to połączenie na pewno się znalazło
   params.set('przes', c.transfers ? '2' : '0')
-  return `${location.origin}/?${params}`
+  return `${location.origin}${regionPath('/')}?${params}`
 }
 
 export function shareConnection(c: Connection) {

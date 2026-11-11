@@ -1,5 +1,6 @@
 import { watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { region } from './region'
 
 /**
  * Tytuł, opis, adres kanoniczny i podgląd linku (Open Graph) bieżącej strony. Ustawiane po każdej nawigacji
@@ -10,15 +11,15 @@ import { useRoute } from 'vue-router'
 export const SITE_URL = 'https://zanimwyjdziesz.pl'
 
 export const descriptions: Record<string, string> = {
-  start: 'Wyszukiwarka połączeń kolejowych w Wielkopolsce: Koleje Wielkopolskie, POLREGIO i PKP Intercity, z przesiadkami i opóźnieniami na żywo. Nieoficjalny serwis pasażerski bez reklam i bez konta.',
-  map: 'Mapa pociągów w Wielkopolsce na żywo: gdzie jest pociąg Kolei Wielkopolskich, POLREGIO i PKP Intercity i ile ma opóźnienia.',
+  start: `Wyszukiwarka połączeń kolejowych ${region.inName}: ${region.agencyName}, POLREGIO i PKP Intercity, z przesiadkami i opóźnieniami na żywo. Nieoficjalny serwis pasażerski bez reklam i bez konta.`,
+  map: `Mapa pociągów ${region.inName} na żywo: gdzie jest pociąg ${region.agencyOf}, POLREGIO i PKP Intercity i ile ma opóźnienia.`,
   scheme: 'Schemat połączeń Kolei Wielkopolskich: linie, stacje i przesiadki w Wielkopolsce na interaktywnym schemacie sieci.',
-  board: 'Odjazdy i przyjazdy pociągów na stacjach w Wielkopolsce na żywo: perony, opóźnienia i odwołania.',
-  train: 'Rozkład jazdy pociągu w Wielkopolsce: postoje, perony i opóźnienie na żywo.',
+  board: `Odjazdy i przyjazdy pociągów na stacjach ${region.inName} na żywo: perony, opóźnienia i odwołania.`,
+  train: `Rozkład jazdy pociągu ${region.inName}: postoje, perony i opóźnienie na żywo.`,
   notices: 'Komunikaty o utrudnieniach w ruchu pociągów Kolei Wielkopolskich: opóźnienia, odwołania i zastępcza komunikacja autobusowa.',
   notice: 'Komunikat o utrudnieniach w ruchu pociągów Kolei Wielkopolskich.',
   btk: 'Bilet Bus-Tramwaj-Kolej (BTK) w aglomeracji poznańskiej: kalkulator ceny, cennik, strefy i zasady wspólnego biletu.',
-  about: 'O serwisie zanimwyjdziesz.pl: nieoficjalny serwis pasażerski kolei w Wielkopolsce. Funkcje, źródła danych i prywatność.',
+  about: 'O serwisie zanimwyjdziesz.pl: nieoficjalny serwis pasażerski kolei w Wielkopolsce i Małopolsce. Funkcje, źródła danych i prywatność.',
 }
 
 /** Strony, których wyszukiwarki nie mają pokazywać. */
@@ -47,7 +48,9 @@ const meta = (attr: 'name' | 'property', key: string, content: string) => tag('m
 
 export function setMeta(page: PageMeta) {
   const description = page.description ?? descriptions.start
-  const url = SITE_URL + (page.path === '/' ? '/' : page.path.replace(/\/+$/, ''))
+  // ścieżki routera są bez początku regionu (/malopolska) — adres kanoniczny z nim
+  const path = region.base + (page.path === '/' && !region.base ? '/' : page.path.replace(/\/+$/, ''))
+  const url = SITE_URL + (path || '/')
   document.title = page.title
   meta('name', 'description', description)
   meta('name', 'robots', page.noindex ? 'noindex' : 'index, follow')

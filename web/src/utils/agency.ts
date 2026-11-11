@@ -1,15 +1,16 @@
-// Przewoźnicy: KW oraz partnerzy POLREGIO i PKP Intercity (tylko w Wielkopolsce, bez mapy).
+// Przewoźnicy: przewoźnik regionu (KW, KML) oraz partnerzy POLREGIO i PKP Intercity (obcięci do województwa).
+import { region } from './region'
 
-const NAMES: Record<string, string> = { KW: 'Koleje Wielkopolskie', PR: 'POLREGIO', IC: 'PKP Intercity' }
+const NAMES: Record<string, string> = { KW: 'Koleje Wielkopolskie', KML: 'Koleje Małopolskie', PR: 'POLREGIO', IC: 'PKP Intercity' }
 
-/** Kurs innego przewoźnika niż KW (brak pola w starszych zapisanych podróżach = KW). */
-export const isPartner = (agency?: string | null) => !!agency && agency !== 'KW'
+/** Kurs innego przewoźnika niż przewoźnik regionu (brak pola w starszych zapisanych podróżach = przewoźnik regionu). */
+export const isPartner = (agency?: string | null) => !!agency && agency !== region.agency
 
-/** PKP Intercity — bilety KW i POLREGIO nie obowiązują. */
+/** PKP Intercity — bilety przewoźnika regionu i POLREGIO nie obowiązują. */
 export const isIntercity = (agency?: string | null) => agency === 'IC'
 
-/** Skrót przed numerem pociągu: „KW 77600”, „PR 85724”. */
-export const agencyCode = (agency?: string | null) => agency || 'KW'
+/** Skrót przed numerem pociągu: „KW 77600”, „KML 30121”, „PR 85724”. */
+export const agencyCode = (agency?: string | null) => agency || region.agency
 
 export const agencyName = (agency?: string | null) => NAMES[agencyCode(agency)] ?? agencyCode(agency)
 

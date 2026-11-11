@@ -1,8 +1,10 @@
 // Mapa: kolory linii KW (z rozkładu wszystkie regionalne mają ten sam czerwony — bierzemy kolory ze schematu połączeń),
-// ważność stacji i odcinki / stacje z komunikatami o utrudnieniach.
+// ważność stacji i odcinki / stacje z komunikatami o utrudnieniach. W Małopolsce linie KML mają w rozkładzie własne kolory
+// (SKA1, K5P…), a schematu nie ma — kształty i pastylki zostają w kolorach z rozkładu.
 import type { Notice, Station } from '@/api/types'
 import { LINES, NODES, PKM_LINES, type SchemeLine } from './scheme'
 import { noticeLines } from './notices'
+import { isDefaultRegion } from './region'
 
 const ALL_LINES = [...LINES, ...PKM_LINES]
 
@@ -95,7 +97,11 @@ export function colorNetwork(fc: GeoJSON.FeatureCollection, stations: Station[],
     features: fc.features.map((f) => {
       const p = { ...(f.properties ?? {}) } as Record<string, unknown>
       p.rank = 0
-      if (!p.partner && !p.bus && f.geometry.type === 'LineString') {
+      if (!isDefaultRegion) {
+        // POLREGIO w Małopolsce jeździ na liniach systemu z numerami K2, K3, K7… — na mapie jak linie KML, nie jak cienki partner
+        if (p.partner && /^K\d/.test(String(p.route ?? ''))) p.partner = false
+        p.rank = p.partner || p.bus ? 0 : 2
+      } else if (!p.partner && !p.bus && f.geometry.type === 'LineString') {
         const c = f.geometry.coordinates as Pt[]
         const [a, b] = [nearest(c[0], kw)?.name, nearest(c[c.length - 1], kw)?.name]
         const pkm = PKM_LINES.find((l) => l.badge === p.route)
@@ -118,6 +124,8 @@ const MAJOR_NAMES = new Set(Object.values(NODES).flatMap((n) => (n.name && n.maj
 /** Ważność stacji na mapie: 3 — główny węzeł (Poznań Gł.), 2 — węzeł ze schematu, 1 — stacja podpisana na schemacie albo ruchliwa, 0 — przystanek. */
 export function stationRank(s: Pick<Station, 'name' | 'daily'>): number {
   if (s.daily >= 400) return 3
+  // bez schematu (Małopolska): węzły według liczby kursów (Tarnów, Trzebinia, Bochnia, Kraków Płaszów…)
+  if (!isDefaultRegion) return s.daily >= 110 ? 2 : s.daily >= 60 ? 1 : 0
   if (MAJOR_NAMES.has(s.name)) return 2
   if (NODE_NAMES.has(s.name) || s.daily >= 80) return 1
   return 0

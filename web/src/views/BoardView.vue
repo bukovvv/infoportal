@@ -19,6 +19,7 @@ import { agencyCode, isIntercity, isPartner } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
 import { noticeIcon } from '@/utils/notices'
+import { region } from '@/utils/region'
 import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
@@ -29,7 +30,7 @@ const ui = useUi()
 const favorites = useFavorites()
 const notices = useNotices()
 const prefs = usePrefs()
-const DEFAULT_STATION = '30601' // Poznań Główny
+const DEFAULT_STATION = region.hub.id // Poznań Główny, Kraków Główny
 
 const stationId = ref<string | null>((route.params.stationId as string) || read<string | null>('kw_board_station', null) || DEFAULT_STATION)
 const mode = ref<'dep' | 'arr'>(route.query.tryb === 'przyjazdy' ? 'arr' : 'dep')
@@ -46,7 +47,7 @@ const stationNotices = computed(() => (station.value ? notices.forStation(statio
 const rowNotices = (row: BoardRow) => (isPartner(row.agency) ? [] : [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(t) ?? []))].filter(prefs.showsNotice))
 usePageMeta(() => station.value ? {
   title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
-  description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: Koleje Wielkopolskie, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,
+  description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: ${region.agencyName}, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,
 } : null)
 
 // Wybrany dzień i godzina. Puste = „teraz” (tablica na żywo, pola pokazują bieżący czas).
@@ -224,7 +225,7 @@ const when = (iso: string) => {
             <span class="d-flex align-center flex-wrap ga-2">
               <RouteBadge :route="row.route" :bus="row.isBus" />
               <span class="text-label-medium number">{{ agencyCode(row.agency) }} {{ row.number }}</span>
-              <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" title="Bilety KW i POLREGIO nie obowiązują">PKP Intercity · osobny bilet</span>
+              <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" :title="`Bilety ${region.agency} i POLREGIO nie obowiązują`">PKP Intercity · osobny bilet</span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
               <span v-for="n in rowNotices(row).slice(0, 1)" :key="n.id" class="n-tag text-label-small" :class="n.severity" :title="n.title">
                 <v-icon :icon="noticeIcon[n.severity]" size="14" />{{ rowNotices(row).length > 1 ? `${rowNotices(row).length} ${plural(rowNotices(row).length, '', 'komunikaty', 'komunikatów')}` : 'Komunikat' }}
@@ -239,7 +240,7 @@ const when = (iso: string) => {
       </template>
     </div>
     <p class="text-body-small muted mt-3 px-1">Tablica odświeża się co 30 sekund. Opóźnienia z systemu PKP PLK.</p>
-    <BtkHint :stations="[station?.name ?? board?.station.name]" context="board" class="mt-4" />
+    <BtkHint v-if="region.features.btk" :stations="[station?.name ?? board?.station.name]" context="board" class="mt-4" />
   </div>
 </template>
 

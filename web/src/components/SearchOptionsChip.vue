@@ -2,6 +2,7 @@
 // Wyszukiwarka: chip „Opcje” obok „Kiedy” — w oknie przesiadki (ile, minimalny czas) i przewoźnicy.
 import { computed, ref } from 'vue'
 import { DEFAULT_OPTIONS, MIN_TRANSFERS, changedCount, optionsLabel, type SearchOptions } from '@/utils/searchOptions'
+import { region } from '@/utils/region'
 import AgencyToggles from './AgencyToggles.vue'
 
 const options = defineModel<SearchOptions>({ required: true })
@@ -84,7 +85,7 @@ function reset() {
 
         <section>
           <h3 class="opt-h">Przewoźnicy</h3>
-          <AgencyToggles v-model="agencies" :notes="{ PR: 'Bilety KW honorowane na odcinkach wspólnych', IC: 'Osobny bilet PKP Intercity' }" />
+          <AgencyToggles v-model="agencies" :notes="{ PR: `Bilety ${region.agency} honorowane na odcinkach wspólnych`, IC: 'Osobny bilet PKP Intercity' }" />
         </section>
       </v-card-text>
       <v-card-actions class="opt-actions">

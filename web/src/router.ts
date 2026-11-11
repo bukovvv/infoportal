@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { region } from '@/utils/region'
 import { descriptions, isNoindex, setMeta } from '@/utils/seo'
 import StartView from '@/views/StartView.vue'
 
@@ -26,8 +27,17 @@ const shortTitles: Record<string, string> = {
   missing: 'Nie znaleziono',
 }
 
+/** Widoki tylko w niektórych regionach (Małopolska: bez schematu, BTK, komunikatów i panelu). */
+const regionOnly: Record<string, keyof typeof region.features> = {
+  scheme: 'scheme',
+  btk: 'btk',
+  notices: 'notices',
+  notice: 'notices',
+}
+
 const router = createRouter({
-  history: createWebHistory(),
+  // Małopolska pod /malopolska: wszystkie trasy i linki routera z tym początkiem
+  history: createWebHistory(region.base || undefined),
   scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
   routes: [
     { path: '/', name: 'start', component: StartView },
@@ -55,6 +65,11 @@ const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', name: 'missing', component: () => import('@/views/NotFound.vue') },
   ],
+})
+
+router.beforeEach((to) => {
+  const feature = regionOnly[String(to.name ?? '')] ?? (to.path.startsWith('/admin') ? 'admin' : null)
+  if (feature && !region.features[feature]) return { name: 'start' }
 })
 
 router.afterEach((to, from, failure) => {

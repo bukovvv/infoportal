@@ -17,6 +17,7 @@ import { useUi } from '@/stores/ui'
 import { agencyCode } from '@/utils/agency'
 import { clock, normalize } from '@/utils/format'
 import { AGENCIES } from '@/utils/searchOptions'
+import { region } from '@/utils/region'
 import type { Trip } from '@/api/types'
 import { alertMarks, colorNetwork, stationRank, trainLineColor } from '@/utils/mapLines'
 import { loadMapStyle, mapPalette } from '@/utils/mapStyle'
@@ -536,7 +537,7 @@ onMounted(async () => {
     const m = new MlMap({
       container: container.value!,
       style,
-      center: [17.2, 52.3],
+      center: region.mapCenter,
       zoom: 7,
       minZoom: 5,
       maxZoom: 17,
@@ -607,7 +608,7 @@ function resetFilters() {
 
 <template>
   <div class="map-screen" :style="{ '--train-sheet': trainPanel && mdAndUp ? `${sheetHeight + 16}px` : '0px' }">
-    <div ref="container" class="map" role="region" aria-label="Mapa pociągów w Wielkopolsce" />
+    <div ref="container" class="map" role="region" :aria-label="`Mapa pociągów ${region.inName}`" />
     <v-alert v-if="mapError" color="error-container" icon="error" class="map-error">{{ mapError }}</v-alert>
 
     <div class="fabs top">
@@ -628,8 +629,8 @@ function resetFilters() {
           <h3 class="mf-h">Przewoźnicy</h3>
           <AgencyToggles v-model="agencies" />
           <v-btn v-if="filter !== 'all' || !allAgencies" variant="text" prepend-icon="restart_alt" class="mt-2" @click="resetFilters">Pokaż wszystko</v-btn>
-          <v-divider class="my-3" />
-          <router-link :to="{ name: 'scheme' }" class="mf-link"><v-icon icon="route" size="20" /><span>Schemat połączeń KW</span><v-icon icon="chevron_right" size="20" class="ml-auto" /></router-link>
+          <v-divider v-if="region.features.scheme" class="my-3" />
+          <router-link v-if="region.features.scheme" :to="{ name: 'scheme' }" class="mf-link"><v-icon icon="route" size="20" /><span>Schemat połączeń KW</span><v-icon icon="chevron_right" size="20" class="ml-auto" /></router-link>
         </v-card>
       </v-menu>
     </div>

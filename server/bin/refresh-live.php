@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 // CRON: co minutę, np. * * * * * php /ścieżka/server/bin/refresh-live.php
+// Odświeża po kolei wszystkie regiony z zaimportowanym rozkładem (feed GTFS-RT pobierany raz — RtFeed).
+// Opcje: --stats (punktualność od razu), --region=malopolska (tylko jeden region)
 
 require dirname(__DIR__) . '/bootstrap.php';
 
+use KwInfo\Config;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\LiveBuilder;
 use KwInfo\Push\JourneyWatcher;
@@ -23,34 +26,54 @@ if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
-$log = static function (string $line): void {
-    echo '[' . date('H:i:s') . '] ' . $line . PHP_EOL;
-};
-try {
-    $tt = new Timetable();
-    (new LiveBuilder($tt, $log))->run();
+$options = getopt('', ['stats', 'region:']);
+$regions = isset($options['region']) ? [(string) $options['region']] : Config::regions();
+$stats = (int) date('i') % 15 === 7 || isset($options['stats']);
+$failed = false;
+foreach ($regions as $region) {
+    if (!Config::isRegion($region)) {
+        fwrite(STDERR, "Nieznany region: $region\n");
+        exit(1);
+    }
+    Config::useRegion($region);
+    // region bez zaimportowanego rozkładu (np. przed pierwszym importem po wdrożeniu) — pomijany po cichu
+    if ($region !== Config::DEFAULT_REGION && !is_file(Config::path('gtfs_db'))) {
+        continue;
+    }
+    $log = static function (string $line) use ($region): void {
+        echo '[' . date('H:i:s') . '] [' . $region . '] ' . $line . PHP_EOL;
+    };
+    $err = static function (string $what, Throwable $exception) use ($region): void {
+        fwrite(STDERR, '[BŁĄD' . ($what !== '' ? ' ' . $what : '') . '] [' . $region . '] ' . $exception->getMessage() . PHP_EOL);
+    };
+    try {
+        $tt = new Timetable();
+        (new LiveBuilder($tt, $log))->run();
+    } catch (Throwable $exception) {
+        $err('', $exception);
+        $failed = true;
+        continue;
+    }
     // powiadomienia o obserwowanych podróżach — ich błąd nie psuje odświeżania danych
     try {
         (new JourneyWatcher($tt, $log))->run();
     } catch (Throwable $exception) {
-        fwrite(STDERR, '[BŁĄD powiadomień] ' . $exception->getMessage() . PHP_EOL);
+        $err('powiadomień', $exception);
     }
     // powiadomienia o obserwowanych trasach (okienka czasu) — osobno, żeby błąd jednych nie blokował drugich
     try {
         (new RouteWatcher($tt, $log))->run();
     } catch (Throwable $exception) {
-        fwrite(STDERR, '[BŁĄD powiadomień o trasach] ' . $exception->getMessage() . PHP_EOL);
+        $err('powiadomień o trasach', $exception);
     }
     // punktualność dojechanych kursów — co kwadrans (albo z --stats), bez osobnego CRON-a
-    if ((int) date('i') % 15 === 7 || in_array('--stats', $argv, true)) {
+    if ($stats) {
         try {
             (new PunctualityRecorder($tt, null, $log))->run();
         } catch (Throwable $exception) {
-            fwrite(STDERR, '[BŁĄD punktualności] ' . $exception->getMessage() . PHP_EOL);
+            $err('punktualności', $exception);
         }
     }
-    exit(0);
-} catch (Throwable $exception) {
-    fwrite(STDERR, '[BŁĄD] ' . $exception->getMessage() . PHP_EOL);
-    exit(1);
 }
+Config::useRegion(Config::DEFAULT_REGION);
+exit($failed ? 1 : 0);

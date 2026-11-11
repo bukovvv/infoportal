@@ -4,10 +4,11 @@ import { api } from '@/api/client'
 import type { Punctuality } from '@/api/types'
 import { usePrefs } from '@/stores/prefs'
 import { plural } from '@/utils/format'
+import { region } from '@/utils/region'
 
 // Punktualność pociągu (opóźnienie na stacji końcowej). Okres, próg „na czas” i to, czy karta w ogóle jest, ustawia pasażer
 // (stores/prefs: domyślnie 30 dni, do 5 min). Pokazujemy od MIN_RUNS kursów.
-// trimmed: kurs POLREGIO / PKP Intercity przycięty do Wielkopolski — liczy się ostatnia stacja w województwie.
+// trimmed: kurs POLREGIO / PKP Intercity przycięty do województwa — liczy się ostatnia stacja w województwie.
 const props = defineProps<{ number: string; agency?: string; trimmed?: boolean }>()
 const MIN_RUNS = 5
 /** pasek ostatnich kursów: wysokość do LATE_CAP min opóźnienia */
@@ -24,7 +25,7 @@ watch([plainNumber, () => props.agency, () => prefs.showPunctuality, () => prefs
     return
   }
   try {
-    data.value = await api.punctuality(number, agency ?? 'KW', days, onTime)
+    data.value = await api.punctuality(number, agency ?? region.agency, days, onTime)
   } catch {
     data.value = null
   }
@@ -72,7 +73,7 @@ const summary = computed(() => (p.value ? `Ostatnie ${bars.value.length} kursów
       <span class="share tnum">{{ p.share }}%</span>
       <span class="hero-text">
         <span class="text-body-large">kursów na czas</span>
-        <span class="text-body-small muted">do {{ p.threshold }} min opóźnienia na {{ trimmed ? 'ostatniej stacji w Wielkopolsce' : 'stacji końcowej' }}</span>
+        <span class="text-body-small muted">do {{ p.threshold }} min opóźnienia na {{ trimmed ? `ostatniej stacji ${region.inName}` : 'stacji końcowej' }}</span>
       </span>
     </div>
     <p class="text-body-small muted tnum">{{ facts.join(' · ') }}</p>

@@ -8,6 +8,7 @@ import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
+import { region, regionPath } from '@/utils/region'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
 import PunctualityCard from './PunctualityCard.vue'
@@ -94,7 +95,7 @@ function fullView() {
 function share() {
   if (!trip.value) return
   const t = trip.value
-  void shareLink({ title: trainLabel(t), text: `${trainLabel(t)} ${t.origin} → ${t.destination}`, url: `${location.origin}/pociag/${t.number.split('/')[0]}` })
+  void shareLink({ title: trainLabel(t), text: `${trainLabel(t)} ${t.origin} → ${t.destination}`, url: `${location.origin}${regionPath('/pociag/' + t.number.split('/')[0])}` })
 }
 defineExpose({ trip })
 </script>
@@ -145,13 +146,13 @@ defineExpose({ trip })
       <p v-if="partner" class="partner-note text-body-medium divider" :class="{ ic: isIntercity(trip.agency) }">
         <v-icon :icon="isIntercity(trip.agency) ? 'confirmation_number' : 'info'" size="20" />
         <span>
-          <template v-if="isIntercity(trip.agency)">Pociąg {{ agencyName(trip.agency) }}. Bilety KW i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</template>
-          <template v-else>Pociąg {{ agencyName(trip.agency) }}. Bilety KW są honorowane na odcinkach, na których jeżdżą też pociągi KW.</template>
-          <template v-if="trip.trimmed"> Pokazujemy stacje w Wielkopolsce.</template>
+          <template v-if="isIntercity(trip.agency)">Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agency }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</template>
+          <template v-else>Pociąg {{ agencyName(trip.agency) }}. Bilety {{ region.agency }} są honorowane na odcinkach, na których jeżdżą też pociągi {{ region.agency }}.</template>
+          <template v-if="trip.trimmed"> Pokazujemy stacje {{ region.inName }}.</template>
         </span>
       </p>
       <VehicleCard v-if="trip.vehicle" :vehicle="trip.vehicle" class="divider" />
-      <PunctualityCard :number="trip.number" :agency="trip.agency ?? 'KW'" :trimmed="trip.trimmed" class="divider" />
+      <PunctualityCard :number="trip.number" :agency="trip.agency ?? region.agency" :trimmed="trip.trimmed" class="divider" />
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />
       </div>

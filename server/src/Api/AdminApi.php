@@ -116,7 +116,8 @@ final class AdminApi
         $iso = static fn (int|string|null $t): ?string => $t === null || $t === '' ? null : date(DATE_ATOM, is_int($t) ? $t : (int) strtotime($t));
 
         $download = $json($storage . '/gtfs-download.json');
-        $rtMeta = $json(Config::path('rt_meta_file'));
+        // stan wspólnego feedu GTFS-RT (RtFeed), nie dekodowania w regionie
+        $rtMeta = $json($storage . '/rt-feed.json');
         $alert = $json($storage . '/alert-state.json');
         $backups = glob($storage . '/backups/*') ?: [];
         usort($backups, static fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));

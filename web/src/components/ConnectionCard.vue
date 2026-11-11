@@ -7,6 +7,7 @@ import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock, duration, minutesUntil, plural, relative } from '@/utils/format'
 import { agencyCode, agencyName, isIntercity, isPartner } from '@/utils/agency'
+import { region } from '@/utils/region'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
 import { unitLabel, vehicleTitle } from '@/utils/vehicle'
@@ -48,12 +49,13 @@ const nextDay = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) !=
 
 /** Kolor odcinka: linia z rozkładu, autobus zastępczy neutralnie, bez koloru — kolor akcji. */
 const legColor = (leg: Leg) => (leg.isBus ? 'rgb(var(--v-theme-outline))' : leg.route?.color ?? 'rgb(var(--v-theme-primary))')
-/** Bilety na odcinku POLREGIO: KW honorowane na odcinkach wspólnych z KW (zasady POLREGIO). W PKP Intercity — osobny bilet. */
+/** Bilety na odcinku POLREGIO: KW (KML) honorowane na odcinkach wspólnych z przewoźnikiem regionu. W PKP Intercity — osobny bilet. */
 function partnerTickets(leg: Leg) {
   const name = agencyName(leg.agency)
-  if (isIntercity(leg.agency)) return `Pociąg ${name}: bilety KW i POLREGIO nie obowiązują, potrzebny bilet ${name}`
-  if (leg.kwTickets === true) return `Pociąg ${name}: bilety KW są tu honorowane`
-  if (leg.kwTickets === false) return `Pociąg ${name}: na tym odcinku nie jeżdżą pociągi KW, potrzebny bilet ${name}`
+  const own = region.agency
+  if (isIntercity(leg.agency)) return `Pociąg ${name}: bilety ${own} i POLREGIO nie obowiązują, potrzebny bilet ${name}`
+  if (leg.kwTickets === true) return `Pociąg ${name}: bilety ${own} są tu honorowane`
+  if (leg.kwTickets === false) return `Pociąg ${name}: na tym odcinku nie jeżdżą pociągi ${own}, potrzebny bilet ${name}`
   return `Pociąg ${name}`
 }
 /** „102 km”, przy autobusie zastępczym „ok. 45 km”; brak w starszych zapisanych podróżach. */

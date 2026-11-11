@@ -1,3 +1,4 @@
+import { region } from '@/utils/region'
 import type { AdminLogEntry, AdminSession, Board, ConnectionsResult, Live, Notice, Punctuality, Station, Status, TrainMatch, Trip } from './types'
 
 export class ApiError extends Error {
@@ -12,7 +13,8 @@ export const setCsrf = (token: string | undefined) => { csrfToken = token ?? '' 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let response: Response
   try {
-    response = await fetch(`/api${path}`, {
+    // dane regionu: /api/malopolska/… (panel administratora zawsze bez prefiksu)
+    response = await fetch(`/api${path.startsWith('/admin') ? '' : region.api}${path}`, {
       method,
       headers: {
         Accept: 'application/json',
@@ -53,7 +55,7 @@ export const api = {
   live: () => request<Live>('GET', '/live'),
   status: () => request<Status>('GET', '/status'),
   notices: () => request<Notice[]>('GET', '/notices'),
-  punctuality: (number: string, agency = 'KW', days = 30, onTime = 5) => request<Punctuality>('GET', `/punctuality?${q({ number, agency, days, onTime })}`),
+  punctuality: (number: string, agency = region.agency, days = 30, onTime = 5) => request<Punctuality>('GET', `/punctuality?${q({ number, agency, days, onTime })}`),
   push: {
     key: () => request<{ key: string }>('GET', '/push/key'),
     watch: (body: { subscription: PushSubscriptionJSON; journeyId: string; legs: { key: string; from: string; to: string }[] }) =>

@@ -10,6 +10,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import { useNotices, useStations } from '@/stores/data'
 import { agencyCode, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, warsawNow } from '@/utils/format'
+import { region, regionPath } from '@/utils/region'
 import { stationRank } from '@/utils/mapLines'
 import { shareLink } from '@/utils/share'
 import { departureAfterDwell, stopTime, tripPlan } from '@/utils/tripPlan'
@@ -186,7 +187,7 @@ function fullView() {
 function share() {
   const t = props.trip
   if (!t) return
-  void shareLink({ title: trainLabel(t), text: `${trainLabel(t)} ${t.origin} → ${t.destination}`, url: `${location.origin}/pociag/${t.number.split('/')[0]}` })
+  void shareLink({ title: trainLabel(t), text: `${trainLabel(t)} ${t.origin} → ${t.destination}`, url: `${location.origin}${regionPath('/pociag/' + t.number.split('/')[0])}` })
 }
 </script>
 
@@ -238,7 +239,7 @@ function share() {
     <div v-if="trip" class="body" :style="{ '--line': color }" :inert="collapsed || undefined">
       <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact" class="mb-2">Ten kurs dziś nie jedzie.</v-alert>
       <NoticeStrip v-if="related.length" :notices="related" :max="1" class="mb-2" />
-      <p v-if="isIntercity(trip.agency)" class="note ic"><v-icon icon="confirmation_number" size="18" />Bilety KW i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</p>
+      <p v-if="isIntercity(trip.agency)" class="note ic"><v-icon icon="confirmation_number" size="18" />Bilety {{ region.agency }} i POLREGIO nie obowiązują, potrzebny bilet {{ agencyName(trip.agency) }}.</p>
       <p v-if="trip.otherLegs.length" class="note">
         <v-icon icon="info" size="18" />
         <span>Ten kurs ma też odcinek:
@@ -285,7 +286,7 @@ function share() {
       <p class="src text-body-small">
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
-        <template v-if="trip.trimmed"> Pokazujemy stacje w Wielkopolsce.</template>
+        <template v-if="trip.trimmed"> Pokazujemy stacje {{ region.inName }}.</template>
       </p>
     </div>
   </section>

@@ -1,16 +1,17 @@
-// Opcje wyszukiwarki połączeń: przesiadki (ile, minimalny czas) i przewoźnicy. Zapamiętywane w przeglądarce (kw_search_options).
+// Opcje wyszukiwarki połączeń: przesiadki (ile, minimalny czas) i przewoźnicy. Zapamiętywane w przeglądarce (kw_search_options, w Małopolsce osobno).
+import { region } from './region'
 
 export interface SearchOptions {
   /** 0 — tylko bezpośrednie */
   maxTransfers: 0 | 1 | 2
   /** minimalny czas na przesiadkę w minutach */
   minTransfer: number
-  /** kody przewoźników: KW, PR, IC */
+  /** kody przewoźników: KW (KML), PR, IC */
   agencies: string[]
 }
 
 export const AGENCIES = [
-  { code: 'KW', label: 'Koleje Wielkopolskie' },
+  { code: region.agency, label: region.agencyName },
   { code: 'PR', label: 'POLREGIO' },
   { code: 'IC', label: 'PKP Intercity' },
 ] as const

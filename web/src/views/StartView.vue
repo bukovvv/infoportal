@@ -20,6 +20,7 @@ import { useJourneys } from '@/stores/journeys'
 import { useRoutes } from '@/stores/routes'
 import { read, useUi, write } from '@/stores/ui'
 import { clock, dayLabel, plural, warsawNow } from '@/utils/format'
+import { region, REGION_LIST, regionPath } from '@/utils/region'
 import { changedCount, optionsFromQuery, optionsToApi, optionsToQuery, sanitize, type SearchOptions } from '@/utils/searchOptions'
 
 const route = useRoute()
@@ -73,8 +74,8 @@ async function search(scroll = true) {
   }
 }
 
-/** BTK obowiązuje w pociągach regionalnych KW i POLREGIO — nie w interREGIO ani PKP Intercity. */
-const btkFits = computed(() => !!result.value?.connections.length && result.value.connections[0].legs.every((l) => l.route?.short !== 'IR' && l.agency !== 'IC'))
+/** BTK obowiązuje w pociągach regionalnych KW i POLREGIO — nie w interREGIO ani PKP Intercity (i tylko w Wielkopolsce). */
+const btkFits = computed(() => region.features.btk && !!result.value?.connections.length && result.value.connections[0].legs.every((l) => l.route?.short !== 'IR' && l.agency !== 'IC'))
 
 /** Nagłówek dnia nad połączeniem, które odjeżdża innego dnia niż poprzednie (lub niż data wyszukiwania). */
 function newDay(i: number) {
@@ -192,7 +193,18 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
   <BandHero overlap>
     <div class="hero">
       <h1 id="search-title" class="hero-title">Dokąd jedziesz?</h1>
-      <p class="hero-sub">Rozkład pociągów po Wielkopolsce. Szybko i w jednej aplikacji! :)</p>
+      <p class="hero-sub">Rozkład pociągów {{ region.overName }}. Szybko i w jednej aplikacji! :)</p>
+      <!-- region: zwykłe linki (pełne wczytanie innego rozkładu); wybrany = aria-current -->
+      <nav class="hero-regions" aria-label="Region">
+        <a
+          v-for="r in REGION_LIST"
+          :key="r.id"
+          class="band-chip"
+          :class="{ on: r.id === region.id }"
+          :href="regionPath('/', r)"
+          :aria-current="r.id === region.id ? 'page' : undefined"
+        ><v-icon :icon="r.id === region.id ? 'check' : 'location_on'" />{{ r.name }}</a>
+      </nav>
     </div>
   </BandHero>
 
@@ -241,7 +253,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           v-if="!result.connections.length"
           icon="search_off"
           title="Brak połączeń w ciągu 12 godzin"
-          :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : 'Zmień godzinę. Szukamy pociągów KW, POLREGIO i PKP Intercity w Wielkopolsce.'"
+          :text="optionsChanged ? 'Zmień opcje wyszukiwania albo godzinę.' : `Zmień godzinę. Szukamy pociągów ${region.agency}, POLREGIO i PKP Intercity ${region.inName}.`"
           class="card"
         />
         <nav v-else class="pager" aria-label="Kolejne połączenia">
@@ -297,7 +309,7 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
           </div>
         </section>
 
-        <section aria-labelledby="notices-title">
+        <section v-if="region.features.notices" aria-labelledby="notices-title">
           <div class="section-head">
             <h2 id="notices-title" class="text-title-large">Komunikaty</h2>
             <v-btn variant="text" append-icon="chevron_right" to="/komunikaty">Wszystkie</v-btn>
@@ -327,6 +339,8 @@ onBeforeUnmount(() => window.clearInterval(journeyTimer))
 .hero { display: grid; gap: 4px; padding-top: 4px; }
 .hero-title { font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.3px; }
 .hero-sub { font-size: 16px; opacity: .85; }
+.hero-regions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.hero-regions .band-chip { height: 32px; padding: 0 14px; font-size: 13px; }
 .start { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); padding-top: 0; }
 
 /* wyszukiwarka: Skąd i Dokąd (z zamianą), pod nimi dzień i godzina jako chip, przycisk; na komputerze stacje i przycisk w jednym rzędzie */

@@ -12,6 +12,7 @@ import { useLive, useNotices, useStatus } from '@/stores/data'
 import { usePrefs } from '@/stores/prefs'
 import { useUi } from '@/stores/ui'
 import { clock } from '@/utils/format'
+import { region, REGION_LIST, regionPath } from '@/utils/region'
 import logoOnBand from '@/assets/logo-na-ciemne.svg'
 
 const route = useRoute()
@@ -28,7 +29,7 @@ const { mdAndUp } = useDisplay()
 onMounted(() => {
   live.start()
   status.start()
-  notices.start()
+  if (region.features.notices) notices.start()
 })
 watch(() => ui.theme, (mode) => theme.change(mode), { immediate: true })
 // pasek przeglądarki / systemu w kolorze górnego paska (według wybranego motywu, nie tylko systemowego)
@@ -38,13 +39,14 @@ watch(() => theme.current.value.colors.band, (color) => {
 
 const isAdmin = computed(() => route.path.startsWith('/admin'))
 const isStart = computed(() => route.name === 'start')
+// BTK i komunikaty tylko w regionach, które je mają (Małopolska: Start, Mapa, Odjazdy)
 const nav = computed(() => [
   { to: '/', name: 'start', label: 'Start', icon: 'home' },
   { to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' },
   { to: '/odjazdy', name: 'board', label: 'Odjazdy', icon: 'departure_board' },
-  { to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' },
-  { to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length },
-])
+  ...(region.features.btk ? [{ to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' }] : []),
+  ...(region.features.notices ? [{ to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length }] : []),
+] as { to: string; name: string; label: string; icon: string; short?: string; badge?: number }[])
 // strona pojedynczego komunikatu podświetla zakładkę Komunikaty, schemat połączeń — zakładkę Mapa
 const current = computed(() => (route.name === 'notice' ? 'notices' : route.name === 'scheme' ? 'map' : String(route.name ?? '')))
 const title = computed(() => {
@@ -95,12 +97,12 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
           v-if="!isAdmin"
           :variant="mdAndUp ? 'flat' : 'text'"
           :class="['mr-1', { 'ticket-btn': mdAndUp }]"
-          href="https://wielkopolskiebilety.pl/"
+          :href="region.ticketUrl"
           target="_blank"
           rel="noopener noreferrer"
           :icon="!mdAndUp"
           :prepend-icon="mdAndUp ? 'confirmation_number' : undefined"
-          aria-label="Kup bilet (otwiera stronę przewoźnika)"
+          :aria-label="`Kup bilet (otwiera stronę: ${region.agencyName})`"
         >
           <v-icon v-if="!mdAndUp" icon="confirmation_number" />
           <template v-else>Kup bilet</template>
@@ -124,8 +126,22 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
             <v-divider class="my-1" />
             <v-list-item v-if="!isAdmin" prepend-icon="tune" title="Ustawienia" @click="prefs.dialog = true" />
-            <v-list-item v-if="!isAdmin" prepend-icon="route" title="Schemat połączeń KW" :to="{ name: 'scheme' }" />
+            <v-list-item v-if="!isAdmin && region.features.scheme" prepend-icon="route" title="Schemat połączeń KW" :to="{ name: 'scheme' }" />
             <v-list-item prepend-icon="info" title="O nas" to="/o-nas" />
+            <template v-if="!isAdmin">
+              <v-divider class="my-1" />
+              <!-- region: zwykły link (pełne wczytanie — inne stacje, rozkład i dane na żywo) -->
+              <v-list-subheader>Region</v-list-subheader>
+              <v-list-item
+                v-for="r in REGION_LIST"
+                :key="r.id"
+                :prepend-icon="r.id === region.id ? 'check' : 'location_on'"
+                :title="r.name"
+                :subtitle="r.agencyName"
+                :active="r.id === region.id"
+                :href="r.id === region.id ? undefined : regionPath('/', r)"
+              />
+            </template>
           </v-list>
         </v-menu>
       </template>
@@ -156,7 +172,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       </router-view>
     </v-main>
 
-    <nav v-if="!mdAndUp && !isAdmin" class="navbar" aria-label="Nawigacja główna">
+    <nav v-if="!mdAndUp && !isAdmin" class="navbar" :style="{ '--nav-count': nav.length }" aria-label="Nawigacja główna">
       <router-link v-for="item in nav" :key="item.to" :to="item.to" class="nav-item" :aria-label="item.label" :aria-current="current === item.name ? 'page' : undefined">
         <span class="nav-ind">
           <v-icon :icon="current === item.name ? `${item.icon}-fill` : item.icon" />
@@ -190,7 +206,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 .rail-fab { margin: 4px 0 20px; }
 .rail-items { display: grid; gap: 12px; }
 .navbar {
-  position: fixed; z-index: 1004; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr);
+  position: fixed; z-index: 1004; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(var(--nav-count, 5), 1fr);
   align-items: start; padding: 12px 0 calc(12px + env(safe-area-inset-bottom, 0px)); background: rgb(var(--v-theme-surface-container));
 }
 .navbar .nav-item { width: auto; }
