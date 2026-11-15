@@ -28,6 +28,8 @@ use KwInfo\Push\RouteWatcher;
 use KwInfo\Push\WebPush;
 use KwInfo\Stats\PunctualityRecorder;
 use KwInfo\Stats\PunctualityRepository;
+use KwInfo\Gtfs\GtfsSource;
+use KwInfo\Vehicles\KwVehicleTypes;
 use KwInfo\Vehicles\Vagonweb;
 use KwInfo\Vehicles\VehicleRepository;
 
@@ -560,6 +562,29 @@ $many = array_map(static fn (int $i): array => $rleg(['id' => "KW_$i@20261014|P"
 [$m2] = RouteWatcher::evaluate($many, $st, $t0);
 check('trasa: najwyżej 3 powiadomienia naraz, reszta w następnym przebiegu', count($m) === 3 && count($m2) === 2);
 check('trasa: stan bez starych kursów', RouteWatcher::prune(['c' => ['A@20261001|P' => true, 'B@20261013|P' => true], 'd' => ['C@20261002|P' => 6]], 20261014) === ['c' => ['B@20261013|P' => true]]);
+
+// rodzaj pojazdu z rozkładu KW: numer z dopisanym rodzajem, różny w różne dni
+$kwDir = sys_get_temp_dir() . '/kw-selftest-' . bin2hex(random_bytes(3));
+mkdir($kwDir);
+file_put_contents($kwDir . '/trips.txt', "route_id,service_id,trip_id,trip_headsign,trip_short_name,wheelchair_accessible,bikes_allowed,PKM\n"
+    . "KW,1,1,Wolsztyn,77246 PAROWY,2,2,3\nKW,2,2,Wolsztyn,77246 SZYNOBUS,1,1,3\nKW,3,3,Rawicz,17217/6 EZT,1,1,21\nKW,4,4,Gołańcz,77601/0 SZYNOBUS/BUS,,,3\nKW,5,5,X,77999 COSIEK,1,1,0\n");
+file_put_contents($kwDir . '/calendar_dates.txt', "service_id,date,exception_type\n1,20261121,1\n2,20261116,1\n2,20261117,1\n2,20261121,1\n3,20261116,1\n4,20261116,1\n5,20261116,1\n");
+file_put_contents($kwDir . '/stop_times.txt', "trip_id,stop_id,arrival_time,departure_time,stop_sequence,bus\n"
+    . "1,159,15:20:00,15:20:00,1,0\n1,524,17:45:00,17:45:00,2,0\n2,100,7:20:00,7:20:00,1,0\n2,88,8:30:00,8:30:00,2,0\n"
+    . "3,1,6:00:00,6:00:00,1,0\n3,2,7:00:00,7:00:00,2,0\n4,1,5:34:00,6:00:00,1,1\n4,2,6:40:00,6:40:00,2,0\n5,1,9:00:00,9:00:00,1,0\n");
+$kwTypes = KwVehicleTypes::build(new GtfsSource($kwDir));
+array_map('unlink', glob($kwDir . '/*') ?: []);
+rmdir($kwDir);
+check('pojazd KW: rodzaj według dnia, godziny kursu, numery łamane, nieznany rodzaj pominięty',
+    $kwTypes['77246'][0] === ['k' => 'steam', 'w' => false, 'b' => false, 's' => 55200, 'e' => 63900, 'd' => [20261121]]
+    && $kwTypes['77246'][1]['d'] === [20261116, 20261117, 20261121]
+    && $kwTypes['17216'][0]['k'] === 'emu' && $kwTypes['17217'][0]['k'] === 'emu' && $kwTypes['77600'][0]['k'] === 'dmu' && $kwTypes['77600'][0]['w'] === null
+    && !isset($kwTypes['77999']));
+$kwLookup = new KwVehicleTypes($kwTypes);
+check('pojazd KW: ten sam numer w sobotę — parowóz po południu, szynobus rano; dzień spoza rozkładu tylko przy jednym rodzaju',
+    $kwLookup->forTrip(['77246'], 20261121, 55200)['kind'] === 'steam' && $kwLookup->forTrip(['77246'], 20261121, 26400)['kind'] === 'dmu'
+    && $kwLookup->forTrip(['77246 Retro'], 20261121, 59000)['kind'] === 'steam' && $kwLookup->forTrip(['77246'], 20261121, 40000) === null
+    && $kwLookup->forTrip(['17216/7'], 20270105, 21600)['kind'] === 'emu' && $kwLookup->forTrip(['77246'], 20270105, 26400)['kind'] === 'dmu');
 
 echo PHP_EOL . "Wynik: {$passed} OK, {$failed} błędów" . PHP_EOL;
 exit($failed > 0 ? 1 : 0);

@@ -21,6 +21,7 @@ import { vHscroll } from '@/utils/hscroll'
 import { noticeIcon } from '@/utils/notices'
 import { region } from '@/utils/region'
 import { usePageMeta } from '@/utils/seo'
+import { unusualVehicle, VEHICLE_KINDS } from '@/utils/vehicle'
 
 const route = useRoute()
 const router = useRouter()
@@ -226,6 +227,9 @@ const when = (iso: string) => {
               <RouteBadge :route="row.route" :bus="row.isBus" />
               <span class="text-label-medium number">{{ agencyLabel(row.agency) }} {{ shortNumber(row.number) }}</span>
               <span v-if="isIntercity(row.agency)" class="ic-tag text-label-small" :title="`Bilety ${region.agencyLabel} i POLREGIO nie obowiązują`">PKP Intercity · osobny bilet</span>
+              <span v-if="unusualVehicle(row.vehicleType)" class="vt-tag text-label-small" :class="row.vehicleType.kind">
+                <v-icon :icon="VEHICLE_KINDS[row.vehicleType.kind].icon" size="14" />{{ VEHICLE_KINDS[row.vehicleType.kind].short }}
+              </span>
               <StatusTag :delay="row.delay" :source="row.delaySource" :cancelled="row.cancelled" :skipped="row.skipped" />
               <span v-for="n in rowNotices(row).slice(0, 1)" :key="n.id" class="n-tag text-label-small" :class="n.severity" :title="n.title">
                 <v-icon :icon="noticeIcon[n.severity]" size="14" />{{ rowNotices(row).length > 1 ? `${rowNotices(row).length} ${plural(rowNotices(row).length, '', 'komunikaty', 'komunikatów')}` : 'Komunikat' }}
@@ -286,6 +290,9 @@ const when = (iso: string) => {
 }
 .n-tag.warning { background: rgb(var(--v-theme-warning-container)); color: rgb(var(--v-theme-on-warning-container)); }
 .n-tag.danger { background: rgb(var(--v-theme-error-container)); color: rgb(var(--v-theme-on-error-container)); }
+/* rodzaj pojazdu inny niż pociąg elektryczny (rozkład KW); parowóz wyróżniony */
+.vt-tag { display: inline-flex; align-items: center; gap: 4px; color: rgb(var(--v-theme-on-surface-variant)); font-weight: 600; }
+.vt-tag.steam { padding: 1px 8px 1px 6px; border-radius: 999px; background: rgb(var(--v-theme-tertiary-container)); color: rgb(var(--v-theme-on-tertiary-container)); font-weight: 700; }
 .platform { display: grid; justify-items: center; min-width: 56px; padding: 6px 10px; border-radius: var(--kw-r-m); background: rgb(var(--v-theme-surface-container)); }
 .platform strong { font-size: 20px; line-height: 24px; font-weight: 800; }
 .platform small { font-size: 11px; line-height: 14px; color: rgb(var(--v-theme-on-surface-variant)); white-space: nowrap; }

@@ -15,6 +15,7 @@ import PunctualityCard from './PunctualityCard.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
 import TrainTimeline from './TrainTimeline.vue'
+import { unusualVehicle, VEHICLE_KINDS } from '@/utils/vehicle'
 import VehicleCard from './VehicleCard.vue'
 
 const props = defineProps<{ tripKey?: string; number?: string; inSheet?: boolean }>()
@@ -123,6 +124,7 @@ defineExpose({ trip })
           <span v-if="trip.position?.source === 'gps'" class="tag tag-band"><v-icon icon="satellite_alt" />GPS<template v-if="trip.position.speed !== null"> · {{ trip.position.speed ? `${trip.position.speed} km/h` : 'postój' }}</template></span>
           <span class="tag tag-band tnum"><v-icon icon="schedule" />{{ clock(trip.stops[0].departure) }} – {{ clock(trip.stops[trip.stops.length - 1].arrival) }}</span>
           <span v-if="trip.distanceKm" class="tag tag-band tnum"><v-icon icon="straighten" />{{ trip.distanceKm }} km</span>
+          <span v-if="unusualVehicle(trip.vehicleType)" class="tag tag-band"><v-icon :icon="VEHICLE_KINDS[trip.vehicleType.kind].icon" />{{ VEHICLE_KINDS[trip.vehicleType.kind].short }}</span>
         </div>
         <v-progress-linear v-if="progress !== null" :model-value="progress" rounded height="6" color="on-band" class="head-progress" aria-label="Postęp kursu" />
         <v-alert v-if="trip.realtime.cancelled" color="error-container" icon="cancel-fill" density="compact">
@@ -151,7 +153,7 @@ defineExpose({ trip })
           <template v-if="trip.trimmed"> Pokazujemy stacje {{ region.inName }}.</template>
         </span>
       </p>
-      <VehicleCard v-if="trip.vehicle" :vehicle="trip.vehicle" class="divider" />
+      <VehicleCard v-if="trip.vehicle || trip.vehicleType" :vehicle="trip.vehicle" :type="trip.vehicleType" class="divider" />
       <PunctualityCard :number="trip.number" :agency="trip.agency ?? region.agency" :trimmed="trip.trimmed" class="divider" />
       <div class="divider">
         <TrainTimeline :trip="trip" :now="now" @station="toStation" />
@@ -161,7 +163,7 @@ defineExpose({ trip })
         <template v-else-if="trip.realtime.source === 'gps'">Opóźnienie według pozycji GPS.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
         <template v-if="trip.position?.source === 'gps' && trip.position.gpsProvider"> Pozycja GPS: {{ trip.position.gpsProvider }}.</template>
-        Rozkład: PKP PLK, GTFS mkuran.pl.<template v-if="trip.vehicle?.url"> Pojazd: <a :href="trip.vehicle.url" target="_blank" rel="noopener noreferrer" class="text-primary">vagonWEB.cz</a>.</template>
+        Rozkład: PKP PLK, GTFS mkuran.pl.<template v-if="trip.vehicleType"> Rodzaj pojazdu: rozkład Kolei Wielkopolskich.</template><template v-if="trip.vehicle?.url"> Pojazd: <a :href="trip.vehicle.url" target="_blank" rel="noopener noreferrer" class="text-primary">vagonWEB.cz</a>.</template>
       </p>
     </template>
   </div>

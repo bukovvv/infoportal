@@ -14,6 +14,7 @@ import { region, regionPath } from '@/utils/region'
 import { stationRank } from '@/utils/mapLines'
 import { shareLink } from '@/utils/share'
 import { departureAfterDwell, stopTime, tripPlan } from '@/utils/tripPlan'
+import { VEHICLE_KINDS } from '@/utils/vehicle'
 
 // pending — wybrano inny pociąg, a jego kurs jeszcze się wczytuje (do tego czasu stary, przygaszony — bez mignięcia pustym panelem)
 const props = defineProps<{ trip: Trip | null; error: string | null; collapsed: boolean; pending?: boolean }>()
@@ -275,7 +276,7 @@ function share() {
         </template>
       </ol>
       <p class="src text-body-small">
-        {{ category }}<template v-if="trip.distanceKm"> · {{ trip.distanceKm }} km</template>.
+        {{ category }}<template v-if="trip.distanceKm"> · {{ trip.distanceKm }} km</template><template v-if="trip.vehicleType"> · {{ VEHICLE_KINDS[trip.vehicleType.kind].name }}</template>.
         <template v-if="trip.realtime.source === 'rt'">Opóźnienia z systemu PKP PLK.</template>
         <template v-else>Godziny według rozkładu jazdy.</template>
         <template v-if="trip.position?.source === 'gps' && trip.position.gpsProvider"> Pozycja GPS: {{ trip.position.gpsProvider }}.</template>

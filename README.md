@@ -12,6 +12,7 @@ Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, 
 | Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
 | Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
 | Pojazdy (zestawienia, rysunki) | vagonWEB.cz — **wyłączone** (`vagonweb_enabled`) do czasu zgody serwisu; działają tylko ręczne przypisania | — |
+| Rodzaj pojazdu (EZT, szynobus, parowóz) i udogodnienia | GTFS Kolei Wielkopolskich `ws.kolejewlkp.pl:83/gtfs_kw.zip` (otwarte dane z BIP KW), tylko Wielkopolska | przy imporcie rozkładu (CRON 03:30) |
 
 Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
 

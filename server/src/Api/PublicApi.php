@@ -19,12 +19,14 @@ use KwInfo\Http\Response;
 use KwInfo\Live\Realtime;
 use KwInfo\Notices\NoticeRepository;
 use KwInfo\Stats\PunctualityRepository;
+use KwInfo\Vehicles\KwVehicleTypes;
 use KwInfo\Vehicles\VehicleRepository;
 
 final class PublicApi
 {
     private ?Timetable $tt = null;
     private ?Realtime $rt = null;
+    private ?KwVehicleTypes $kinds = null;
     /** @var array<string, DayTimetable> */
     private array $days = [];
     /** @var array<string, array<string, mixed>> */
@@ -126,6 +128,7 @@ final class PublicApi
                     'track' => $stop[D::TRACK],
                     'cancelled' => $exp['cancelled'] ?? false,
                     'skipped' => $exp['stops'][$idx]['skipped'] ?? false,
+                    'vehicleType' => $this->vehicleType($trip),
                 ];
             }
             if (count($rows) >= $limit) {
@@ -229,6 +232,7 @@ final class PublicApi
                     'distanceKm' => (int) round($legKm),
                     'stops' => $this->legStops($trip, $l['from'], $l['to'], $date, $exp),
                     'vehicle' => $trip['isBus'] || $partner ? null : $vehicles->forNumbers($trip['numbers'] ?: [$trip['number']]),
+                    'vehicleType' => $this->vehicleType($trip),
                     // bilety KW są honorowane w POLREGIO na odcinkach wspólnych z KW: każda stacja odcinka obsługiwana też przez KW;
                     // w PKP Intercity nigdy
                     'kwTickets' => !$partner || (in_array($trip['agency'], $kwTicketAgencies, true) && $this->kwSection($trip, $l['from'], $l['to'])),
@@ -431,6 +435,7 @@ final class PublicApi
             'otherLegs' => $legs,
             'notices' => array_map(static fn (array $n): int => $n['id'], $notices),
             'vehicle' => $trip['isBus'] || $partner ? null : (new VehicleRepository())->forNumbers($trip['numbers'] ?: [$trip['number']]),
+            'vehicleType' => $this->vehicleType($trip),
         ]);
     }
 
@@ -637,6 +642,26 @@ final class PublicApi
     }
 
     /** @return array<string, mixed>|null */
+    /**
+     * Rodzaj pojazdu i udogodnienia z rozkładu przewoźnika (KwVehicleTypes); autobus, partnerzy i regiony bez danych — null.
+     * @param array<string, mixed> $trip @return array{kind: string, wheelchair: bool|null, bikes: bool|null}|null
+     */
+    private function vehicleType(array $trip): ?array
+    {
+        if ($trip['isBus'] || $trip['agency'] !== $this->tt()->agency()) {
+            return null;
+        }
+
+        // godziny kursu z sąsiedniego dnia (wyszukiwarka) są przesunięte o dobę — liczymy od północy dnia kursowania
+        $start = $trip['stops'][0][D::DEP] ?? null;
+
+        return ($this->kinds ??= new KwVehicleTypes())->forTrip(
+            $trip['numbers'] ?: [$trip['number']],
+            (int) $trip['serviceDate'],
+            $start !== null ? (int) $start - (int) ($trip['offset'] ?? 0) : null
+        );
+    }
+
     private function route(string $id): ?array
     {
         return $this->tt()->routes()[$id] ?? null;

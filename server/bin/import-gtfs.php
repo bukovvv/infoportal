@@ -10,6 +10,7 @@ require dirname(__DIR__) . '/bootstrap.php';
 
 use KwInfo\Config;
 use KwInfo\Gtfs\GtfsImporter;
+use KwInfo\Vehicles\KwVehicleTypes;
 
 if (PHP_SAPI !== 'cli') {
     exit(1);
@@ -40,6 +41,10 @@ foreach ($regions as $i => $region) {
         });
         // archiwum pobiera tylko pierwszy region, kolejne korzystają z tego samego pliku
         $importer->run(isset($options['force']), isset($options['file']) ? (string) $options['file'] : null, $i === 0);
+        // rodzaj pojazdu z rozkładu przewoźnika (tylko Wielkopolska); błąd nie przerywa importu
+        KwVehicleTypes::refresh(static function (string $line) use ($region): void {
+            echo '[' . date('H:i:s') . '] [' . $region . '] ' . $line . PHP_EOL;
+        }, isset($options['force']));
     } catch (Throwable $exception) {
         fwrite(STDERR, '[BŁĄD] [' . $region . '] ' . $exception->getMessage() . PHP_EOL);
         $failed = true;

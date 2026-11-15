@@ -10,7 +10,7 @@ import { agencyLabel, agencyName, isIntercity, isPartner, shortNumber } from '@/
 import { region } from '@/utils/region'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
-import { unitLabel, vehicleTitle } from '@/utils/vehicle'
+import { unitLabel, VEHICLE_KINDS, vehicleAmenities, vehicleTitle } from '@/utils/vehicle'
 import NoticeStrip from './NoticeStrip.vue'
 import RouteBadge from './RouteBadge.vue'
 import StatusTag from './StatusTag.vue'
@@ -110,7 +110,7 @@ function watchJourney() {
           <span v-if="i" class="wait text-body-small muted"><v-icon icon="transfer_within_a_station" size="18" />{{ c.via[i - 1].name }} · {{ c.waits[i - 1] }} min</span>
           <span class="d-inline-flex align-center ga-1">
             <RouteBadge :route="leg.route" :bus="leg.isBus" />
-            <TrainChip :number="leg.number" :trip-key="leg.key" :bus="leg.isBus" :agency="leg.agency" />
+            <TrainChip :number="leg.number" :trip-key="leg.key" :bus="leg.isBus" :agency="leg.agency" :vehicle="leg.vehicleType" />
             <span v-if="leg.platform" class="text-body-small muted ml-1">peron {{ leg.platform }}</span>
           </span>
         </template>
@@ -152,6 +152,19 @@ function watchJourney() {
               </div>
               <div v-if="isPartner(leg.agency)" class="partner-note text-body-small" :class="{ ic: isIntercity(leg.agency) }">
                 <v-icon :icon="isIntercity(leg.agency) ? 'confirmation_number' : 'info'" size="16" />{{ partnerTickets(leg) }}
+              </div>
+              <div v-if="leg.vehicleType && !leg.vehicle" class="leg-type text-body-small">
+                <v-icon :icon="VEHICLE_KINDS[leg.vehicleType.kind].icon" size="16" />
+                <span><span class="muted">Możesz spodziewać się pojazdu:</span> {{ VEHICLE_KINDS[leg.vehicleType.kind].name }}</span>
+                <span
+                  v-for="a in vehicleAmenities(leg.vehicleType)"
+                  :key="a.icon"
+                  class="leg-amenity"
+                  :class="{ off: !a.on }"
+                  :title="a.label"
+                  role="img"
+                  :aria-label="a.label"
+                ><v-icon :icon="a.icon" size="16" /></span>
               </div>
               <div v-if="leg.vehicle" class="leg-vehicle">
                 <span class="text-body-small"><span class="muted">Możesz spodziewać się pojazdu:</span> {{ vehicleTitle(leg.vehicle) }}</span>
@@ -262,6 +275,11 @@ function watchJourney() {
 .leg-name { font-size: 16px; font-weight: 800; }
 .leg-no { color: rgb(var(--v-theme-on-surface)); }
 .leg-vehicle { display: grid; gap: 4px; margin-top: 6px; }
+/* rodzaj pojazdu z rozkładu KW + udogodnienia jako ikony (opis w title / aria-label) */
+.leg-type { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; }
+.leg-type > .v-icon { color: rgb(var(--v-theme-on-surface-variant)); }
+.leg-amenity { display: inline-flex; color: rgb(var(--v-theme-on-surface-variant)); }
+.leg-amenity.off { opacity: .55; }
 .partner-note { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: rgb(var(--v-theme-on-surface-variant)); }
 /* PKP Intercity: inny bilet — wyraźnie, jak ostrzeżenie */
 .partner-note.ic {

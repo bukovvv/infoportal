@@ -40,6 +40,8 @@ final class Config
             'gps_source' => 'kml',
             'kml_rt_url' => 'https://gtfs.kolejemalopolskie.com.pl/?download=L2hvbWUva21sL3JvemtsYWR5X2phemR5L2tvbGVqL3JlYWx0aW1lLnBi',
             'kml_gtfs_url' => 'https://gtfs.kolejemalopolskie.com.pl/?download=L2hvbWUva21sL3JvemtsYWR5X2phemR5L2tvbGVqL2d0ZnMuemlw',
+            // rozkład KMŁ nie podaje rodzaju pojazdu
+            'kw_gtfs_url' => null,
         ],
     ];
 
@@ -118,6 +120,8 @@ final class Config
             'cacert' => $root . '/config/cacert.pem',
             'gtfs_url' => 'https://mkuran.pl/gtfs/polish_trains.zip',
             'gtfs_rt_url' => 'https://mkuran.pl/gtfs/polish_trains/updates.pb',
+            // rozkład przewoźnika (otwarte dane z BIP KW) — tylko rodzaj pojazdu i udogodnienia (Vehicles/KwVehicleTypes)
+            'kw_gtfs_url' => 'http://ws.kolejewlkp.pl:83/gtfs_kw.zip',
             // GPS (Mapa BILKOM + zapas) — wyłączony, bo źródło od dawna nie zwraca pozycji; włączenie: local.php
             'gps_enabled' => false,
             'backup_gps_url' => 'https://kierownik-plus-v2.jak-ste139.workers.dev/',

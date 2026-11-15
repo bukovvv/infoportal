@@ -46,6 +46,8 @@ export interface BoardRow {
   track: string | null
   cancelled: boolean
   skipped: boolean
+  /** rodzaj pojazdu z rozkładu przewoźnika; brak danych, autobus, partnerzy — null */
+  vehicleType?: VehicleType | null
 }
 
 export interface Board {
@@ -79,6 +81,8 @@ export interface Leg {
   stops?: LegStop[]
   /** spodziewany pojazd (vagonWEB); brak danych lub autobus — null */
   vehicle?: VehicleInfo | null
+  /** rodzaj pojazdu z rozkładu przewoźnika; brak w starszych zapisanych podróżach */
+  vehicleType?: VehicleType | null
   /** POLREGIO na odcinku wspólnym z KW — bilety KW honorowane (PKP Intercity — nigdy); brak w starszych zapisanych podróżach */
   kwTickets?: boolean
   /** długość odcinka w km */
@@ -189,6 +193,18 @@ export interface Trip {
   notices: number[]
   /** ostatnio zaobserwowany skład (vagonWEB); brak danych lub autobus — null */
   vehicle?: VehicleInfo | null
+  /** rodzaj pojazdu z rozkładu przewoźnika (KW); brak danych, autobus, partnerzy — null */
+  vehicleType?: VehicleType | null
+}
+
+/**
+ * Rodzaj pojazdu w danym dniu z rozkładu Kolei Wielkopolskich: emu — elektryczny zespół trakcyjny, dmu — szynobus,
+ * steam — parowóz (Wolsztyn), diesel — lokomotywa spalinowa. Udogodnienia: null — przewoźnik nie podaje.
+ */
+export interface VehicleType {
+  kind: 'emu' | 'dmu' | 'steam' | 'diesel'
+  wheelchair: boolean | null
+  bikes: boolean | null
 }
 
 /** Pociąg znaleziony po numerze (GET /trains?q=…): bieżący albo najbliższy kurs. */
