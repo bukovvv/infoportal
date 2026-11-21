@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { Notice } from '@/api/types'
 import { useUi } from '@/stores/ui'
 import { ago, dateTime, plural } from '@/utils/format'
-import { noticeIcon, noticeLabel, plainBody } from '@/utils/notices'
+import { noticeIcon, noticeLabel, parseNoticeTrain, plainBody } from '@/utils/notices'
 import TrainChip from './TrainChip.vue'
 
 // link: cały komunikat prowadzi do jego strony (tytuł jest linkiem rozciągniętym na kartę, chipy pociągów zostają osobnymi przyciskami)
@@ -33,7 +33,7 @@ const more = computed(() => props.notice.trains.length - trains.value.length)
       <p class="text-body-medium muted notice-text" :class="{ clamp: compact }">{{ plainBody(notice.body) }}</p>
       <div class="text-body-small muted scope" :title="notice.line"><v-icon icon="route" size="16" /><span class="ellipsis">{{ notice.line }}</span></div>
       <div v-if="notice.trains.length" class="trains">
-        <TrainChip v-for="n in trains" :key="n" :number="n" class="above" />
+        <TrainChip v-for="n in trains" :key="n" v-bind="parseNoticeTrain(n)" class="above" />
         <span v-if="more > 0" class="more text-label-medium">+{{ more }} {{ plural(more, 'pociąg', 'pociągi', 'pociągów') }}</span>
       </div>
     </div>

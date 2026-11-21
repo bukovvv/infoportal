@@ -494,8 +494,8 @@ check('komunikat: bez znaczników HTML i znaków sterujących', NoticeRepository
 $noticeDb = sys_get_temp_dir() . '/kw-selftest-notices-' . bin2hex(random_bytes(4)) . '.sqlite';
 $noticeRepo = new NoticeRepository(NoticeRepository::connect($noticeDb));
 $saved = $noticeRepo->save(['title' => 'Zmiany na stacji Konin', 'body' => "Wstęp\n- KW 77600 wcześniej o 3 min", 'active' => true,
-    'trains' => ['77600', '77600', 'x1', 12], 'stations' => ['30601', '<b>', '30601'], 'lines' => ['kutno', 'Zła Linia', 'pkm2']]);
-check('komunikat: stacje i linie, bez powtórzeń i złych wartości', $saved['trains'] === ['77600'] && $saved['stations'] === ['30601'] && $saved['lines'] === ['kutno', 'pkm2']
+    'trains' => ['77600', '77600', 'x1', 12, 'PR 85724', 'PR85724'], 'stations' => ['30601', '<b>', '30601'], 'lines' => ['kutno', 'Zła Linia', 'pkm2']]);
+check('komunikat: stacje i linie, bez powtórzeń i złych wartości', $saved['trains'] === ['77600', 'PR 85724'] && $saved['stations'] === ['30601'] && $saved['lines'] === ['kutno', 'pkm2']
     && $noticeRepo->find($saved['id'])['body'] === "Wstęp\n- KW 77600 wcześniej o 3 min" && $noticeRepo->published()[0]['id'] === $saved['id']);
 unset($noticeRepo, $saved);
 array_map(static fn (string $f) => @unlink($f), [$noticeDb, $noticeDb . '-wal', $noticeDb . '-shm']);

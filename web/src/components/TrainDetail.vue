@@ -8,6 +8,7 @@ import { useNotices } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { agencyLabel, agencyName, isIntercity, isPartner, trainLabel, trainTitle } from '@/utils/agency'
 import { clock, dayLabel } from '@/utils/format'
+import { noticeTrain } from '@/utils/notices'
 import { region, regionPath } from '@/utils/region'
 import { shareLink } from '@/utils/share'
 import NoticeItem from './NoticeItem.vue'
@@ -57,13 +58,12 @@ const category = computed(() => {
   if (t.route?.id === 'PR_IR') return 'interREGIO'
   return t.route?.id === 'KW_P' || t.route?.id === 'PR_RP' ? 'Pociąg przyspieszony' : 'Pociąg osobowy'
 })
-/** pociąg POLREGIO / PKP Intercity: bez pojazdu i komunikatów (dotyczą KW) */
+/** pociąg POLREGIO / PKP Intercity: bez pojazdu */
 const partner = computed(() => isPartner(trip.value?.agency))
 const title = computed(() => (trip.value ? trainTitle(trip.value.number, trip.value.name) : null))
 // komunikaty o tym pociągu, stacjach na trasie albo linii, którą jedzie
-const related = computed(() => (trip.value && !partner.value
-  ? notices.forTrip(trip.value.numbers.length ? trip.value.numbers : [trip.value.number], trip.value.stops.map((s) => s.station))
-  : []))
+const numbers = computed(() => (trip.value ? (trip.value.numbers.length ? trip.value.numbers : [trip.value.number]) : []))
+const related = computed(() => (trip.value ? notices.forTrip(numbers.value, trip.value.stops.map((s) => s.station), trip.value.agency) : []))
 const progress = computed(() => {
   const t = trip.value
   if (!t?.position) return null
@@ -143,7 +143,7 @@ defineExpose({ trip })
         <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>
       <div v-if="related.length" class="notices divider">
-        <NoticeItem v-for="n in related" :key="n.id" :notice="n" :first="trip.numbers.length ? trip.numbers : [trip.number]" compact link />
+        <NoticeItem v-for="n in related" :key="n.id" :notice="n" :first="numbers.map((n) => noticeTrain(trip!.agency, n))" compact link />
       </div>
       <p v-if="partner" class="partner-note text-body-medium divider" :class="{ ic: isIntercity(trip.agency) }">
         <v-icon :icon="isIntercity(trip.agency) ? 'confirmation_number' : 'info'" size="20" />

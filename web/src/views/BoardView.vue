@@ -15,10 +15,10 @@ import { useNotices, useStations, useStatus } from '@/stores/data'
 import { MAX_FAVORITES, useFavorites } from '@/stores/favorites'
 import { usePrefs } from '@/stores/prefs'
 import { read, useUi, write } from '@/stores/ui'
-import { agencyLabel, isIntercity, isPartner, shortNumber } from '@/utils/agency'
+import { agencyLabel, isIntercity, shortNumber } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, splitNumbers, warsawNow, weekdayShort } from '@/utils/format'
 import { vHscroll } from '@/utils/hscroll'
-import { noticeIcon } from '@/utils/notices'
+import { noticeIcon, noticeTrain } from '@/utils/notices'
 import { region } from '@/utils/region'
 import { usePageMeta } from '@/utils/seo'
 import { unusualVehicle, VEHICLE_KINDS } from '@/utils/vehicle'
@@ -44,8 +44,8 @@ const locating = ref(false)
 const station = computed(() => (stationId.value ? stations.byId.get(stationId.value) : undefined))
 /** komunikaty i aktualności o tej stacji albo linii przez nią przechodzącej */
 const stationNotices = computed(() => (station.value ? notices.forStation(station.value) : []))
-/** Komunikaty wymieniające pociąg z rzędu (najważniejszy pierwszy); POLREGIO i PKP Intercity pomijamy — komunikaty dotyczą KW. */
-const rowNotices = (row: BoardRow) => (isPartner(row.agency) ? [] : [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(t) ?? []))].filter(prefs.showsNotice))
+/** Komunikaty wymieniające pociąg z rzędu (najważniejszy pierwszy). */
+const rowNotices = (row: BoardRow) => [...new Set(splitNumbers(row.number).flatMap((t) => notices.byTrain.get(noticeTrain(row.agency, t)) ?? []))].filter(prefs.showsNotice)
 usePageMeta(() => station.value ? {
   title: `${station.value.name}: odjazdy i przyjazdy | zanimwyjdziesz.pl`,
   description: `Odjazdy i przyjazdy pociągów na stacji ${station.value.name} na żywo: ${region.agencyName}, POLREGIO i PKP Intercity, perony, opóźnienia i odwołania.`,

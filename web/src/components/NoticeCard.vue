@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import type { Notice } from '@/api/types'
 import { ago, clock, dateTime, dayLabel, plural } from '@/utils/format'
-import { noticeIcon, noticeLabel, plainBody } from '@/utils/notices'
+import { noticeIcon, noticeLabel, parseNoticeTrain, plainBody } from '@/utils/notices'
 import TrainChip from './TrainChip.vue'
 
 // Karta komunikatu na liście: cała prowadzi do strony komunikatu (link rozciągnięty na kartę), chipy pociągów zostają osobnymi przyciskami.
@@ -28,7 +28,7 @@ const more = computed(() => props.notice.trains.length - trains.value.length)
       <span v-if="notice.endsAt"><v-icon icon="event" size="18" />do {{ dayLabel(notice.endsAt) }}, {{ clock(notice.endsAt) }}</span>
     </div>
     <div v-if="notice.trains.length" class="n-trains">
-      <TrainChip v-for="n in trains" :key="n" :number="n" />
+      <TrainChip v-for="n in trains" :key="n" v-bind="parseNoticeTrain(n)" />
       <span v-if="more > 0" class="n-more text-label-medium">+{{ more }} {{ plural(more, 'pociąg', 'pociągi', 'pociągów') }}</span>
     </div>
   </article>

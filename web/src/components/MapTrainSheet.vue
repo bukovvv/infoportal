@@ -8,7 +8,7 @@ import NoticeStrip from '@/components/NoticeStrip.vue'
 import RouteBadge from '@/components/RouteBadge.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useNotices, useStations } from '@/stores/data'
-import { agencyLabel, agencyName, isIntercity, isPartner, shortNumber, trainLabel } from '@/utils/agency'
+import { agencyLabel, agencyName, isIntercity, shortNumber, trainLabel } from '@/utils/agency'
 import { clock, dayLabel, minutesUntil, plural, relative, warsawNow } from '@/utils/format'
 import { region, regionPath } from '@/utils/region'
 import { stationRank } from '@/utils/mapLines'
@@ -106,8 +106,8 @@ const day = computed(() => {
 })
 /** kolor osi jak trasa kursu na mapie (z rozkładu; autobus zastępczy neutralnie) */
 const color = computed(() => (props.trip?.isBus || !props.trip?.route?.color ? 'rgb(var(--v-theme-outline))' : props.trip.route.color))
-const related = computed(() => (props.trip && !isPartner(props.trip.agency)
-  ? notices.forTrip(props.trip.numbers.length ? props.trip.numbers : [props.trip.number], props.trip.stops.map((s) => s.station))
+const related = computed(() => (props.trip
+  ? notices.forTrip(props.trip.numbers.length ? props.trip.numbers : [props.trip.number], props.trip.stops.map((s) => s.station), props.trip.agency)
   : []))
 
 const plan = computed(() => (props.trip ? tripPlan(props.trip, now.value) : null))

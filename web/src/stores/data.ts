@@ -96,7 +96,7 @@ export const useNotices = defineStore('notices', () => {
   const forNumbers = (numbers: string[]) => list.value.filter((n) => n.trains.some((t) => numbers.includes(t)))
   const forStation = (station: Pick<StationRef, 'id' | 'name'>) => list.value.filter((n) => aboutStation(n, station))
   const forLine = (lineId: string) => list.value.filter((n) => n.lines.includes(lineId))
-  const forTrip = (numbers: string[], stops: Pick<StationRef, 'id' | 'name'>[]) => list.value.filter((n) => aboutTrip(n, numbers, stops))
+  const forTrip = (numbers: string[], stops: Pick<StationRef, 'id' | 'name'>[], agency?: string | null) => list.value.filter((n) => aboutTrip(n, numbers, stops, agency))
   const forConnection = (c: Pick<Connection, 'legs'>) => list.value.filter((n) => aboutConnection(n, c)).sort(bySeverity)
   /** komunikaty wymieniające pociąg z numerem (tablica odjazdów: znak przy rzędzie) */
   const byTrain = computed(() => {

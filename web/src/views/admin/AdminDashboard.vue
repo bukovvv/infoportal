@@ -9,7 +9,7 @@ import { healthSummary, sourceRows, upkeepRows, type Health } from '@/utils/admi
 import { logInfo, logSummary } from '@/utils/adminLog'
 import { noticeState, stampMs, todos } from '@/utils/adminNotices'
 import { ago, plural, splitNumbers } from '@/utils/format'
-import { bySeverity, noticeLabel } from '@/utils/notices'
+import { bySeverity, noticeLabel, noticeTrain } from '@/utils/notices'
 import { useNoticeActions } from './noticeActions'
 
 const admin = useAdmin()
@@ -49,7 +49,7 @@ const nextPlanned = computed(() => {
 function delayOf(trains: string[]): number | null {
   let max: number | null = null
   for (const t of live.trains) {
-    if (t.delay == null || !splitNumbers(t.number).some((n) => trains.includes(n))) continue
+    if (t.delay == null || !splitNumbers(t.number).some((n) => trains.includes(noticeTrain(t.agency, n)))) continue
     max = Math.max(max ?? 0, t.delay)
   }
   return max

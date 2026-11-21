@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useNotices, useStatus } from '@/stores/data'
 import { useUi } from '@/stores/ui'
+import { parseNoticeTrain } from '@/utils/notices'
 
 const notices = useNotices()
 const status = useStatus()
@@ -36,7 +37,7 @@ const data = computed(() => {
     >
       <p class="text-body-medium banner-text">{{ n.body }}</p>
       <div class="d-flex flex-wrap ga-2 mt-2 ml-n3">
-        <v-btn v-if="n.trains.length" variant="text" size="small" @click="ui.openTrain({ number: n.trains[0] })">Szczegóły pociągu</v-btn>
+        <v-btn v-if="n.trains.length" variant="text" size="small" @click="ui.openTrain({ number: parseNoticeTrain(n.trains[0]).number })">Szczegóły pociągu</v-btn>
         <v-btn variant="text" size="small" @click="dismiss(n.id)">Ukryj</v-btn>
       </div>
     </v-alert>

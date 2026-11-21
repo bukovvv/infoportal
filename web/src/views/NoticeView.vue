@@ -7,7 +7,7 @@ import TrainChip from '@/components/TrainChip.vue'
 import { useNotices, useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { ago, clock, dateTime, dayLabel } from '@/utils/format'
-import { noticeIcon, noticeLabel, noticeLines, plainBody } from '@/utils/notices'
+import { noticeIcon, noticeLabel, noticeLines, parseNoticeTrain, plainBody } from '@/utils/notices'
 import { usePageMeta } from '@/utils/seo'
 
 const route = useRoute()
@@ -107,7 +107,7 @@ async function share() {
         <h2 class="text-title-small">{{ notice.trains.length === 1 ? 'Pociąg, którego dotyczy' : 'Pociągi, których dotyczy' }}</h2>
         <p class="text-body-small muted">Kliknij numer, żeby zobaczyć trasę i aktualne opóźnienie.</p>
         <div class="d-flex flex-wrap ga-2">
-          <TrainChip v-for="n in notice.trains" :key="n" :number="n" />
+          <TrainChip v-for="n in notice.trains" :key="n" v-bind="parseNoticeTrain(n)" />
         </div>
       </section>
 

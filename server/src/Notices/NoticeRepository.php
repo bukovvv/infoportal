@@ -156,7 +156,8 @@ final class NoticeRepository
         if ($starts !== null && $ends !== null && $ends < $starts) {
             throw new ApiException('Koniec publikacji nie może być wcześniejszy niż jej początek.', 422);
         }
-        $trains = self::ids($data['trains'] ?? [], '/^\d{3,6}$/', 40);
+        // sam numer — przewoźnik regionu, „PR 85724” / „IC 1804” — POLREGIO, PKP Intercity
+        $trains = self::ids($data['trains'] ?? [], '/^(?:(?:PR|IC) )?\d{3,6}$/', 40);
         // id stacji z rozkładu (GTFS) i linii ze schematu połączeń
         $stations = self::ids($data['stations'] ?? [], '/^[A-Za-z0-9_.:-]{1,40}$/', 40);
         $lines = self::ids($data['lines'] ?? [], '/^[a-z0-9-]{1,30}$/', 20);

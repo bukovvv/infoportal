@@ -1,6 +1,7 @@
 import type { Connection, Notice, Severity, StationRef } from '@/api/types'
 import { isPartner } from './agency'
 import { splitNumbers } from './format'
+import { region } from './region'
 import { LEGEND, PKM_LINES, type SchemeLine } from './scheme'
 
 export const noticeIcon: Record<Severity, string> = { danger: 'cancel-fill', warning: 'warning-fill', info: 'info-fill' }
@@ -18,16 +19,33 @@ export function aboutStation(n: Notice, station: Pick<StationRef, 'id' | 'name'>
   return n.stations.includes(station.id) || noticeLines(n).some((l) => l.stations.includes(station.name))
 }
 
-/** Komunikat dotyczy kursu: pociąg z listy, postój na wybranej stacji albo przejazd wybraną linią (co najmniej dwie stacje kursu na linii). */
-export function aboutTrip(n: Notice, numbers: string[], stops: Pick<StationRef, 'id' | 'name'>[]): boolean {
-  if (n.trains.some((t) => numbers.includes(t))) return true
+/** Pociąg w komunikacie: sam numer — przewoźnik regionu, „PR 85724” / „IC 1804” — POLREGIO, PKP Intercity. */
+export const noticeTrain = (agency: string | null | undefined, number: string) => (isPartner(agency) ? `${agency} ${number}` : number)
+export function parseNoticeTrain(token: string): { agency: string; number: string } {
+  const m = /^([A-Z]+) (\d+)$/.exec(token)
+  return m ? { agency: m[1], number: m[2] } : { agency: region.agency, number: token }
+}
+/** Wpis w polu pociągów panelu („85724”, „pr85724”, „IC 1804”, „KW 77600”) → pociąg komunikatu; null — to nie numer. */
+export function noticeTrainInput(value: string): string | null {
+  const m = /^\s*(?:(kw|km[lł]|pr|ic)\s*)?(\d{3,6})\s*$/i.exec(value)
+  return m ? noticeTrain(m[1]?.toUpperCase().replace('Ł', 'L'), m[2]) : null
+}
+
+/**
+ * Komunikat dotyczy kursu: pociąg z listy, postój na wybranej stacji albo przejazd wybraną linią (co najmniej dwie stacje kursu na linii).
+ * POLREGIO i PKP Intercity — tylko wymienione z numerem (stacje i linie dotyczą pociągów przewoźnika regionu).
+ */
+export function aboutTrip(n: Notice, numbers: string[], stops: Pick<StationRef, 'id' | 'name'>[], agency?: string | null): boolean {
+  const own = numbers.map((x) => noticeTrain(agency, x))
+  if (n.trains.some((t) => own.includes(t))) return true
+  if (isPartner(agency)) return false
   if (stops.some((s) => n.stations.includes(s.id))) return true
   return noticeLines(n).some((l) => stops.filter((s) => l.stations.includes(s.name)).length >= 2)
 }
 
-/** Komunikat dotyczy połączenia: któregoś odcinka KW (POLREGIO i PKP Intercity pomijamy — komunikaty dotyczą KW, jak na stronie pociągu). */
+/** Komunikat dotyczy połączenia: któregoś odcinka (jak na stronie pociągu). */
 export function aboutConnection(n: Notice, c: Pick<Connection, 'legs'>): boolean {
-  return c.legs.some((leg) => !isPartner(leg.agency) && aboutTrip(n, splitNumbers(leg.number), [leg.from, ...(leg.stops ?? []), leg.to]))
+  return c.legs.some((leg) => aboutTrip(n, splitNumbers(leg.number), [leg.from, ...(leg.stops ?? []), leg.to], leg.agency))
 }
 
 /** Najpierw poważne utrudnienia, potem utrudnienia, na końcu informacje. */

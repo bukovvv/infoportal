@@ -13,7 +13,7 @@ import { clearDraft, emptyForm, readDraft, reach, SEVERITY_OPTIONS, stampMs, toF
 import { clock, plural } from '@/utils/format'
 import { buildNotice, requiredFields, templateKinds, type TemplateInput } from '@/utils/noticeTemplates'
 import { analyzeNotice, findPeriod, HUB_STATION, publishBefore, publishUntil, suggestLines, type NoticeAnalysis } from '@/utils/noticeText'
-import { NOTICE_LINES, lineTitle, noticeIcon, noticeLabel, scopeText } from '@/utils/notices'
+import { NOTICE_LINES, lineTitle, noticeIcon, noticeLabel, noticeTrain, noticeTrainInput, parseNoticeTrain, scopeText } from '@/utils/notices'
 import { checkTrains, trainChecks } from './trainCheck'
 
 const route = useRoute()
@@ -155,9 +155,21 @@ const stationName = (id: string) => stations.byId.get(id)?.name ?? id
 const lineItems = NOTICE_LINES.map((l) => ({ value: l.id, title: lineTitle(l), color: l.color }))
 const stationItems = computed(() => [...stations.all].sort((a, b) => a.name.localeCompare(b.name, 'pl')).map((s) => ({ value: s.id, title: s.name })))
 watch(() => form.trains.join(), () => {
-  form.trains = [...new Set(form.trains.map((t) => String(t).trim()).filter((t) => /^\d{3,6}$/.test(t)))].slice(0, 40)
+  form.trains = [...new Set(form.trains.flatMap((t) => noticeTrainInput(String(t)) ?? []))].slice(0, 40)
   checkTrains(form.trains)
 }, { immediate: true })
+// sam numer znaleziony tylko u POLREGIO / PKP Intercity → „PR 85724” (inaczej chip pokazywałby KW)
+watch(() => form.trains.map((t) => { const c = trainChecks.get(t); return c?.state === 'ok' ? c.agency : '' }).join(), () => {
+  const fixed = form.trains.map((t) => {
+    const c = trainChecks.get(t)
+    if (c?.state !== 'ok' || parseNoticeTrain(t).number !== t) return t
+    const token = noticeTrain(c.agency, t)
+    if (token !== t) trainChecks.set(token, c)
+    return token
+  })
+  if (fixed.some((t, i) => t !== form.trains[i])) form.trains = fixed
+})
+const hasTrain = (n: string) => form.trains.some((t) => parseNoticeTrain(t).number === n)
 /** wartość chipu w polu pociągów (Vuetify podaje sam tekst albo obiekt z `value`) */
 const chipValue = (item: unknown) => String(item && typeof item === 'object' ? ((item as { value?: unknown }).value ?? (item as { title?: unknown }).title) : item)
 const checkText = (n: string) => {
@@ -172,13 +184,13 @@ const suggestions = computed(() => {
   const names = [...form.stations.map(stationName), ...a.stations.filter((s) => !s.hub).map((s) => s.station.name)]
   return {
     stations: a.stations.filter((s) => !form.stations.includes(s.station.id)),
-    trains: a.trains.filter((t) => !form.trains.includes(t)),
+    trains: a.trains.filter((t) => !hasTrain(t)),
     lines: suggestLines(names).filter((id) => !form.lines.includes(id)).map((id) => NOTICE_LINES.find((l) => l.id === id)!),
   }
 })
 const hasSuggestions = computed(() => suggestions.value.stations.length + suggestions.value.trains.length + suggestions.value.lines.length > 0)
 const addStation = (id: string) => { if (!form.stations.includes(id)) form.stations = [...form.stations, id].slice(0, 40) }
-const addTrain = (n: string) => { if (!form.trains.includes(n)) form.trains = [...form.trains, n] }
+const addTrain = (n: string) => { if (!hasTrain(n)) form.trains = [...form.trains, n] }
 const addLine = (id: string) => { if (!form.lines.includes(id)) form.lines = [...form.lines, id] }
 function addAll() {
   suggestions.value.stations.filter((s) => !s.hub).forEach((s) => addStation(s.station.id))
@@ -403,7 +415,7 @@ const setSeverity = (s: Severity) => { form.severity = s }
               </v-combobox>
               <span class="hint" :class="{ 'text-warning': missingTrains.length }">
                 <template v-if="missingTrains.length">Nie ma w rozkładzie na dziś i jutro: {{ missingTrains.join(', ') }} — sprawdź numer (pociąg może kursować tylko w inne dni).</template>
-                <template v-else>Wpisz numer i naciśnij Enter. Numery sprawdzamy w rozkładzie.</template>
+                <template v-else>Wpisz numer i naciśnij Enter. Numery sprawdzamy w rozkładzie — POLREGIO i PKP Intercity dostaną skrót PR / IC.</template>
               </span>
             </div>
 
