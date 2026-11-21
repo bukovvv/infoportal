@@ -138,7 +138,7 @@ defineExpose({ trip })
         </div>
       </header>
       <div class="actions">
-        <v-btn v-if="!partner || trip.shape.length" variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
+        <v-btn v-if="region.features.map && (!partner || trip.shape.length)" variant="flat" color="primary-container" prepend-icon="map" @click="toMap">Pokaż na mapie</v-btn>
         <v-btn v-if="inSheet" variant="outlined" prepend-icon="open_in_full" @click="fullView">Pełny widok</v-btn>
         <v-btn variant="outlined" prepend-icon="share" @click="share">Udostępnij</v-btn>
       </div>

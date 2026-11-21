@@ -75,6 +75,8 @@ const items = computed(() => [
           <span>{{ it.label }}</span>
           <span v-if="it.badge" class="side-badge" :aria-label="`${it.badge} widocznych`">{{ it.badge }}</span>
         </router-link>
+        <!-- podgląd rozkładu całej Polski to osobny region (pełne wczytanie), stąd zwykły link -->
+        <a href="/nowyrj27" class="side-item"><v-icon icon="manage_search" size="22" /><span>Nowy RJ 2026/27</span></a>
       </div>
       <p v-if="mdAndUp" class="side-foot">Sesja wygasa po 2 h bezczynności.<br>Niezapisany formularz zostaje w tej przeglądarce.</p>
     </nav>

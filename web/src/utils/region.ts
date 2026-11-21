@@ -2,7 +2,7 @@
 // Region wynika z adresu przy wczytaniu strony i nie zmienia się do przeładowania — przełączenie regionu to zwykły
 // link do drugiego adresu (pełne wczytanie: inne stacje, rozkład i dane na żywo). Router dostaje base, API prefiks.
 
-export type RegionId = 'wielkopolska' | 'malopolska'
+export type RegionId = 'wielkopolska' | 'malopolska' | 'nowyrj27'
 
 export interface Region {
   id: RegionId
@@ -30,7 +30,10 @@ export interface Region {
   /** środek i przybliżenie mapy przed wczytaniem pociągów */
   mapCenter: [number, number]
   /** części serwisu, które są tylko w niektórych regionach */
-  features: { scheme: boolean; btk: boolean; notices: boolean; admin: boolean }
+  features: { scheme: boolean; btk: boolean; notices: boolean; admin: boolean; map: boolean }
+  /** tylko dla zalogowanego administratora (bez przełącznika regionu, noindex); startDate — domyślny dzień wyszukiwania */
+  adminOnly?: boolean
+  startDate?: string
 }
 
 export const DEFAULT_REGION: RegionId = 'wielkopolska'
@@ -51,7 +54,7 @@ export const REGIONS: Record<RegionId, Region> = {
     ticketUrl: 'https://wielkopolskiebilety.pl/',
     partnerTickets: true,
     mapCenter: [17.2, 52.3],
-    features: { scheme: true, btk: true, notices: true, admin: true },
+    features: { scheme: true, btk: true, notices: true, admin: true, map: true },
   },
   malopolska: {
     id: 'malopolska',
@@ -68,15 +71,36 @@ export const REGIONS: Record<RegionId, Region> = {
     ticketUrl: 'https://kolejemalopolskie.com.pl/pl/dla-pasazera/gdzie-kupic-bilet-kolejowy',
     partnerTickets: true,
     mapCenter: [20.1, 49.85],
-    features: { scheme: false, btk: false, notices: false, admin: false },
+    features: { scheme: false, btk: false, notices: false, admin: false, map: true },
+  },
+  // podgląd nowego rozkładu 2026/27 dla administratora: KW, POLREGIO i PKP Intercity w całej Polsce, bez danych na żywo
+  nowyrj27: {
+    id: 'nowyrj27',
+    base: '/nowyrj27',
+    api: '/admin/nowyrj27',
+    name: 'Polska (RJ 2026/27)',
+    inName: 'w całej Polsce',
+    overName: 'po Polsce',
+    agency: 'KW',
+    agencyLabel: 'KW',
+    agencyName: 'Koleje Wielkopolskie',
+    agencyOf: 'Kolei Wielkopolskich',
+    hub: { id: '30601', name: 'Poznań Główny' },
+    ticketUrl: 'https://wielkopolskiebilety.pl/',
+    partnerTickets: true,
+    mapCenter: [19.4, 52.1],
+    features: { scheme: false, btk: false, notices: false, admin: false, map: false },
+    adminOnly: true,
+    startDate: '2026-12-13',
   },
 }
 
-export const REGION_LIST: Region[] = Object.values(REGIONS)
+/** Regiony w przełączniku (bez podglądu dla administratora). */
+export const REGION_LIST: Region[] = Object.values(REGIONS).filter((r) => !r.adminOnly)
 
 /** Region z adresu strony: /malopolska i wszystko pod nim — Małopolska, reszta — Wielkopolska. */
 export function regionFromPath(pathname: string): Region {
-  return REGION_LIST.find((r) => r.base && (pathname === r.base || pathname.startsWith(r.base + '/'))) ?? REGIONS[DEFAULT_REGION]
+  return Object.values(REGIONS).find((r) => r.base && (pathname === r.base || pathname.startsWith(r.base + '/'))) ?? REGIONS[DEFAULT_REGION]
 }
 
 /** Region tej strony (stały do przeładowania). */

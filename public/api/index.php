@@ -27,6 +27,17 @@ $path = preg_replace('#^.*?/api(?=/|$)#', '', $path) ?? '/';
 if (preg_match('#^/([a-z]+)(?=/|$)#', $path, $m) === 1 && $m[1] !== KwInfo\Config::DEFAULT_REGION && KwInfo\Config::isRegion($m[1])) {
     KwInfo\Config::useRegion($m[1]);
     $path = substr($path, strlen($m[0])) ?: '/';
+} elseif (preg_match('#^/admin/([a-z0-9]+)(?=/|$)#', $path, $m) === 1 && KwInfo\Config::isRegion($m[1])) {
+    // region tylko dla administratora: /api/admin/nowyrj27/… — tu dociera ciasteczko sesji panelu (ścieżka /api/admin)
+    KwInfo\Config::useRegion($m[1]);
+    $path = substr($path, strlen($m[0])) ?: '/';
+}
+if (KwInfo\Config::get('admin_only') && KwInfo\Auth\AdminAuth::session() === null) {
+    (new KwInfo\Http\Response(['error' => 'Zaloguj się do panelu administratora.'], 401))->send();
+    exit;
+}
+if (KwInfo\Config::get('admin_only')) {
+    ini_set('memory_limit', '512M'); // rozkład całej Polski: dwa dni kursów w pamięci to ok. 250 MB
 }
 /** @var KwInfo\Http\Router $router */
 $router = require $server . '/routes.php';

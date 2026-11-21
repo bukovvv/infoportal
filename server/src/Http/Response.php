@@ -27,7 +27,8 @@ final class Response
         }
         if ($this->maxAge !== null && $this->status === 200) {
             $etag = '"' . substr(hash('sha1', $body), 0, 20) . '"';
-            header('Cache-Control: public, max-age=' . $this->maxAge);
+            // dane regionu tylko dla administratora nie mogą trafić do wspólnej pamięci podręcznej (LiteSpeed, pośrednicy)
+            header('Cache-Control: ' . (\KwInfo\Config::get('admin_only') ? 'private' : 'public') . ', max-age=' . $this->maxAge);
             header('ETag: ' . $etag);
             if (trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
                 http_response_code(304);

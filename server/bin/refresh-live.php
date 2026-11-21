@@ -37,7 +37,8 @@ foreach ($regions as $region) {
     }
     Config::useRegion($region);
     // region bez zaimportowanego rozkładu (np. przed pierwszym importem po wdrożeniu) — pomijany po cichu
-    if ($region !== Config::DEFAULT_REGION && !is_file(Config::path('gtfs_db'))) {
+    // region bez danych na żywo (nowyrj27) i region bez zaimportowanego rozkładu (np. przed pierwszym importem po wdrożeniu) — pomijane po cichu
+    if (!Config::get('live_enabled') || ($region !== Config::DEFAULT_REGION && !is_file(Config::path('gtfs_db')))) {
         continue;
     }
     $log = static function (string $line) use ($region): void {

@@ -122,7 +122,9 @@ final class GtfsImporter
     {
         $agency = (string) Config::get('agency_id');
         $partners = array_keys((array) Config::get('partner_agencies'));
-        $region = new Region();
+        // region bez granicy (nowyrj27) — kursy partnerów w całości, jak kursy przewoźnika
+        $crop = Config::get('region_file') !== null;
+        $region = $crop ? new Region() : null;
         $pdo = new PDO('sqlite:' . $path, null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $pdo->exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF;');
         $pdo->exec(file_get_contents(__DIR__ . '/schema.sql'));
@@ -160,10 +162,10 @@ final class GtfsImporter
             $id = $t['trip_id'];
             $tripAgency = $routes[$t['route_id']];
             // kursy partnerów: true = obcinane do województwa (kształt też)
-            $trips[$id] = $tripAgency !== $agency;
+            $trips[$id] = $crop && $tripAgency !== $agency;
             $services[$t['service_id']] = true;
             $shape = $t['shape_id'] ?: null;
-            if ($shape !== null && $tripAgency === $agency) {
+            if ($shape !== null && !$trips[$id]) {
                 $shapesNeeded[$shape] = true;
             } elseif ($shape !== null) {
                 $partnerShapes[$id] = $shape;

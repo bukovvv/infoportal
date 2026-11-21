@@ -36,7 +36,7 @@ const initial = warsawNow()
 const last = read<{ from?: string; to?: string }>('kw_last_search', {})
 const from = ref<string | null>((route.query.z as string) || last.from || null)
 const to = ref<string | null>((route.query.do as string) || last.to || null)
-const date = ref((route.query.data as string) || initial.date)
+const date = ref((route.query.data as string) || (region.startDate && region.startDate > initial.date ? region.startDate : initial.date))
 const time = ref((route.query.godz as string) || initial.time)
 // opcje: z adresu (link udostępniony), inaczej ostatnio używane w tej przeglądarce
 const options = ref<SearchOptions>(optionsFromQuery(route.query) ?? sanitize(read<Partial<SearchOptions> | null>('kw_search_options', null)))

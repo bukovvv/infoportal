@@ -66,7 +66,7 @@ check('regiony: Kraków, Tarnów, Zakopane w Małopolsce; Katowice, Kielce, Pozn
     && $mp->contains(49.2995, 19.9497) && !$mp->contains(50.2577, 19.0175) && !$mp->contains(50.8746, 20.6300) && !$mp->contains(52.4019, 16.9113));
 Config::useRegion(Config::DEFAULT_REGION);
 check('regiony: Wielkopolska — KW, pliki jak dotąd w storage/', Config::get('agency_id') === 'KW' && Config::path('gtfs_db') === $storage . '/gtfs.sqlite'
-    && Config::get('site_path') === '' && Config::get('admin_enabled') === true && Config::regions() === ['wielkopolska', 'malopolska']);
+    && Config::get('site_path') === '' && Config::get('admin_enabled') === true && Config::regions() === ['wielkopolska', 'malopolska', 'nowyrj27']);
 
 // --- upraszczanie kształtu zachowuje końce i odległości
 $line = [[52.0, 16.0, 0.0], [52.00001, 16.5, 5.0], [52.0, 17.0, 10.0], [52.5, 17.0, 20.0]];

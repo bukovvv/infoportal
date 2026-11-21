@@ -43,6 +43,18 @@ final class Config
             // rozkład KMŁ nie podaje rodzaju pojazdu
             'kw_gtfs_url' => null,
         ],
+        // podgląd nowego rozkładu 2026/27 dla administratora: KW, POLREGIO i PKP Intercity w całej Polsce, bez obcinania
+        // do województwa i bez danych na żywo; API tylko pod /api/admin/nowyrj27/… z sesją panelu (public/api/index.php)
+        'nowyrj27' => [
+            'region_file' => null,
+            'region_inside' => [],
+            'region_name' => 'Polska (RJ 2026/27)',
+            'site_path' => '/nowyrj27',
+            'admin_enabled' => false,
+            'admin_only' => true,
+            'live_enabled' => false,
+            'kw_gtfs_url' => null,
+        ],
     ];
 
     /** @var array<string, mixed>|null */
@@ -140,6 +152,9 @@ final class Config
             'agency_name' => 'Koleje Wielkopolskie',
             'site_path' => '',
             'admin_enabled' => true,
+            // region widoczny tylko dla zalogowanego administratora (bez sitemap), bez odświeżania danych na żywo
+            'admin_only' => false,
+            'live_enabled' => true,
             'rt_min_interval' => 110,
             'site_url' => 'https://zanimwyjdziesz.pl',
             // e-mail na alerty o stanie danych (bin/check-health.php) — ustawiany w local.php na serwerze

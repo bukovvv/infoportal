@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { api } from '@/api/client'
 import { region } from '@/utils/region'
 import { descriptions, isNoindex, setMeta } from '@/utils/seo'
 import StartView from '@/views/StartView.vue'
@@ -33,6 +34,7 @@ const regionOnly: Record<string, keyof typeof region.features> = {
   btk: 'btk',
   notices: 'notices',
   notice: 'notices',
+  map: 'map',
 }
 
 const router = createRouter({
@@ -67,7 +69,17 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+// podgląd tylko dla administratora (/nowyrj27): bez sesji panelu — logowanie w panelu (pełne wczytanie, inny region)
+let adminChecked = false
+router.beforeEach(async (to) => {
+  if (region.adminOnly && !adminChecked) {
+    const session = await api.admin.session().catch(() => null)
+    if (!session?.loggedIn) {
+      location.href = '/admin'
+      return false
+    }
+    adminChecked = true
+  }
   const feature = regionOnly[String(to.name ?? '')] ?? (to.path.startsWith('/admin') ? 'admin' : null)
   if (feature && !region.features[feature]) return { name: 'start' }
 })
@@ -81,7 +93,7 @@ router.afterEach((to, from, failure) => {
     title: name === 'start' ? `${base} | Twój osobisty przewodnik w podróży.` : `${base} | zanimwyjdziesz.pl`,
     description: descriptions[name],
     path: to.path,
-    noindex: isNoindex(name),
+    noindex: isNoindex(name) || !!region.adminOnly,
   })
 })
 

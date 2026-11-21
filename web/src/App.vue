@@ -42,7 +42,7 @@ const isStart = computed(() => route.name === 'start')
 // BTK i komunikaty tylko w regionach, które je mają (Małopolska: Start, Mapa, Odjazdy)
 const nav = computed(() => [
   { to: '/', name: 'start', label: 'Start', icon: 'home' },
-  { to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' },
+  ...(region.features.map ? [{ to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' }] : []),
   { to: '/odjazdy', name: 'board', label: 'Odjazdy', icon: 'departure_board' },
   ...(region.features.btk ? [{ to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' }] : []),
   ...(region.features.notices ? [{ to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length }] : []),

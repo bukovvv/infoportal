@@ -539,7 +539,7 @@ final class PublicApi
             }
             Config::useRegion($region);
             $prefix = (string) Config::get('site_path');
-            if (is_file(Config::path('gtfs_db'))) {
+            if (is_file(Config::path('gtfs_db')) && !Config::get('admin_only')) {
                 $urls[] = [$prefix, null];
                 $urls[] = [$prefix . '/mapa', null];
                 foreach ((new Timetable())->stations() as $station) {
