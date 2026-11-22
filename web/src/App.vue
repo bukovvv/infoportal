@@ -44,6 +44,7 @@ const nav = computed(() => [
   { to: '/', name: 'start', label: 'Start', icon: 'home' },
   ...(region.features.map ? [{ to: '/mapa', name: 'map', label: 'Mapa', icon: 'map' }] : []),
   { to: '/odjazdy', name: 'board', label: 'Odjazdy', icon: 'departure_board' },
+  ...(region.features.compare ? [{ to: '/porownanie', name: 'compare', label: 'Porównanie', icon: 'compare_arrows' }] : []),
   ...(region.features.btk ? [{ to: '/bus-tramwaj-kolej', name: 'btk', label: 'Bus-Tramwaj-Kolej', short: 'Bus-Tram-Kolej', icon: 'commute' }] : []),
   ...(region.features.notices ? [{ to: '/komunikaty', name: 'notices', label: 'Komunikaty', icon: 'campaign', badge: notices.alerts.length }] : []),
 ] as { to: string; name: string; label: string; icon: string; short?: string; badge?: number }[])

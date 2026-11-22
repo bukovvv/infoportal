@@ -33,6 +33,13 @@ $router->post('/push/unwatch', [$push, 'unwatch']);
 $router->post('/push/route-watch', [$push, 'watchRoute']);
 $router->post('/push/route-unwatch', [$push, 'unwatchRoute']);
 
+// porównanie dwóch dni rozkładu — tylko w podglądzie dla administratora (/nowyrj27)
+if (Config::get('admin_only')) {
+    $compare = new KwInfo\Api\CompareApi();
+    $router->get('/compare', [$compare, 'summary']);
+    $router->get('/compare/route', [$compare, 'route']);
+}
+
 // panel administratora (komunikaty) tylko w regionach z komunikatami — dziś Wielkopolska
 if (!Config::get('admin_enabled')) {
     return $router;

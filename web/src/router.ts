@@ -14,6 +14,7 @@ const titles: Record<string, string> = {
   notice: 'Komunikat',
   btk: 'Bus-Tramwaj-Kolej',
   about: 'O nas',
+  compare: 'Porównanie rozkładów',
   admin: 'Panel administratora',
   missing: 'Nie znaleziono strony',
 }
@@ -24,6 +25,7 @@ const shortTitles: Record<string, string> = {
   scheme: 'Schemat',
   board: 'Odjazdy',
   btk: 'Bilet BTK',
+  compare: 'Porównanie',
   admin: 'Panel admina',
   missing: 'Nie znaleziono',
 }
@@ -35,6 +37,7 @@ const regionOnly: Record<string, keyof typeof region.features> = {
   notices: 'notices',
   notice: 'notices',
   map: 'map',
+  compare: 'compare',
 }
 
 const router = createRouter({
@@ -52,6 +55,7 @@ const router = createRouter({
     { path: '/komunikaty/:id', name: 'notice', component: () => import('@/views/NoticeView.vue') },
     { path: '/bus-tramwaj-kolej', name: 'btk', component: () => import('@/views/BtkView.vue') },
     { path: '/o-nas', name: 'about', component: () => import('@/views/AboutView.vue') },
+    { path: '/porownanie', name: 'compare', component: () => import('@/views/CompareView.vue') },
     {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),

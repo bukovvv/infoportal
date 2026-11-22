@@ -80,4 +80,24 @@ export const api = {
     health: () => request<Status & { server: Record<string, unknown> }>('GET', '/admin/health'),
     importTimetable: () => request<{ stats: Record<string, unknown>; log: string[] }>('POST', '/admin/import', {}),
   },
+  /** porównanie dwóch dni rozkładu (tylko podgląd /nowyrj27) */
+  compare: (old: string, next: string) => request<Compare>('GET', `/compare?${q({ old, new: next })}`),
+  compareRoute: (old: string, next: string, from: string, to: string) =>
+    request<CompareRoute>('GET', `/compare/route?${q({ old, new: next, from, to })}`),
 }
+
+export interface CompareSide { trains: number; buses: number; km: number; calls: number; stations: number; speed: number | null }
+export interface CompareStation { id: string; name: string; old: number; new: number; diff: number }
+export interface CompareTrain { number: string; name: string | null; from: string; to: string; dep: string; arr: string }
+export interface Compare {
+  old: string
+  new: string
+  total: { old: CompareSide; new: CompareSide }
+  agencies: { agency: string; old: CompareSide; new: CompareSide }[]
+  hours: { hour: number; old: number; new: number }[]
+  stations: { up: CompareStation[]; down: CompareStation[]; opened: CompareStation[]; closed: CompareStation[] }
+  numbers: { agency: string; kept: number; addedCount: number; removedCount: number; added: CompareTrain[]; removed: CompareTrain[] }[]
+}
+export interface CompareDirect { agency: string; number: string; name: string | null; bus: boolean; dep: string; arr: string; minutes: number }
+export interface CompareRouteSide { date: string; trains: CompareDirect[]; count: number; fastest: number | null; average: number | null }
+export interface CompareRoute { from: { id: string; name: string }; to: { id: string; name: string }; old: CompareRouteSide; new: CompareRouteSide }

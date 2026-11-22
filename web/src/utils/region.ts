@@ -30,7 +30,7 @@ export interface Region {
   /** środek i przybliżenie mapy przed wczytaniem pociągów */
   mapCenter: [number, number]
   /** części serwisu, które są tylko w niektórych regionach */
-  features: { scheme: boolean; btk: boolean; notices: boolean; admin: boolean; map: boolean }
+  features: { scheme: boolean; btk: boolean; notices: boolean; admin: boolean; map: boolean; compare: boolean }
   /** tylko dla zalogowanego administratora (bez przełącznika regionu, noindex); startDate — domyślny dzień wyszukiwania */
   adminOnly?: boolean
   startDate?: string
@@ -54,7 +54,7 @@ export const REGIONS: Record<RegionId, Region> = {
     ticketUrl: 'https://wielkopolskiebilety.pl/',
     partnerTickets: true,
     mapCenter: [17.2, 52.3],
-    features: { scheme: true, btk: true, notices: true, admin: true, map: true },
+    features: { scheme: true, btk: true, notices: true, admin: true, map: true, compare: false },
   },
   malopolska: {
     id: 'malopolska',
@@ -71,7 +71,7 @@ export const REGIONS: Record<RegionId, Region> = {
     ticketUrl: 'https://kolejemalopolskie.com.pl/pl/dla-pasazera/gdzie-kupic-bilet-kolejowy',
     partnerTickets: true,
     mapCenter: [20.1, 49.85],
-    features: { scheme: false, btk: false, notices: false, admin: false, map: true },
+    features: { scheme: false, btk: false, notices: false, admin: false, map: true, compare: false },
   },
   // podgląd nowego rozkładu 2026/27 dla administratora: KW, POLREGIO i PKP Intercity w całej Polsce, bez danych na żywo
   nowyrj27: {
@@ -89,7 +89,7 @@ export const REGIONS: Record<RegionId, Region> = {
     ticketUrl: 'https://wielkopolskiebilety.pl/',
     partnerTickets: true,
     mapCenter: [19.4, 52.1],
-    features: { scheme: false, btk: false, notices: false, admin: false, map: false },
+    features: { scheme: false, btk: false, notices: false, admin: false, map: false, compare: true },
     adminOnly: true,
     startDate: '2026-12-13',
   },
