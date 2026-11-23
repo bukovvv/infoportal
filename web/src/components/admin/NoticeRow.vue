@@ -35,6 +35,7 @@ const busy = computed(() => actions.busy.value === props.notice.id)
       <div class="main">
         <router-link :to="{ name: 'admin-edit', params: { id: notice.id } }" class="title text-title-small">{{ notice.title }}</router-link>
         <div class="meta">
+          <span v-if="notice.source === 'plk'" class="mchip" title="Szkic utworzony automatycznie z utrudnień PKP PLK">z PKP PLK</span>
           <span v-for="l in lines" :key="l.id" class="mchip"><span class="sw" :style="{ background: l.color }" />{{ l.name }}</span>
           <span v-if="stationText" class="mchip">{{ stationText }}</span>
           <span v-if="trainText" class="mchip">{{ trainText }}</span>

@@ -157,6 +157,8 @@ final class Config
             'live_enabled' => true,
             'rt_min_interval' => 110,
             'site_url' => 'https://zanimwyjdziesz.pl',
+            // klucz otwartego API PKP PLK (pdp-api.plk-sa.pl) — utrudnienia jako szkice komunikatów (Notices/PlkDisruptions); w local.php
+            'plk_api_key' => null,
             // e-mail na alerty o stanie danych (bin/check-health.php) — ustawiany w local.php na serwerze
             'alert_email' => null,
             'alert_from' => 'no-reply@abuczek.pl',

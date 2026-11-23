@@ -497,7 +497,41 @@ $saved = $noticeRepo->save(['title' => 'Zmiany na stacji Konin', 'body' => "Wst�
     'trains' => ['77600', '77600', 'x1', 12, 'PR 85724', 'PR85724'], 'stations' => ['30601', '<b>', '30601'], 'lines' => ['kutno', 'Zła Linia', 'pkm2']]);
 check('komunikat: stacje i linie, bez powtórzeń i złych wartości', $saved['trains'] === ['77600', 'PR 85724'] && $saved['stations'] === ['30601'] && $saved['lines'] === ['kutno', 'pkm2']
     && $noticeRepo->find($saved['id'])['body'] === "Wstęp\n- KW 77600 wcześniej o 3 min" && $noticeRepo->published()[0]['id'] === $saved['id']);
-unset($noticeRepo, $saved);
+// utrudnienia PKP PLK → szkice: stacje po id albo nazwie, pociągi z trip_id, poprawki tylko nieruszanych szkiców, koniec utrudnienia
+$plkGtfs = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+$plkGtfs->exec('CREATE TABLE stations (id TEXT, name TEXT, kw INTEGER); CREATE TABLE trips (trip_id TEXT, short_name TEXT, agency TEXT)');
+$plkGtfs->exec("INSERT INTO stations VALUES ('30601', 'Poznań Główny', 1), ('X1', 'Swarzędz', 1), ('X2', 'Wronki Tylko PR', 0)");
+$plkGtfs->exec("INSERT INTO trips VALUES ('PLK_KW_2026_100_LEG1', '77600/1', 'KW'), ('PLK_KW_2026_1000', '77999', 'KW'), ('PLK_PR_2026_200', '85724 Bachus', 'PR')");
+$plkApp = NoticeRepository::connect($noticeDb);
+$plk = new KwInfo\Notices\PlkDisruptions($plkApp, $plkGtfs, $noticeRepo);
+$plkData = static fn (array ...$ds) => ['disruptions' => $ds, 'disruptionTypes' => ['utr_1' => 'Zamknięcie toru'],
+    'stations' => ['30601' => 'Poznań Główny', '555' => 'Swarzędz', '777' => 'Kraków Główny']];
+$d1 = ['disruptionId' => 1, 'disruptionTypeCode' => 'utr_1', 'startStationId' => 30601, 'endStationId' => 555, 'message' => 'Jeden tor.',
+    'affectedRoutes' => [['scheduleId' => 2026, 'orderId' => 200, 'operatingDate' => '2026-11-25', 'stationId' => 30601],
+        ['scheduleId' => 2026, 'orderId' => 100, 'operatingDate' => '2026-11-24', 'stationId' => 555]]];
+$elsewhere = ['disruptionId' => 2, 'startStationId' => 777, 'message' => 'Kraków'];
+$reverse = ['disruptionId' => 4, 'disruptionTypeCode' => 'utr_1', 'startStationId' => 555, 'endStationId' => 30601, 'message' => 'Jeden tor (wstecz).'];
+$delayReason = ['disruptionId' => 5, 'startStationId' => 30601, 'message' => 'utr_42', 'affectedRoutes' => [['scheduleId' => 2026, 'orderId' => 1000]]];
+$first = $plk->sync($plkData($d1, $elsewhere, $reverse, $delayReason));
+$plkNotice = fn () => array_values(array_filter($noticeRepo->all(), static fn ($n) => $n['source'] === 'plk'));
+$n = $plkNotice()[0] ?? [];
+check('PLK: szkic z utrudnienia w regionie, oba kierunki razem, bez samych przyczyn opóźnień, pociągi także z _LEG',
+    $first['relevant'] === 1 && $first['added'] === 1 && count($plkNotice()) === 1 && !$n['active'] && $n['title'] === 'Zamknięcie toru: Poznań Główny – Swarzędz'
+    && $n['stations'] === ['30601', 'X1'] && $n['trains'] === ['77600', 'PR 85724'] && $n['endsAt'] === '2026-11-25T23:59'
+    && $n['body'] === "Jeden tor.\n\n" . KwInfo\Notices\PlkDisruptions::ATTRIBUTION);
+$second = $plk->sync($plkData(['message' => 'Dwa tory.'] + $d1, $elsewhere));
+$noticeRepo->save(['active' => true] + $plkNotice()[0], $plkNotice()[0]['id']);
+$third = $plk->sync($plkData(['message' => 'Trzy tory.'] + $d1, $elsewhere));
+check('PLK: zmiana poprawia nieruszany szkic, opublikowanego nie',
+    $second['updated'] === 1 && $third['updated'] === 0 && str_starts_with($plkNotice()[0]['body'], 'Dwa tory.'));
+$plk->sync($plkData($d1, $elsewhere, ['disruptionId' => 3, 'startStationId' => 30601, 'message' => 'Winda',
+    'affectedRoutes' => [['scheduleId' => 2026, 'orderId' => 1000, 'stationId' => 30601]]]));
+$gone = $plk->sync($plkData($elsewhere));
+$left = $plkNotice();
+check('PLK: koniec utrudnienia — szkic usunięty, opublikowany wygasa', $gone['removed'] === 2 && count($left) === 1
+    && $left[0]['active'] && $left[0]['endsAt'] !== null && $left[0]['endsAt'] <= Clock::now()->format('Y-m-d\TH:i')
+    && $plk->sync($plkData())['removed'] === 0);
+unset($noticeRepo, $saved, $plk, $plkApp, $plkGtfs, $n, $left);
 array_map(static fn (string $f) => @unlink($f), [$noticeDb, $noticeDb . '-wal', $noticeDb . '-shm']);
 AdminLog::use(new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]));
 AdminLog::write('notice-create', 7, ['after' => ['title' => 'Test']]);

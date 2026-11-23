@@ -103,6 +103,8 @@ Bez SSH: zaloguj się w `/admin` i w zakładce „Stan źródeł” użyj „Imp
 
 **Alerty e-mail.** `check-health.php` ocenia stan jak `/api/status`; gdy problem trwa ponad 15 min, wysyła jeden e-mail (przypomnienie co 12 h, ponownie przy pogorszeniu) i drugi, gdy dane wrócą do normy. Odbiorca: `KW_ALERT_EMAIL` w `deploy.env` (trafia do `server/config/local.php` na serwerze); nadawca: `no-reply@abuczek.pl` (`alert_from` w `Config.php`). Próba: `php server/bin/check-health.php --test`, podgląd bez wysyłki: `--dry-run`.
 
+**Utrudnienia PKP PLK.** Klucz z https://pdp-api.plk-sa.pl/ (darmowy, zatwierdzenie 3–5 dni roboczych) dopisać ręcznie do `server/config/local.php` na serwerze: `'plk_api_key' => '…',` (plik zwraca tablicę; `deploy.sh` go nie nadpisuje). Bez klucza pobieranie jest wyłączone. `refresh-live.php` co 10 min (minuta % 10 = 3) zamienia utrudnienia na szkice komunikatów; od razu: `php server/bin/refresh-live.php --plk --region=wielkopolska`.
+
 `refresh-live.php` pobiera pozycje GPS co minutę, a opóźnienia GTFS-RT najwyżej co ok. 2 min (z warunkowym pobieraniem, gdy plik się nie zmienił). `import-gtfs.php` pobiera rozkład tylko wtedy, gdy mkuran.pl opublikował nową wersję, i podmienia bazę dopiero po pozytywnej walidacji.
 
 ## Kontrola po wdrożeniu

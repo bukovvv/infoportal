@@ -299,6 +299,8 @@ export interface Notice {
   active: boolean
   createdAt: string
   updatedAt: string
+  /** 'plk' — szkic z utrudnień PKP PLK (serwer: Notices/PlkDisruptions), inaczej z panelu */
+  source?: string | null
 }
 
 /** Punktualność pociągu z ostatnich dni (GET /punctuality) — opóźnienie na stacji końcowej, na czas = do 5 min. */

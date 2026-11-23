@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 // CRON: co minutę, np. * * * * * php /ścieżka/server/bin/refresh-live.php
 // Odświeża po kolei wszystkie regiony z zaimportowanym rozkładem (feed GTFS-RT pobierany raz — RtFeed).
-// Opcje: --stats (punktualność od razu), --region=malopolska (tylko jeden region)
+// Opcje: --stats (punktualność od razu), --plk (utrudnienia PKP PLK od razu), --region=malopolska (tylko jeden region)
 
 require dirname(__DIR__) . '/bootstrap.php';
 
 use KwInfo\Config;
 use KwInfo\Gtfs\Timetable;
 use KwInfo\Live\LiveBuilder;
+use KwInfo\Notices\PlkDisruptions;
 use KwInfo\Push\JourneyWatcher;
 use KwInfo\Push\RouteWatcher;
 use KwInfo\Stats\PunctualityRecorder;
@@ -26,9 +27,10 @@ if ($lock === false || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
-$options = getopt('', ['stats', 'region:']);
+$options = getopt('', ['stats', 'plk', 'region:']);
 $regions = isset($options['region']) ? [(string) $options['region']] : Config::regions();
 $stats = (int) date('i') % 15 === 7 || isset($options['stats']);
+$plk = (int) date('i') % 10 === 3 || isset($options['plk']);
 $failed = false;
 foreach ($regions as $region) {
     if (!Config::isRegion($region)) {
@@ -73,6 +75,15 @@ foreach ($regions as $region) {
             (new PunctualityRecorder($tt, null, $log))->run();
         } catch (Throwable $exception) {
             $err('punktualności', $exception);
+        }
+    }
+    // utrudnienia PKP PLK → szkice komunikatów — co 10 min, tylko region z komunikatami (Wielkopolska)
+    $plkKey = trim((string) Config::get('plk_api_key'));
+    if ($plk && $plkKey !== '' && $region === Config::DEFAULT_REGION) {
+        try {
+            PlkDisruptions::create($log)->run($plkKey);
+        } catch (Throwable $exception) {
+            $err('utrudnień PKP PLK', $exception);
         }
     }
 }

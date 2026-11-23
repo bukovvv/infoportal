@@ -23,6 +23,7 @@ const sources: { title: string; parts: Part[] }[] = [
   { title: 'GPS Kolei Małopolskich', parts: ['Dane: Koleje Małopolskie sp. z o.o., ', ['otwarte dane GTFS', 'https://gtfs.kolejemalopolskie.com.pl/'], ' (GTFS-Realtime), pobierane co minutę. Łączymy je z rozkładem i opóźnieniami PKP PLK: pozycja pochodzi od przewoźnika, opóźnienie z PKP PLK. To nasze opracowanie, nie oficjalna informacja przewoźnika.'] },
   { title: 'Rodzaj pojazdu', parts: ['Dane: Koleje Wielkopolskie sp. z o.o., rozkład GTFS przewoźnika udostępniany jako informacja publiczna (', ['zasady w BIP', 'https://bip.koleje-wielkopolskie.com.pl/informacje-publiczne/zasady-udostepniania-informacji-publicznych/'], '), pobierany codziennie. Bierzemy z niego tylko rodzaj pojazdu (pociąg elektryczny, szynobus, parowóz) i udogodnienia dla osób na wózkach i rowerzystów. Przewoźnik może podstawić inny pojazd.'] },
   { title: 'Mapa', parts: ['Podkład ', ['OpenFreeMap', 'https://openfreemap.org/'], ' i OpenMapTiles, dane © autorzy ', ['OpenStreetMap', 'https://www.openstreetmap.org/copyright'], '.'] },
+  ...(region.features.notices ? [{ title: 'Komunikaty', parts: ['Piszemy je sami na podstawie informacji przewoźników. Część zaczyna się od utrudnień z ', ['otwartego API PKP PLK', 'https://pdp-api.plk-sa.pl/'], ' (źródło: PKP Polskie Linie Kolejowe S.A.); takie komunikaty sprawdzamy przed publikacją.'] as Part[] }] : []),
   ...(region.features.btk ? [{ title: 'Bilet Bus-Tramwaj-Kolej', parts: ['Ceny i strefy ze stron Kolei Wielkopolskich i POLREGIO.'] as Part[] }] : []),
 ]
 

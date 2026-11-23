@@ -51,7 +51,8 @@ final class NoticeRepository
                 updated_at TEXT NOT NULL,
                 trains TEXT NOT NULL DEFAULT "[]",
                 stations TEXT NOT NULL DEFAULT "[]",
-                lines TEXT NOT NULL DEFAULT "[]"
+                lines TEXT NOT NULL DEFAULT "[]",
+                source TEXT NULL
             )'
         );
         $columns = array_column($pdo->query('PRAGMA table_info(notices)')->fetchAll(), 'name');
@@ -59,6 +60,10 @@ final class NoticeRepository
             if (!in_array($column, $columns, true)) {
                 $pdo->exec('ALTER TABLE notices ADD COLUMN ' . $column . ' TEXT NOT NULL DEFAULT "[]"');
             }
+        }
+        // skąd komunikat: null — panel, "plk" — szkic z utrudnień PKP PLK (PlkDisruptions)
+        if (!in_array('source', $columns, true)) {
+            $pdo->exec('ALTER TABLE notices ADD COLUMN source TEXT NULL');
         }
 
         return $pdo;
@@ -97,7 +102,7 @@ final class NoticeRepository
     }
 
     /** @param array<string, mixed> $data @return array<string, mixed> */
-    public function save(array $data, ?int $id = null): array
+    public function save(array $data, ?int $id = null, ?string $source = null): array
     {
         $values = self::validate($data);
         $now = Clock::now()->format(DATE_ATOM);
@@ -113,14 +118,23 @@ final class NoticeRepository
             )->execute($values);
         } else {
             $values['created_at'] = $now;
+            $values['source'] = $source;
             $this->pdo->prepare(
-                'INSERT INTO notices (title, body, line, severity, starts_at, ends_at, active, trains, stations, lines, created_at, updated_at)
-                 VALUES (:title, :body, :line, :severity, :starts_at, :ends_at, :active, :trains, :stations, :lines, :created_at, :updated_at)'
+                'INSERT INTO notices (title, body, line, severity, starts_at, ends_at, active, trains, stations, lines, created_at, updated_at, source)
+                 VALUES (:title, :body, :line, :severity, :starts_at, :ends_at, :active, :trains, :stations, :lines, :created_at, :updated_at, :source)'
             )->execute($values);
             $id = (int) $this->pdo->lastInsertId();
         }
 
         return $this->find($id);
+    }
+
+    /** Kończy publikację teraz (gdy kończyła się później albo wcale); bez zmiany updated_at. */
+    public function expire(int $id): void
+    {
+        $now = Clock::now()->format('Y-m-d\TH:i');
+        $this->pdo->prepare('UPDATE notices SET ends_at = :now WHERE id = :id AND (ends_at IS NULL OR ends_at = "" OR ends_at > :now)')
+            ->execute(['now' => $now, 'id' => $id]);
     }
 
     public function delete(int $id): bool
@@ -226,6 +240,7 @@ final class NoticeRepository
             'active' => (int) $row['active'] === 1,
             'createdAt' => (string) $row['created_at'],
             'updatedAt' => (string) $row['updated_at'],
+            'source' => $row['source'] ?? null,
         ];
     }
 }
