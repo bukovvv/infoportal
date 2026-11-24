@@ -15,6 +15,10 @@ if (str_starts_with($path, '/api/') || $path === '/api' || $path === '/sitemap.x
 if ($path !== '/' && is_file($public . $path)) {
     return false;
 }
+if ($path !== '/' && is_file($public . rtrim($path, '/') . '/index.html')) {
+    readfile($public . rtrim($path, '/') . '/index.html'); // katalog z index.html (np. /v20/), jak DirectoryIndex
+    return true;
+}
 if (is_file($public . '/index.html')) {
     header('Content-Type: text/html; charset=utf-8');
     readfile($public . '/index.html');
