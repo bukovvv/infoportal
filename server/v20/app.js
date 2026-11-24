@@ -37,7 +37,9 @@ const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
 const hm=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
 const norm=s=>s.toLowerCase().replace(/ł/g,'l').normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
-const krotko=s=>s.replace('Wielkopolskie','Wlkp.').replace('Wielkopolski','Wlkp.').replace('koło Poznania','k. Poznania');
+// polskie nazwy stacji za granicą (w rozkładzie nazwy miejscowe)
+const OBCE={'Vilnius':'Wilno','Praha hlavní nádraží':'Praga Główna','Praha-Holešovice':'Praga-Holešovice','Berlin Hauptbahnhof':'Berlin Główny','Berlin Hbf':'Berlin Główny','Wien Hauptbahnhof':'Wiedeń Główny','Wien Hbf':'Wiedeń Główny','Bratislava hl.st.':'Bratysława Główna','Budapest-Keleti':'Budapeszt Keleti','Kyiv':'Kijów','Kyiv-Pasazhyrskyi':'Kijów Pasażerski','Lviv':'Lwów','Ostrava hl.n.':'Ostrawa Główna','Bohumín':'Bogumin','Kaunas':'Kowno','Hamburg Hbf':'Hamburg Główny','Leipzig Hbf':'Lipsk Główny','Dresden Hbf':'Drezno Główne'};
+const krotko=s=>(OBCE[s]||s).replace('Wielkopolskie','Wlkp.').replace('Wielkopolski','Wlkp.').replace('koło Poznania','k. Poznania');
 const bkrotko=s=>krotko(s).replace('Główny','Gł.');
 const pl=(n,a,b,c)=>n+' '+(n===1?a:(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?b:c);
 const dur=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'');
@@ -139,7 +141,7 @@ function tablica(st,mode,n){const s=SBN.get(st);if(!s)return[];const r=dane(`/st
 function kurs(key){const r=dane('/trips/'+encodeURIComponent(key),30,'k'+key);if(!r)return r;if(r._t)return r._t;
  const L=r.stops.length-1,num=krNum(r.number),l={...linia(r.route,r.agency,r.isBus),nazwa:nazwaP(r.number)};
  const st=r.stops.map((s,k)=>({n:s.station.name,t:mn(k===L?s.arrival||s.departure:s.departure||s.arrival),d:k===L?s.arrivalDelay:s.departureDelay,p:s.platform,tor:s.track,skip:s.skipped,prz:mn(s.arrival),odj:mn(s.departure),dp:s.arrivalDelay,dd:s.departureDelay,km:s.km}));
- return r._t={id:key,l,st,dep:st[0].t,arr:st[L].t,num,nums:numery(r.number),label:AGL(l.ag)+' '+num,raw:r.realtime?.delay||0,odw:r.realtime?.cancelled,km:r.distanceKm,vt:r.vehicleType,shape:r.shape||[],origin:r.origin,destination:r.destination,trimmed:r.trimmed}}
+ return r._t={id:key,l,st,dep:st[0].t,arr:st[L].t,num,nums:numery(r.number),label:AGL(l.ag)+' '+num,raw:r.realtime?.delay||0,odw:r.realtime?.cancelled,km:r.distanceKm,vt:r.vehicleType,shape:r.shape||[],origin:r.origin,destination:r.destination,trimmed:r.trimmed,gps:r.position?.source==='gps'}}
 /* komunikaty z serwisu w kształcie z makiety */
 let KR,KC=[];
 function KOM(){const r=dane('/notices',120);if(r!==KR){KR=r;const dz=s=>dzien(mn(s));
@@ -333,12 +335,14 @@ function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t),c=t.l.color;let h='
 
 /* ---------- widoki ---------- */
 function rWyjazd(){const el=$('#wyjazd'),r=S.routes[0];if(!r){el.innerHTML='';return}
- const cs=polaczenia(r.a,r.b,{min:Math.floor(now()/5)*5,n:6},'w'+r.a+'>'+r.b),c=cs&&cs.find(c=>doOdj(c)-S.walk>-1);
+ const opt=bez=>({min:Math.floor(now()/5)*5,n:6,o:{bezp:S.bezp,minT:S.minT,bez}}),pierwsze=l=>l&&l.find(c=>doOdj(c)-S.walk>-1);
+ const reg=polaczenia(r.a,r.b,opt([...new Set([...S.bez,'IC'])]),'w'+r.a+'>'+r.b),wsz=reg&&!pierwsze(reg)?polaczenia(r.a,r.b,opt(S.bez),'wa'+r.a+'>'+r.b):null;
+ const c=pierwsze(reg)||pierwsze(wsz),cs=reg===undefined||wsz===undefined?undefined:wsz||reg;
  if(!c){el.innerHTML=`<div class="blok"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p><p style="margin-top:6px;font-weight:600">${cs===undefined?'Sprawdzamy najbliższe połączenie…':cs===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p></div>`;return}
  const w=wyjscie(c,dzien(c.dep)),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);anim(el,c.k);
  el.innerHTML=`<div class="blok kol wyj" style="gap:6px" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}" role="button" tabindex="0" aria-label="Szczegóły najbliższego połączenia"><p class="dr maly wiersz rozsun" style="font-weight:600"><span>Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</span><span class="wyj-strz" aria-hidden="true">${ic('strz',16)}</span></p>
   <div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
-  <p class="dr maly">${x.t.l.badge}${pr.p?' · peron '+pr.p:''} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
+  <p class="dr maly">${x.t.l.badge}${pr.p?' · peron '+pr.p:''}${c.legs.some(g=>g.t.l.ag==='IC')?' · osobny bilet':''} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
   ${oPolaczeniu(c).filter(n=>n.sev!=='info').map(kpas).join('')}
   <div class="wiersz wyj-akcje" style="margin-top:8px;gap:8px"><button class="drugi" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}">Szczegóły</button><button class="drugi" data-a="trasa-szukaj" data-i="0">Inne godziny</button></div></div>`}
 function szukaj(){S.q={min:(S.when??now())+S.day*1440,arrive:S.kier==='prz'};S.selAuto=true;rWyniki()}
@@ -420,7 +424,7 @@ function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--p
   m.addLayer({id:'st'+r,type:'circle',source:'stacje',minzoom:z,filter:f,paint:{'circle-radius':['match',['get','r'],3,6.5,2,5,1,4,3],'circle-color':pap,'circle-stroke-color':tu,'circle-stroke-width':r>=2?2.5:1.5}});
   m.addLayer({id:'stn'+r,type:'symbol',source:'stacje',minzoom:zt,filter:f,layout:{'text-field':['get','l'],'text-font':[r>=2?'Noto Sans Bold':'Noto Sans Regular'],'text-size':r>=2?13:11.5,'text-anchor':'left','text-offset':[.8,0],'text-optional':true},paint:{'text-color':r>=2?tu:t2,'text-halo-color':pap,'text-halo-width':1.5}})}}
 function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr=(live?.trains||[]).filter(t=>t.key);
- $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now());
+ $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now())+(R.id==='mal'&&tr.some(t=>t.source==='gps')?'. Pozycja na żywo dzięki Kolejom Małopolskim.':'');
  mapaStart();const m=MAP;if(!m?._ok)return;m.resize();
  if(net&&m._net!==net){m._net=net;m.getSource('siec').setData(net);let a=180,b=-180,c=90,d=-90;
   for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
@@ -985,7 +989,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  </section>
  <section class="plyta kol" style="gap:12px"><div class="fakty"><div><span>czas jazdy</span><b>${dur(t.arr-t.dep)}</b></div>${t.km?`<div><span>odległość</span><b>${t.km} km</b></div>`:''}<div><span>stacje</span><b>${L+1}</b></div>${vt?`<div><span>pojazd</span><b>${POJ[vt.kind]||'pociąg'}</b></div>`:''}</div>
   ${vt?.bikes||vt?.wheelchair?`<div class="wiersz zawin" style="gap:6px">${vt.bikes?'<span class="znak neutr">miejsca na rowery</span>':''}${vt.wheelchair?'<span class="znak neutr">miejsce na wózek</span>':''}</div>`:''}
-  ${t.trimmed?`<p class="dr maly">Pociąg jedzie z ${esc(t.origin)} do ${esc(t.destination)}. Pokazujemy stacje w regionie.</p>`:''}</section>
+  ${t.trimmed?`<p class="dr maly">${kropka(`Pociąg relacji ${krotko(esc(t.origin))} – ${krotko(esc(t.destination))}`)} Pokazujemy stacje w regionie.</p>`:''}${t.gps&&R.id==='mal'?'<p class="dr maly">Pozycja na żywo dzięki Kolejom Małopolskim.</p>':''}</section>
  ${KOM().filter(n=>trwa(n)&&oOdcinku(n,t,0,L)).sort((a,b)=>waga(a)-waga(b)).map(kpas).join('')}
  <section class="plyta">${os}</section>
  <div class="strony">${t.shape.length?`<button class="drugi" data-a="poc-mapa">${ic('mapa',18)}Pokaż na mapie</button>`:''}<button class="drugi" data-a="poc-link" data-n="${t.nums[0]||t.num}">${ic('udost',18)}Udostępnij</button></div>`);
