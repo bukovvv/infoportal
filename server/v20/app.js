@@ -99,7 +99,7 @@ function resolve(v){const q=norm(v);if(!q)return null;return STATIONS.find(s=>no
 const KOL={PKM1:'#3A76C2',PKM2:'#EA1A35',PKM3:'#3F9236',PKM4:'#823D8C',PKM5:'#E8B120',KW:'#E6000A',SKA1:'#00B1EB',SKA2:'#E82F89',SKA3:'#FBBA21',K3:'#E84D0F',K5:'#F29EC4',K7:'#008C36',K22:'#95C11F',K32:'#69BFAC',K33:'#951A80',K52:'#BD1621',K63:'#4464AC',K71:'#28235B'};
 const AGN={KW:'Koleje Wielkopolskie',KML:'Koleje Małopolskie',PR:'POLREGIO',IC:'PKP Intercity'};
 const AGL=a=>a==='KML'?'KMŁ':a;
-const KAT={KW:'Osobowy',KML:'Osobowy',REG:'REGIO',IR:'interREGIO',IC:'InterCity',TLK:'TLK',EIC:'Express InterCity',EIP:'Express InterCity Premium',EC:'EuroCity',EN:'EuroNight'};
+const KAT={KW:'Osobowy',KML:'Osobowy',REG:'REGIO',IR:'interREGIO',IC:'Intercity',TLK:'TLK',EIC:'Express Intercity',EIP:'Express Intercity Premium',EC:'EuroCity',EN:'EuroNight'};
 function linia(route,ag,isBus){ag=ag||R.ag;const sh=route?.short||AGL(ag);if(route?.color)KOL[sh]=route.color;
  const przysp=/(\d| )P$/.test(sh),b=sh.replace(/ ?P$/,''),lin_=/^(PKM|SKA|K)\d/.test(b); // „KW P”, „K7P” — przyspieszony
  const kat=isBus?'Autobus zastępczy':(KAT[b]||(lin_?(ag==='PR'?'REGIO':'Osobowy'):''))+(przysp?' przyspieszony':'');

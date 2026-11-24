@@ -358,7 +358,10 @@ button.kpas:hover{background:var(--plyta-2)}
 .os.pos .n{align-items:flex-start}
 .os.pos .n>span{display:flex;flex-direction:column;min-width:0}
 .os.pos .n .nz{font-weight:500}
-.os.pos .nz-w{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}
+.os.pos .n>span{flex:1}
+.os.pos .nz-w{display:flex;align-items:center;gap:8px;min-width:0}
+.os.pos .nz-w .nz{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.os.pos .nz-w .znak{flex:none}
 .os.pos .nz-w .znak{padding:1px 8px;font-size:12px}
 .os.pos.gl .n .nz{font-weight:700}
 .os.pos .n small{white-space:normal;font-size:12px}
