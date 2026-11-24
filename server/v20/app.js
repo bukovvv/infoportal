@@ -952,14 +952,14 @@ function rSchemat(){const el=$('#v-schemat'),D=schDane(),c=S.sch,dark=ciemny(),c
 const schPanel=el=>{if(el.closest('svg')&&matchMedia('(max-width:919px)').matches)$('#sch-panel').scrollIntoView({behavior:'smooth',block:'start'})};
 
 /* ---------- O nas: poranek pasażera zamiast listy funkcji ---------- */
-function rONas(){const W=R.id==='wlkp',a=bkrotko(R.hub),b=bkrotko(R.cel);
+function rONas(){const W=R.id==='wlkp';
  const kroki=[
-  ['07:10','Sprawdzasz, czy wszystko jedzie',`„Moje trasy” pokazują najbliższe połączenia ${a} – ${b} razem z opóźnieniami.`,'moje','Moje trasy'],
-  ['07:14','Telefon daje znać',`Gdy pociąg się spóźnia albo jest odwołany, dostajesz powiadomienie. Nie musisz sprawdzać co chwilę.`,'',''],
-  ['07:22','Wychodzisz z domu','Podajesz, ile idziesz na stację, a my pokazujemy, o której wyjść. Nie tylko, o której odjeżdża pociąg.','szukaj','Wyszukiwarka'],
-  ['07:27','Jesteś na stacji','Tablica pokazuje peron, tor i opóźnienie każdego pociągu. Utrudnienia widać od razu przy pociągu.','stacje','Tablica'],
-  ['07:30','Jedziesz','Na mapie widzisz, gdzie jest pociąg i ile zostało do następnej stacji.','mapa','Mapa'],
-  ['08:19','Jesteś na miejscu','Jutro rano zrobisz to samo, tylko szybciej.','','']];
+  ['Zanim wyjdziesz',`Sprawdzasz swoją zapisaną trasę ${R.cel} – ${R.hub}. Widzisz najbliższe połączenia, godziny odjazdów oraz aktualną sytuację na kolei. Wszystko, co istotne, masz w jednym miejscu.`,'moje','Moje trasy'],
+  ['Nic Cię nie zaskoczy','Twój pociąg ma opóźnienie? Został odwołany? Nie musisz samodzielnie szukać informacji. Otrzymujesz powiadomienie o zmianach dotyczących Twojej podróży.','',''],
+  ['Wiesz, kiedy ruszyć','Nie musisz samodzielnie obliczać, ile czasu potrzebujesz na dotarcie na stację. Wyszukiwarka pomoże Ci zaplanować wyjście z domu, uwzględniając czas dojścia do pociągu.','szukaj','Wyszukiwarka'],
+  ['Na stacji wszystko jest jasne','Sprawdzasz, z którego peronu i toru odjedzie Twój pociąg. Aktualne godziny, opóźnienia i informacje o utrudnieniach są dostępne na tablicy odjazdów.','stacje','Tablica odjazdów'],
+  ['Podróżujesz na bieżąco','Pociąg jest już w drodze. Możesz sprawdzić jego położenie na mapie, prześledzić przebieg trasy i zobaczyć, jakie stacje znajdują się przed Tobą.','mapa','Mapa'],
+  [`Cel podróży: ${R.hub}`,'Docierasz na miejsce. Bez niepotrzebnego stresu, bez szukania informacji w kilku różnych serwisach.','','']];
  const zr=[
   ['Rozkład jazdy',`Dane GTFS <a href="https://mkuran.pl/gtfs/" target="_blank" rel="noopener">Mikołaja Kuranowskiego</a> na podstawie danych PKP Polskich Linii Kolejowych, aktualizowane codziennie w nocy. Obejmują ${W?'Koleje Wielkopolskie':'Koleje Małopolskie'} oraz pociągi POLREGIO i PKP Intercity na stacjach w województwie.`],
   ['Opóźnienia','Z systemu PKP PLK, odświeżane co około 2 minuty. Gdy źródło nie odpowiada, pokazujemy sam rozkład.'],
@@ -974,10 +974,11 @@ function rONas(){const W=R.id==='wlkp',a=bkrotko(R.hub),b=bkrotko(R.cel);
   ['Nigdzie',['konta i hasła','reklamy','statystyki odwiedzin','ciasteczka'],'Ciasteczko zapisuje tylko panel administratora. Lokalizacji używamy tylko po kliknięciu „Najbliższa stacja”, a najbliższą stację wylicza Twoja przeglądarka.']];
  $('#v-onas').innerHTML=`
  <section class="onas-hero kol" style="gap:14px"><p class="dr maly" style="font-weight:600">O nas</p>
-  <h1>Zanim wyjdziesz z domu, już wiesz, jak pojedziesz.</h1>
-  <p class="dr" style="font-size:17px;max-width:52ch">zanimwyjdziesz.pl to nieoficjalny serwis dla pasażerów kolei w Wielkopolsce i Małopolsce. Bez reklam i bez konta.</p></section>
- <section class="onas-sek"><div class="kol" style="gap:6px"><h2>Jeden poranek</h2><p class="dr">Tak wygląda zwykły dojazd ${a} – ${b} z zanimwyjdziesz.pl.</p></div>
-  <div class="plyta dzien">${kroki.map(([t,h,o,v,l])=>`<div class="wpis"><time>${t}</time><div class="sz"><i></i></div><div class="kol" style="gap:2px"><b>${h}</b><p>${o}</p>${v?`<a class="tekstowy" style="padding:0;height:36px;align-self:flex-start" href="#${v}">${l} ${ic('strz',16)}</a>`:''}</div></div>`).join('')}</div></section>
+  <h1>zanimwyjdziesz.pl</h1>
+  <p class="dr" style="font-size:19px;max-width:52ch">Połączenia, opóźnienia i aktualne informacje dla Pasażerów.</p></section>
+ <section class="onas-sek"><div class="kol" style="gap:6px"><h2>Twoja podróż pod kontrolą</h2><p class="dr">Poranna podróż do pracy lub szkoły nie musi oznaczać ciągłego sprawdzania rozkładu i zastanawiania się, czy pociąg pojedzie zgodnie z planem.</p></div>
+  <div class="plyta dzien">${kroki.map(([h,o,v,l])=>`<div class="wpis bez-czasu"><div class="sz"><i></i></div><div class="kol" style="gap:2px"><b>${h}</b><p>${o}</p>${v?`<a class="tekstowy" style="padding:0;height:36px;align-self:flex-start" href="#${v}">${l} ${ic('strz',16)}</a>`:''}</div></div>`).join('')}</div></section>
+ <p class="onas-haslo">zanimwyjdziesz.pl – Twoja podróż koleją!</p>
  <section class="onas-sek"><div class="kol" style="gap:6px"><h2>Co wiemy o Tobie</h2><p class="dr">Najmniej, jak się da.</p></div>
   <div class="kol" style="gap:12px"><div class="pryw">${pryw.map(([h,l,o],i)=>`<section class="plyta kol" style="gap:10px"><b>${h}</b><ul class="${i===2?'nie':''}">${l.map(x=>`<li>${x}</li>`).join('')}</ul><p class="dr maly">${o}</p></section>`).join('')}</div>
   <p class="dr maly" style="max-width:62ch">Podkład mapy pobieramy z OpenFreeMap, więc ta usługa widzi Twój adres IP. Hosting może zapisywać standardowe logi serwera.</p></div></section>
