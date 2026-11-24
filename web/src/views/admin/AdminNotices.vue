@@ -104,7 +104,6 @@ function clearFilters() {
         <h1 class="text-headline-medium font-weight-bold">Komunikaty</h1>
         <p class="muted">{{ admin.notices ? summary : 'Wczytywanie…' }}</p>
       </div>
-      <v-btn variant="flat" color="secondary-container" prepend-icon="content_paste" :to="{ name: 'admin-paste' }">Wklej od przewoźnika</v-btn>
       <v-btn prepend-icon="add" :to="{ name: 'admin-new' }">Nowy komunikat</v-btn>
     </header>
 
@@ -121,9 +120,9 @@ function clearFilters() {
         hide-details
         clearable
       />
-      <v-select v-model="severity" :items="SEVERITY_OPTIONS" item-title="title" item-value="value" label="Rodzaj" density="comfortable" variant="outlined" hide-details clearable class="pick" />
-      <v-autocomplete v-model="line" :items="lineItems" label="Linia" density="comfortable" variant="outlined" hide-details clearable class="pick" />
-      <v-select v-model="sort" :items="sortItems" label="Kolejność" density="comfortable" variant="outlined" hide-details class="pick" />
+      <v-select v-model="severity" :items="SEVERITY_OPTIONS" item-title="title" item-value="value" label="Rodzaj" density="comfortable" hide-details clearable class="pick" />
+      <v-autocomplete v-model="line" :items="lineItems" label="Linia" density="comfortable" hide-details clearable class="pick" />
+      <v-select v-model="sort" :items="sortItems" label="Kolejność" density="comfortable" hide-details class="pick" />
     </div>
 
     <div class="pills" role="group" aria-label="Stan komunikatu">

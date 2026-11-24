@@ -115,36 +115,12 @@ export function reach(form: Pick<NoticeForm, 'stations' | 'lines' | 'trains'>, s
   }
 }
 
-// --- „Do zrobienia” na pulpicie
-
-export interface Todo {
-  kind: 'expiring' | 'draft'
-  notice: Notice
-  text: string
-}
-
-/** Widoczne komunikaty, które wygasają w ciągu 6 h, i szkice nieruszane od 3 dni. */
-export function todos(list: Notice[], now = Date.now()): Todo[] {
-  const out: Todo[] = []
-  for (const n of list) {
-    const state = noticeState(n, now)
-    const end = stampMs(n.endsAt)
-    if (state === 'live' && end !== null && end - now < 6 * 3_600_000) out.push({ kind: 'expiring', notice: n, text: relativeText(n, now) })
-    if (state === 'draft' && now - new Date(n.updatedAt).getTime() > 3 * DAY) {
-      out.push({ kind: 'draft', notice: n, text: `szkic czeka od ${Math.floor((now - new Date(n.updatedAt).getTime()) / DAY)} dni` })
-    }
-  }
-  return out
-}
-
 // --- robocze wersje formularza (w przeglądarce; nie giną przy odświeżeniu ani wygaśnięciu sesji)
 
 export interface EditorDraft {
   form: NoticeForm
   step: number
   savedAt: string
-  /** skąd treść: wklejka od przewoźnika — edytor pokazuje wtedy, że wszystko rozpoznano automatycznie */
-  origin?: 'paste'
 }
 
 const DRAFT_KEY = 'kw_admin_draft'

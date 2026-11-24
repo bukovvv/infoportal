@@ -26,3 +26,20 @@
 .tz-menu-t b { font-size: 15px; }
 .tz-menu-t small { font-size: 12px; color: var(--tusz-2); }
 .tz-menu :focus-visible { outline: 2px solid var(--tusz); outline-offset: 2px; }
+
+/* panel admina w stylu 2.0 (AdminLayout: v-theme-provider „tarcza”): krój, płyty bez cieni, pola wypełnione */
+.tarcza-panel, .tarcza-panel [class*='text-'], .tarcza-panel .v-btn, .tarcza-panel .v-field, .tarcza-panel input, .tarcza-panel textarea {
+  font-family: 'Inter Tarcza', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+.tarcza-panel .text-headline-small, .tarcza-panel .text-headline-medium, .tarcza-panel .text-title-large { font-weight: 700; letter-spacing: -0.02em; }
+.tarcza-panel h1.text-headline-medium { font-size: 30px; line-height: 1.15; letter-spacing: -0.03em; }
+.tarcza-panel .v-btn { letter-spacing: 0; font-weight: 600; }
+.tarcza-panel .v-btn--variant-outlined { border-color: var(--kreska); }
+.tarcza-panel .muted { color: var(--tusz-2); }
+.tarcza-panel .card { border-radius: 28px; background: var(--plyta); box-shadow: none; }
+.tarcza-panel .v-card { border-radius: 28px; }
+.tarcza-panel .v-field--variant-solo-filled { background: var(--plyta); border-radius: 16px; box-shadow: none; }
+.tarcza-panel .card .v-field--variant-solo-filled, .tarcza-panel .v-card .v-field--variant-solo-filled { background: var(--papier); }
+.tarcza-panel .v-field--variant-solo-filled.v-field--focused { box-shadow: inset 0 0 0 2px var(--tusz); }
+.tarcza-panel .v-chip.v-chip--variant-outlined { border-color: var(--kreska); }
+.tarcza-panel .v-list { background: transparent; }

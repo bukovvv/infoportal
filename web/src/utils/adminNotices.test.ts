@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Notice } from '@/api/types'
-import { clearDraft, emptyForm, extendedEnd, noticeState, periodText, reach, readDraft, relativeText, todos, writeDraft } from './adminNotices'
+import { clearDraft, emptyForm, extendedEnd, noticeState, periodText, reach, readDraft, relativeText, writeDraft } from './adminNotices'
 
 const now = new Date(2026, 9, 25, 19, 0).getTime()
 const notice = (over: Partial<Notice> = {}): Notice => ({
@@ -29,11 +29,6 @@ describe('stan komunikatu', () => {
   it('przedłużenie liczy od późniejszego z: końca i teraz', () => {
     expect(extendedEnd(notice({ endsAt: '2026-10-25T21:00' }), 2, now)).toBe('2026-10-25T23:00')
     expect(extendedEnd(notice({ endsAt: '2026-10-24T10:00' }), 24, now)).toBe('2026-10-26T19:00')
-  })
-
-  it('do zrobienia: wygasające i porzucone szkice', () => {
-    const list = [notice({ id: 1, endsAt: '2026-10-25T21:00' }), notice({ id: 2, endsAt: '2026-11-25T21:00' }), notice({ id: 3, active: false })]
-    expect(todos(list, now).map((t) => [t.kind, t.notice.id])).toEqual([['expiring', 1], ['draft', 3]])
   })
 })
 

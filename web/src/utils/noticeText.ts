@@ -2,7 +2,7 @@ import type { Severity, StationRef } from '@/api/types'
 import { normalize, splitNumbers } from './format'
 import { NOTICE_LINES } from './notices'
 
-// Rozbiór tekstu komunikatu (panel: „Wklej od przewoźnika” i podpowiedzi w edytorze) — tylko tekst, nic nie trafia do HTML.
+// Rozbiór tekstu komunikatu (panel: podpowiedzi w edytorze) — tylko tekst, nic nie trafia do HTML.
 
 /** Węzeł, przez który jeździ prawie wszystko — w tekście przewoźnika zwykle tylko cel pociągów, więc nie zaznaczamy go z góry. */
 export const HUB_STATION = 'Poznań Główny'
@@ -267,7 +267,7 @@ export function suggestLines(stationNames: string[]): string[] {
     .map((l) => l.id)
 }
 
-// --- całość: „Wklej od przewoźnika”
+// --- całość: podpowiedzi „W treści jest jeszcze” w edytorze
 
 export type MarkKind = 'date' | 'train' | 'station' | 'skip'
 export interface Mark { start: number; end: number; kind: MarkKind }

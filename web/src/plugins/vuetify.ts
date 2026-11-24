@@ -184,6 +184,47 @@ if (region.id === 'malopolska') {
   Object.assign(dark.colors!, KML_DARK)
 }
 
+/**
+ * Wersja 2.0 („Tarcza”, server/v20) dla panelu admina: chłodne szarości, płyty bez obrysów, czerwień tylko na głównym
+ * przycisku. Panel włącza je przez v-theme-provider (AdminLayout), reszta serwisu bez zmian.
+ */
+const tarcza: ThemeDefinition = {
+  dark: false,
+  colors: {
+    background: '#FBFBFC', 'on-background': '#14171C', surface: '#FBFBFC', 'on-surface': '#14171C',
+    'surface-bright': '#FFFFFF', 'surface-light': '#E2E6EB', 'surface-variant': '#E2E6EB', 'on-surface-variant': '#5A626E',
+    'surface-container-lowest': '#FFFFFF', 'surface-container-low': '#EFF1F4', 'surface-container': '#EFF1F4',
+    'surface-container-high': '#E2E6EB', 'surface-container-highest': '#E2E6EB',
+    primary: '#D2232A', 'on-primary': '#FFFFFF', 'primary-container': '#FBE3E4', 'on-primary-container': '#7A1015',
+    secondary: '#5A626E', 'on-secondary': '#FFFFFF', 'secondary-container': '#E2E6EB', 'on-secondary-container': '#14171C',
+    tertiary: '#9A5200', 'tertiary-container': '#FBEBCF', 'on-tertiary-container': '#5C3100',
+    error: '#B81D24', 'error-container': '#FBE3E4', 'on-error-container': '#7A1015',
+    outline: '#8A929E', 'outline-variant': '#D5DAE1', 'inverse-surface': '#14171C', 'on-inverse-surface': '#FBFBFC', 'inverse-primary': '#FF8084',
+    success: '#0E7A55', 'success-container': '#DDF1E8', 'on-success-container': '#0B4D37',
+    warning: '#9A5200', 'warning-container': '#FBEBCF', 'on-warning-container': '#5C3100',
+    info: '#2A55B0', 'info-container': '#DCE3F7', 'on-info-container': '#0F1F45',
+    band: '#14171C', 'on-band': '#FBFBFC', 'band-accent': '#FBFBFC', 'on-band-accent': '#14171C', 'brand-red': '#D2232A',
+  },
+}
+const tarczaDark: ThemeDefinition = {
+  dark: true,
+  colors: {
+    background: '#0E1013', 'on-background': '#F1F3F6', surface: '#0E1013', 'on-surface': '#F1F3F6',
+    'surface-bright': '#343943', 'surface-light': '#252930', 'surface-variant': '#252930', 'on-surface-variant': '#A3ABB7',
+    'surface-container-lowest': '#07080A', 'surface-container-low': '#181B20', 'surface-container': '#181B20',
+    'surface-container-high': '#252930', 'surface-container-highest': '#252930',
+    primary: '#E5484D', 'on-primary': '#FFFFFF', 'primary-container': '#3D1416', 'on-primary-container': '#FFD9DA',
+    secondary: '#A3ABB7', 'on-secondary': '#14171C', 'secondary-container': '#252930', 'on-secondary-container': '#F1F3F6',
+    tertiary: '#F2B95C', 'tertiary-container': '#3A2A0C', 'on-tertiary-container': '#FBE3B8',
+    error: '#FF8084', 'error-container': '#3D1416', 'on-error-container': '#FFD9DA',
+    outline: '#6B7380', 'outline-variant': '#343943', 'inverse-surface': '#F1F3F6', 'on-inverse-surface': '#14171C', 'inverse-primary': '#D2232A',
+    success: '#5FD0A0', 'success-container': '#12352A', 'on-success-container': '#B8F0D6',
+    warning: '#F2B95C', 'warning-container': '#3A2A0C', 'on-warning-container': '#FBE3B8',
+    info: '#B3C6F2', 'info-container': '#1F2B45', 'on-info-container': '#DCE3F7',
+    band: '#07080A', 'on-band': '#F1F3F6', 'band-accent': '#F1F3F6', 'on-band-accent': '#07080A', 'brand-red': '#D2232A',
+  },
+}
+
 const aliases: Record<string, string> = {
   collapse: 'keyboard_arrow_up', complete: 'check', cancel: 'cancel', close: 'close', delete: 'cancel', clear: 'close',
   success: 'check_circle', info: 'info', warning: 'warning', error: 'error', prev: 'chevron_left', next: 'chevron_right',
@@ -199,7 +240,7 @@ const aliases: Record<string, string> = {
 const vuetify = createVuetify({
   blueprint: md3,
   locale: { locale: 'pl', messages: { pl } },
-  theme: { defaultTheme: 'system', themes: { light, dark } },
+  theme: { defaultTheme: 'system', themes: { light, dark, tarcza, tarczaDark } },
   icons: {
     defaultSet: 'ms',
     aliases,

@@ -5,13 +5,11 @@ import type { Notice, Severity } from '@/api/types'
 import StampField from '@/components/admin/StampField.vue'
 import NoticeBody from '@/components/NoticeBody.vue'
 import NoticeItem from '@/components/NoticeItem.vue'
-import TimeField from '@/components/TimeField.vue'
 import { useAdmin } from '@/stores/admin'
 import { useStations } from '@/stores/data'
 import { useUi } from '@/stores/ui'
 import { clearDraft, emptyForm, readDraft, reach, SEVERITY_OPTIONS, stampMs, toForm, writeDraft, type NoticeForm } from '@/utils/adminNotices'
 import { clock, plural } from '@/utils/format'
-import { buildNotice, requiredFields, templateKinds, type TemplateInput } from '@/utils/noticeTemplates'
 import { analyzeNotice, findPeriod, HUB_STATION, publishBefore, publishUntil, suggestLines, type NoticeAnalysis } from '@/utils/noticeText'
 import { NOTICE_LINES, lineTitle, noticeIcon, noticeLabel, noticeTrain, noticeTrainInput, parseNoticeTrain, scopeText } from '@/utils/notices'
 import { checkTrains, trainChecks } from './trainCheck'
@@ -29,8 +27,6 @@ const form = reactive<NoticeForm>(emptyForm())
 /** stan formularza po wczytaniu (bez zmian użytkownika) — do wykrycia, czy jest co zapisywać w wersji roboczej */
 const base = ref(JSON.stringify(emptyForm()))
 const step = ref(1)
-const start = ref<'blank' | 'tpl'>('blank')
-const fromPaste = ref(false)
 const restoredAt = ref<string | null>(null)
 const draftSavedAt = ref<string | null>(null)
 const ready = ref(false)
@@ -56,10 +52,8 @@ function load() {
   if (d && !dup && (!original.value || new Date(d.savedAt).getTime() > new Date(original.value.updatedAt).getTime())) {
     Object.assign(form, d.form)
     step.value = d.step
-    fromPaste.value = d.origin === 'paste'
     lineManual.value = !lineIsAutoText(form)
-    if (d.origin === 'paste' && !editingId.value && JSON.stringify(d.form) !== base.value) base.value = '' // świeża wklejka — od razu „niezapisane”
-    if (d.origin !== 'paste') restoredAt.value = d.savedAt
+    restoredAt.value = d.savedAt
     draftSavedAt.value = d.savedAt
   }
   if (dup) ui.notify('Skopiowano komunikat. Sprawdź treść i ustaw nowe daty.')
@@ -93,7 +87,7 @@ watch([() => JSON.stringify(form), step], () => {
     if (leaving) return
     if (!dirty.value) return clearDraft(draftKey.value)
     const savedAt = new Date().toISOString()
-    writeDraft(draftKey.value, { form: JSON.parse(JSON.stringify(form)), step: step.value, savedAt, origin: fromPaste.value ? 'paste' : undefined })
+    writeDraft(draftKey.value, { form: JSON.parse(JSON.stringify(form)), step: step.value, savedAt })
     draftSavedAt.value = savedAt
   }, 600)
 })
@@ -111,24 +105,7 @@ function go(n: number) {
   void nextTick(() => stepTop.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }))
 }
 
-// --- krok 1: szablon i treść
-const tpl = reactive<TemplateInput>({ kind: 'bus', train: '', delay: null, origin: '', departure: '', destination: '', arrival: '', newDestination: '', station: '', eventTime: '', platform: '', track: '', reason: 'z przyczyn technicznych', replacement: false })
-const tplError = ref<string | null>(null)
-const shows = (field: keyof TemplateInput) => requiredFields(tpl.kind).includes(field) || (field === 'track' && tpl.kind === 'platform') || (field === 'reason' && tpl.kind !== 'platform')
-function generate() {
-  try {
-    const out = buildNotice(tpl)
-    Object.assign(form, { title: out.title, body: out.body, severity: out.severity, trains: [...new Set([...form.trains, ...out.trains])] })
-    if (out.line && !lineManual.value) {
-      form.line = out.line
-      lineManual.value = true
-    }
-    tplError.value = null
-    ui.notify('Wstawiono tytuł i treść z szablonu.')
-  } catch (e) {
-    tplError.value = (e as Error).message
-  }
-}
+// --- krok 1: treść
 const bodyField = ref<{ $el: HTMLElement } | null>(null)
 /** Wstawia tekst w miejscu kursora w treści (przyciski „Nowy akapit”, „Punkt listy”). */
 function insert(text: string) {
@@ -324,49 +301,6 @@ const setSeverity = (s: Severity) => { form.severity = s }
         <section class="card form" :aria-label="STEPS[step - 1].label">
           <!-- krok 1 -->
           <template v-if="step === 1">
-            <div v-if="fromPaste" class="note info">
-              <v-icon icon="content_paste" />
-              <div class="grow"><div class="text-title-small">Treść wklejona od przewoźnika</div><div class="text-body-small">Rozpoznane daty, pociągi i stacje są już wpisane w krokach 2 i 3 — sprawdź je.</div></div>
-              <v-btn variant="outlined" size="small" :to="{ name: 'admin-paste' }">Wróć do wklejki</v-btn>
-            </div>
-            <div v-else-if="!editingId" class="field">
-              <span class="flabel">Zacznij od</span>
-              <div class="starts">
-                <button type="button" class="start" :aria-pressed="start === 'blank'" @click="start = 'blank'"><span class="t">Pusty</span><span class="d">Piszesz od zera.</span></button>
-                <button type="button" class="start" :aria-pressed="start === 'tpl'" @click="start = 'tpl'"><span class="t">Szablon</span><span class="d">Opóźnienie, odwołanie, autobusy, peron…</span></button>
-                <router-link class="start" :to="{ name: 'admin-paste' }"><span class="t">Tekst przewoźnika</span><span class="d">Wklej aktualność — panel rozpozna resztę.</span></router-link>
-              </div>
-            </div>
-
-            <div v-if="start === 'tpl' && !fromPaste && !editingId" class="sub">
-              <div class="pills" role="group" aria-label="Rodzaj szablonu">
-                <button v-for="k in templateKinds" :key="k.value" type="button" class="pill" :aria-pressed="tpl.kind === k.value" @click="tpl.kind = k.value; tplError = null">{{ k.title }}</button>
-              </div>
-              <div class="grid2">
-                <v-text-field v-model="tpl.train" label="Numer pociągu" inputmode="numeric" density="comfortable" hide-details />
-                <v-text-field v-if="shows('delay')" v-model.number="tpl.delay" type="number" min="1" max="1440" label="Opóźnienie" suffix="min" density="comfortable" hide-details />
-                <template v-if="shows('origin')">
-                  <v-text-field v-model="tpl.origin" label="Stacja początkowa" density="comfortable" hide-details />
-                  <TimeField v-model="tpl.departure!" label="Odjazd" density="comfortable" />
-                  <v-text-field v-model="tpl.destination" label="Planowa stacja końcowa" density="comfortable" hide-details />
-                  <TimeField v-model="tpl.arrival!" label="Planowy przyjazd" density="comfortable" />
-                </template>
-                <v-text-field v-if="shows('newDestination')" v-model="tpl.newDestination" label="Nowa stacja końcowa" density="comfortable" class="span2" hide-details />
-                <template v-if="shows('station')">
-                  <v-text-field v-model="tpl.station" label="Stacja" density="comfortable" hide-details />
-                  <TimeField v-model="tpl.eventTime!" label="Godzina odjazdu" density="comfortable" />
-                  <v-text-field v-model="tpl.platform" label="Nowy peron" density="comfortable" hide-details />
-                  <v-text-field v-model="tpl.track" label="Nowy tor" density="comfortable" hide-details />
-                </template>
-                <v-text-field v-if="shows('reason')" v-model="tpl.reason" label="Przyczyna" density="comfortable" class="span2" hide-details />
-                <v-checkbox v-if="tpl.kind === 'delay' || tpl.kind === 'cancellation'" v-model="tpl.replacement" label="Podstawiono skład lub transport zastępczy" density="compact" class="span2" hide-details />
-              </div>
-              <div class="d-flex flex-wrap align-center ga-3">
-                <v-btn variant="flat" color="secondary-container" prepend-icon="wand_stars" @click="generate">Wstaw tytuł i treść</v-btn>
-                <span v-if="tplError" class="text-body-small text-error" role="alert">{{ tplError }}</span>
-              </div>
-            </div>
-
             <v-text-field v-model="form.title" label="Tytuł" counter="160" maxlength="160" class="title-field" />
             <div class="field">
               <div class="toolbar">

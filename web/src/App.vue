@@ -37,7 +37,8 @@ watch(() => theme.current.value.colors.band, (color) => {
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', String(color)))
 }, { immediate: true })
 
-const isAdmin = computed(() => route.path.startsWith('/admin'))
+// przed rozwiązaniem trasy (pierwsze wczytanie) adres z paska — bez mignięcia paska i menu portalu w panelu
+const isAdmin = computed(() => (route.matched.length ? route.path : location.pathname).startsWith('/admin'))
 const isStart = computed(() => route.name === 'start')
 // BTK i komunikaty tylko w regionach, które je mają (Małopolska: Start, Mapa, Odjazdy)
 const nav = computed(() => [
