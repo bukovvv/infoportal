@@ -487,6 +487,36 @@ html.zablokuj,html.zablokuj body{overflow:hidden}
   }
   @supports not selector(::-webkit-scrollbar){*{scrollbar-width:thin;scrollbar-color:var(--sb) transparent}}
 }
+/* ---------- telefon ---------- */
+html{scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))} /* nagłówki nie chowają się pod górnym paskiem */
+.wyj{cursor:pointer}
+.wyj-strz{display:inline-flex;opacity:.7}
+.kafle{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr))}
+.fakty{grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}
+.dni{display:flex;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.dni::-webkit-scrollbar{display:none}
+.dni .chip{flex:none}
+@media (max-width:919px){
+  .wyj-akcje{display:none}
+  .wyj .wielkie{font-size:25px}
+  .wyj .tarcza{width:62px;height:62px}
+  .wyj .tarcza span{font-size:21px}
+  .fakty{grid-template-columns:1fr 1fr} /* 4 fakty karty pociągu: 2 × 2 zamiast 3 + 1 */
+  .kafel{padding:8px;min-width:0}
+  .kafel b{font-size:16px;white-space:nowrap}
+  .kafel span{white-space:nowrap}
+  .rzad{padding:8px 6px;grid-template-columns:54px minmax(0,1fr) auto}
+  .rzad .g{font-size:17px}
+  .rzad .pe b{font-size:16px}
+  /* mapa: cały ekran między paskami, licznik i przyciski na karcie nad mapą */
+  #v-mapa{position:fixed;inset:calc(64px + env(safe-area-inset-top,0px)) 0 calc(74px + env(safe-area-inset-bottom,0px)) 0;z-index:5;gap:0}
+  #v-mapa>.wiersz{position:absolute;z-index:2;top:10px;left:10px;right:10px;gap:6px 10px;padding:8px 8px 8px 14px;background:var(--papier);border-radius:var(--r-l);box-shadow:0 8px 24px rgba(0,0,0,.16)}
+  #v-mapa h1{display:none}
+  #v-mapa #mapa-opis{font-size:13px}
+  #v-mapa>.wiersz .drugi{height:40px;padding:0 12px}
+  #v-mapa>p{display:none}
+  #mapa-okno{height:100%;min-height:0;border-radius:0}
+}
 .moje-gl,.kom-gl{display:flex;flex-direction:column;gap:12px}
 @media (min-width:920px){
   #mapa-okno{height:calc(100dvh - 200px)}

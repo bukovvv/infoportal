@@ -303,7 +303,7 @@ function polKarta(c,sel,day=0){const x=c.legs[0],pr=peron(x.t,x.i);
  const icl=c.legs.some(l=>l.t.l.ag==='IC'),km=oPolaczeniu(c,day).filter(n=>n.sev!=='info');
  return `<button class="pol" data-a="sel" data-k="${cKey(c)}" data-d="${day}" aria-current="${sel}">
  <span class="g">${godziny(c,day)}${stan(c,day)}</span>
- <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span>${cenaPol(c)?`<span>${cenaPol(c)}</span>`:''}${pr.p?`<span>peron ${pr.p}</span>`:''}${icl?'<span class="znak neutr">osobny bilet</span>':''}</span>
+ <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span>${cenaPol(c)?`<span>${cenaPol(c)}</span>`:''}${pr.p?`<span>peron ${pr.p}</span>`:''}${icl?'<span>osobny bilet</span>':''}</span>
  ${km.length?`<span class="kpas">${kzn(km[0],1)}<b>${km[0].tyt}</b>${km.length>1?`<em>i ${pl(km.length-1,'kolejny','kolejne','kolejnych')}</em>`:''}</span>`:''}</button>`}
 const kropka=s=>/\.$/.test(s)?s:s+'.'; // „Ostrów Wlkp.” bez drugiej kropki
 function odcinekKursu(g){const k=kurs(g.t.id);if(!k)return null;const A=g.t.st[0].n,B=g.t.st.at(-1).n,i=k.st.findIndex(s=>s.n===A),j=k.st.findIndex((s,x)=>x>i&&s.n===B);return i<0||j<0?null:{k,i,j}}
@@ -333,11 +333,11 @@ function rWyjazd(){const el=$('#wyjazd'),r=S.routes[0];if(!r){el.innerHTML='';re
  const cs=polaczenia(r.a,r.b,{min:Math.floor(now()/5)*5,n:6},'w'+r.a+'>'+r.b),c=cs&&cs.find(c=>doOdj(c)-S.walk>-1);
  if(!c){el.innerHTML=`<div class="blok"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p><p style="margin-top:6px;font-weight:600">${cs===undefined?'Sprawdzamy najbliższe połączenie…':cs===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p></div>`;return}
  const w=wyjscie(c,dzien(c.dep)),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);anim(el,c.k);
- el.innerHTML=`<div class="blok kol" style="gap:6px"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p>
+ el.innerHTML=`<div class="blok kol wyj" style="gap:6px" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}" role="button" tabindex="0" aria-label="Szczegóły najbliższego połączenia"><p class="dr maly wiersz rozsun" style="font-weight:600"><span>Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</span><span class="wyj-strz" aria-hidden="true">${ic('strz',16)}</span></p>
   <div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
   <p class="dr maly">${x.t.l.badge}${pr.p?' · peron '+pr.p:''} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
   ${oPolaczeniu(c).filter(n=>n.sev!=='info').map(kpas).join('')}
-  <div class="wiersz" style="margin-top:8px;gap:8px"><button class="drugi" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}">Szczegóły</button><button class="drugi" data-a="trasa-szukaj" data-i="0">Inne godziny</button></div></div>`}
+  <div class="wiersz wyj-akcje" style="margin-top:8px;gap:8px"><button class="drugi" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}">Szczegóły</button><button class="drugi" data-a="trasa-szukaj" data-i="0">Inne godziny</button></div></div>`}
 function szukaj(){S.q={min:(S.when??now())+S.day*1440,arrive:S.kier==='prz'};S.selAuto=true;rWyniki()}
 const wyniki=()=>polaczenia(S.from,S.to,{min:S.q.min,arrive:S.q.arrive,o:S});
 function rWyniki(){const el=$('#wyniki');
@@ -400,9 +400,9 @@ async function stylMapy(){BAZA??=fetch('https://tiles.openfreemap.org/styles/pos
 function mapaStop(){if(MAP)MAP.remove();MAP=null;MAPST='';MKP.clear();MKK=[];$('#mapa-okno').innerHTML=''}
 async function mapaStart(){const key=R.id+(ciemny()?'d':'j');if(MAPST===key)return;mapaStop();MAPST=key;const el=$('#mapa-okno');
  try{ML??=await import('./maplibre-gl.mjs');const style=await stylMapy();if(MAPST!==key)return;const h=SBN.get(R.hub);
-  const m=MAP=new ML.Map({container:el,style,center:h?[h.lon,h.lat]:[17,52],zoom:8,dragRotate:false,pitchWithRotate:false,touchPitch:false,attributionControl:{compact:true}});
+  const m=MAP=new ML.Map({container:el,style,center:h?[h.lon,h.lat]:[17,52],zoom:desk()?8:8.6,dragRotate:false,pitchWithRotate:false,touchPitch:false,attributionControl:{compact:true}});
   m.touchZoomRotate.disableRotation();m.addControl(new ML.NavigationControl({showCompass:false}),'bottom-left');
-  m.on('load',()=>{warstwy(m);m._ok=true;rMapa()});m.on('moveend',uklad);
+  m.on('load',()=>{warstwy(m);m._ok=true;el.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');rMapa()});m.on('moveend',uklad);
   m.on('click',ev=>{if(ev.originalEvent.target.closest?.('.mpoc,.mkom'))return;const p=ev.point,f=m.queryRenderedFeatures([[p.x-12,p.y-12],[p.x+12,p.y+12]],{layers:['st0','st1','st2']});if(f[0])arkStacja(f[0].properties.name)});
  }catch(e){if(MAPST===key){MAPST='';el.innerHTML='<p class="pusto">Nie udało się wczytać mapy. Spróbuj ponownie za chwilę.</p>'}}}
 function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--papier'),tu=cssv('--tusz'),t2=cssv('--tusz-2'),lr={'line-join':'round','line-cap':'round'},w=(a,b)=>['interpolate',['linear'],['zoom'],7,a,13,b];
@@ -421,7 +421,7 @@ function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr
  mapaStart();const m=MAP;if(!m?._ok)return;m.resize();
  if(net&&m._net!==net){m._net=net;m.getSource('siec').setData(net);let a=180,b=-180,c=90,d=-90;
   for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
-  m._bb=[[a,c],[b,d]];if(!m._fit){m._fit=1;m.fitBounds(m._bb,{padding:30,duration:0})}}
+  m._bb=[[a,c],[b,d]];if(!m._fit){m._fit=1;if(desk())m.fitBounds(m._bb,{padding:30,duration:0})}}
  if(m._stn!==STN){m._stn=STN;m.getSource('stacje').setData({type:'FeatureCollection',features:STN.filter(s=>R.id!=='wlkp'||s.kw!==false).map(s=>({type:'Feature',
   properties:{name:s.name,l:R.etyk?R.etyk(s.name):bkrotko(s.name),r:s.name===R.hub?3:WAZNE.includes(s.name)?2:s.daily>=80?1:0},geometry:{type:'Point',coordinates:[s.lon,s.lat]}}))})}
  // trasa wybranego pociągu; „Pokaż na mapie” dopasowuje widok do całej trasy, dotknięta pastylka — nie
@@ -1008,7 +1008,7 @@ function rKomunikaty(){const f=S.kfiltr||'wsz';setTimeout(()=>anim($('.kom-gl>.k
  const l=KOM().filter(n=>n.do==null||n.do>=0).filter(n=>f==='wsz'||(f==='utr'?n.sev!=='info':moje(n))).sort((a,b)=>waga(a)-waga(b)||a.od-b.od);
  const sel=desk()&&(l.find(n=>n.id===S.kSel)||l[0]);
  $('#v-komunikaty').innerHTML=`<h1>Komunikaty</h1>
- <div class="na-papierze"><div class="seg">${[['wsz','Wszystkie'],['utr','Utrudnienia'],['moje','Na moich trasach']].map(([k,t])=>`<button data-a="kfiltr" data-k="${k}" aria-pressed="${f===k}">${t}</button>`).join('')}</div></div>
+ <div class="na-papierze"><div class="seg">${[['wsz','Wszystkie'],['utr','Utrudnienia'],['moje','Moje trasy']].map(([k,t])=>`<button data-a="kfiltr" data-k="${k}" aria-pressed="${f===k}">${t}</button>`).join('')}</div></div>
  <div class="kom-gl"><div class="kol" style="gap:8px">${l.length?l.map(n=>`<button class="kom" data-a="kom" data-id="${n.id}" aria-current="${!!sel&&sel.id===n.id}">${kzn(n)}<span><span class="t">${n.tyt}</span><span class="o">${n.tr.split('\n')[0]}</span>
   <span class="meta"><span>${RODZ[n.sev]}</span><span>${okres(n)}</span><span>${kStan(n)}</span>${n.lines.map(schLinia).filter(Boolean).map(l=>lin({badge:l.badge||l.name,color:l.color})).join('')}</span></span></button>`).join(''):`<div class="plyta pusto">${KR===undefined?'Wczytujemy komunikaty…':f==='moje'?'Na Twoich trasach nie ma teraz komunikatów.':f==='utr'?'Nie ma teraz utrudnień.':'Nie ma teraz komunikatów.'}</div>`}</div>${sel?`<aside class="kom-panel plyta kol" style="gap:14px">${komHtml(sel,'')}</aside>`:''}</div>`}
 function komHtml(n,zam){
@@ -1123,7 +1123,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'trasa-szukaj':{const r=S.routes[i];S.from=r.a;S.to=r.b;S.when=null;S.day=0;S.kier='odj';formularz();szukaj();if(view!=='szukaj')go('szukaj');else $('#wyniki').scrollIntoView({block:'start'});break}
  }});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){ark('');P=O=null;$('#detal').classList.remove('otwarty')}
- if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a],.mpoc')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+ if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a],.mpoc,.wyj')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
 $('#f').addEventListener('submit',e=>{e.preventDefault();if(czytaj())szukaj()});
 ['skad','dokad'].forEach(id=>$('#'+id).addEventListener('change',()=>{if(resolve($('#skad').value)&&resolve($('#dokad').value)&&czytaj())szukaj()}));
 ['skad','dokad','stacja'].forEach(id=>$('#'+id).addEventListener('focus',e=>e.target.select()));
