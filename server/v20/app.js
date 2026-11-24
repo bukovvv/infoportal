@@ -995,12 +995,18 @@ function punktualnosc(t){if(t.l.badge==='BUS')return'';const okres=S.pktOkres||3
  let tresc;
  if(r===undefined)tresc='<p class="dr maly">Wczytujemy…</p>';
  else if(!r||r.runs<5)tresc=`<p class="dr" style="font-size:14px">Za mało przejazdów w tym okresie, żeby policzyć punktualność.${r?.since?` Dane zbieramy od ${dataPL(r.since)}.`:''}</p>`;
- else{const proc=Math.round(r.share),kl=proc>=90?'ok':proc>=75?'opoz':'zle',min=v=>v!=null?'+'+Math.round(v)+' min':'—';
-  tresc=`<div class="pkt-gl"><b class="pkt-proc ${kl}">${proc}%</b><span>przejazdów na czas<br><small>do ${r.threshold} min opóźnienia na stacji końcowej</small></span></div>
-  <div class="fakty"><div><span>średnio</span><b>${min(r.avgDelay)}</b></div><div><span>najwięcej</span><b>${min(r.maxDelay)}</b></div><div><span>odwołane</span><b>${r.cancelled}</b></div><div><span>przejazdy</span><b>${r.runs}</b></div></div>
-  <div><div class="pkt-slupki" role="img" aria-label="Opóźnienia ostatnich ${pl(r.recent.length,'przejazdu','przejazdów','przejazdów')}">${r.recent.map(x=>`<i class="${x.cancelled?'odw':x.delay>r.threshold?'pozn':'ok'}" style="--h:${x.cancelled?100:Math.max(8,Math.min(100,x.delay/30*100))}%" title="${dataPL(x.date)}: ${x.cancelled?'odwołany':x.delay?'+'+x.delay+' min':'na czas'}"></i>`).join('')}</div>
-  <div class="wiersz rozsun dr maly" style="margin-top:4px"><span>${dataPL(r.recent[0].date)}</span><span>${dataPL(r.recent.at(-1).date)}</span></div></div>
-  <div class="pkt-leg dr maly"><span><i class="ok"></i>na czas</span><span><i class="pozn"></i>opóźniony</span><span><i class="odw"></i>odwołany</span></div>`}
+ else{const n=r.runs,ok=r.onTime,late=r.late,odw=r.cancelled,proc=Math.round(r.share),C=2*Math.PI*26,min=v=>'+'+Math.round(v)+' min';
+  // Tarcza: koło z odsetkiem (obwód: na czas / opóźnione / odwołane), werdykt słowami, ostatnie przejazdy jako kółka
+  const luk=(v,od,kl)=>v?`<circle class="${kl}" cx="32" cy="32" r="26" stroke-dasharray="${(v/n*C).toFixed(1)} ${C.toFixed(1)}" stroke-dashoffset="${(-od/n*C).toFixed(1)}"/>`:'';
+  const werdykt=proc>=90?'Prawie zawsze na czas':proc>=75?'Zwykle na czas':proc>=50?'Często się spóźnia':'Zwykle się spóźnia';
+  const zdanie=`${ok} z ${n} przejazdów na czas${late?`, ${pl(late,'raz','razy','razy')} opóźniony`:''}${odw?`, ${pl(odw,'raz','razy','razy')} odwołany`:''}.`;
+  const naj=r.maxDelay?r.recent.slice().reverse().find(x=>!x.cancelled&&x.delay===r.maxDelay):null,ost=r.recent.slice(-21);
+  tresc=`<div class="pkt-gora"><div class="pkt-tarcza" role="img" aria-label="${proc}% przejazdów na czas"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="tlo" cx="32" cy="32" r="26"/>${luk(ok,0,'ok')}${luk(late,ok,'pozn')}${luk(odw,ok+late,'odw')}</svg><b class="num">${proc}%</b></div>
+   <div class="kol" style="gap:2px;min-width:0"><p class="pkt-werdykt">${werdykt}</p><p class="dr" style="font-size:14px">${zdanie}</p></div></div>
+  ${r.avgDelay!=null||naj?`<p style="font-size:14px">${r.avgDelay!=null?`Średnio <b>${min(r.avgDelay)}</b>`:''}${naj?`${r.avgDelay!=null?', ':''}najwięcej <b>${min(naj.delay)}</b> (${dataPL(naj.date)})`:''} na stacji końcowej.</p>`:''}
+  <div class="kol" style="gap:6px"><span class="dr maly">Ostatnie przejazdy, od najstarszego</span>
+   <div class="pkt-kropki">${ost.map(x=>`<span class="${x.cancelled?'k-odw':x.delay>r.threshold?'k-poz':'k-ok'}" title="${dataPL(x.date)}: ${x.cancelled?'odwołany':x.delay?'+'+x.delay+' min':'na czas'}">${x.cancelled?'×':x.delay>r.threshold?x.delay:''}</span>`).join('')}</div>
+   <span class="dr maly">Puste kółko — na czas (do ${r.threshold} min), liczba — minuty opóźnienia, × — odwołany.</span></div>`}
  const zw=!!S.pktZwin,mini=r&&r.runs>=5?`<span class="pkt-mini ${Math.round(r.share)>=90?'ok':Math.round(r.share)>=75?'opoz':'zle'}">${Math.round(r.share)}% na czas</span>`:'';
  return `<section class="plyta kol" style="gap:12px"><button class="pkt-nagl" data-a="pkt-zwin" aria-expanded="${!zw}"><b>Punktualność</b>${zw?mini:''}${ic(zw?'dol':'gora',18)}</button>${zw?'':`<div>${seg}</div>${tresc}`}</section>`}
 
