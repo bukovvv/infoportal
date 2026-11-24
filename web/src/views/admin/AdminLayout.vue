@@ -77,7 +77,6 @@ const items = computed(() => [
         </router-link>
         <!-- podgląd rozkładu całej Polski to osobny region (pełne wczytanie), stąd zwykły link -->
         <a href="/nowyrj27" class="side-item"><v-icon icon="manage_search" size="22" /><span>Nowy RJ 2026/27</span></a>
-        <a href="/v20" class="side-item"><v-icon icon="visibility" size="22" /><span>Wersja 2.0 (test)</span></a>
       </div>
       <p v-if="mdAndUp" class="side-foot">Sesja wygasa po 2 h bezczynności.<br>Niezapisany formularz zostaje w tej przeglądarce.</p>
     </nav>
