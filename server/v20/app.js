@@ -113,7 +113,7 @@ const numery=n=>{const m=/^(\d+)(?:\/(\d+))?/.exec(n||'');return!m?[]:m[2]?[m[1]
 /* odcinek połączenia → kurs w kształcie z makiety: st = postoje od wsiadania do wysiadania */
 function zOdcinka(g){const l={...linia(g.route,g.agency,g.isBus),nazwa:nazwaP(g.number)},d=g.departureDelay||0;
  const st=[{n:g.from.name,t:mn(g.departure),d:g.departureDelay,p:g.platform,tor:g.track},...(g.stops||[]).map(s=>({n:s.name,t:mn(s.departure),d:s.delay})),{n:g.to.name,t:mn(g.arrival),d:g.arrivalDelay,p:g.arrivalPlatform}];
- return{id:g.key,l,st,dep:st[0].t,arr:st.at(-1).t,num:krNum(g.number),nums:numery(g.number),label:AGL(l.ag)+' '+krNum(g.number),raw:d,arrD:g.arrivalDelay??d,kier:g.headsign,kwT:g.kwTickets,km:g.distanceKm}}
+ return{id:g.key,l,st,dep:st[0].t,arr:st.at(-1).t,num:krNum(g.number),nums:numery(g.number),label:AGL(l.ag)+' '+krNum(g.number),raw:d,arrD:g.arrivalDelay??d,kier:g.headsign,aId:g.from.id,bId:g.to.id,kwT:g.kwTickets,km:g.distanceKm}}
 const CON={};
 function zPolaczenia(c){const legs=c.legs.map(g=>{const t=zOdcinka(g);return{t,i:0,j:t.st.length-1,dep:t.dep,arr:t.arr}});
  const o={legs,dep:legs[0].dep,arr:legs.at(-1).arr,km:c.distanceKm,kmP:c.distanceApprox};o.k=legs.map(x=>x.t.id).join('|');return CON[o.k]=o}
@@ -246,6 +246,30 @@ function biletHtml(c){const bs=bilety(c),T=CENY[R.ag],u=ulgaW(),own=bs.filter(b=
  if(!T)return `<section class="plyta kol" style="gap:8px">${own.length?`<b>Bilet ${R.kto}</b><p class="dr" style="font-size:14px">Kupisz go w kasie, w automacie albo u konduktora.</p>`:''}${obce}</section>`;
  return `<section class="plyta kol" style="gap:12px">${own.length?`<h3 style="font-size:17px;font-weight:700">Jaką kwotę zapłacisz za przejazd${inne.length?(own.length>1?' w pociągach ':' w pociągu ')+AGL(R.ag):''}?<sup class="przypis">*</sup></h3>`:''}${karty}${lista}${obce}
   ${own.length&&T?`<p class="dr maly"><sup class="przypis">*</sup> Cena jest sugerowana. Pochodzi ona z oficjalnego cennika ${R.kto}. Bilety zakupisz wygodnie w aplikacjach mobilnych, w kasie biletowej oraz u obsługi pociągu.</p>`:''}</section>`}
+/* ---------- powiadomienia: ten sam serwer i service worker (/sw.js) co w 1.0 ---------- */
+const PUSH_BLOK='Powiadomienia są zablokowane. Zezwól na nie w ustawieniach przeglądarki dla tej strony.',PUSH_CZAS='Przeglądarka nie odpowiada przy włączaniu powiadomień. Spróbuj ponownie za chwilę.';
+function pushTu(){const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),app=matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ if('serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window)return true;
+ toast(ios&&!app?'Na iPhonie powiadomienia działają po dodaniu strony do ekranu początkowego (Udostępnij → Do ekranu początkowego).':'Ta przeglądarka nie obsługuje powiadomień.');return false}
+const wCzasie=(p,ms=15000)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(new Error(PUSH_CZAS)),ms))]);
+const kluczB=k=>Uint8Array.from(atob(k.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-k.length%4)%4)),c=>c.charCodeAt(0));
+async function subskrypcja(){const zg=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;if(zg!=='granted')throw new Error(PUSH_BLOK);
+ const reg=await wCzasie(navigator.serviceWorker.register('/sw.js').then(()=>navigator.serviceWorker.ready));const jest=await reg.pushManager.getSubscription();if(jest)return jest;
+ const{key}=await(await fetch(API()+'/push/key')).json();
+ return wCzasie(reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:kluczB(key)})).catch(e=>{if(e.message===PUSH_CZAS)throw e;throw new Error(e?.name==='NotAllowedError'?PUSH_BLOK:'Nie udało się włączyć powiadomień w tej przeglądarce. Spróbuj ponownie za chwilę.')})}
+async function pushPost(sciezka,body){const r=await fetch(API()+sciezka,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Nie udało się zapisać powiadomień. Spróbuj ponownie za chwilę.');return j}
+async function mojaSub(){if(!('serviceWorker' in navigator))return null;const reg=await navigator.serviceWorker.getRegistration('/sw.js');return reg?.pushManager.getSubscription()||null}
+// podróż: opóźnienie odjazdu, odwołanie, zagrożona przesiadka (JourneyWatcher na serwerze)
+const pushPodrozId=t=>'v20:'+t.k+'@'+t.dz;
+async function powiadomPodroz(t,c){const sub=await subskrypcja();await pushPost('/push/watch',{subscription:sub.toJSON(),journeyId:pushPodrozId(t),legs:c.legs.map(g=>({key:g.t.id,from:g.t.aId,to:g.t.bId}))})}
+async function wylaczPodroz(t){const sub=await mojaSub();if(sub)await pushPost('/push/unwatch',{endpoint:sub.endpoint,journeyId:pushPodrozId(t)})}
+// trasa: okienka dni i godzin odjazdu (RouteWatcher na serwerze); id niezależne od kierunku
+const pushTrasaId=r=>'v20:'+[r.a,r.b].sort().join('|');
+async function powiadomTrase(r){const sub=await subskrypcja(),A=SBN.get(r.a),B=SBN.get(r.b);
+ await pushPost('/push/route-watch',{subscription:sub.toJSON(),routeId:pushTrasaId(r),from:A.id,to:B.id,options:{transfers:S.bezp?0:2,minTransfer:S.minT,agencies:agencje().map(x=>x[0]).filter(k=>!S.bez.includes(k))},windows:r.pow.okna})}
+async function wylaczTrase(r){const sub=await mojaSub();if(sub)await pushPost('/push/route-unwatch',{endpoint:sub.endpoint,routeId:pushTrasaId(r)})}
+const DNI_KR=['pn','wt','śr','cz','pt','so','nd'],hmS=m=>pad(Math.floor(m/60))+':'+pad(m%60),hmM=s=>{const[h,m]=s.split(':');return +h*60+ +m};
+const oknaDomyslne=()=>[{dir:'ab',days:[1,2,3,4,5],start:'06:30',end:'08:00'},{dir:'ba',days:[1,2,3,4,5],start:'15:00',end:'17:00'}];
 /* ---------- stan ---------- */
 const S={from:'',to:'',when:null,day:0,kier:'odj',bezp:false,minT:5,bez:[],start:0,sel:null,selDay:0,station:'',tryb:'dep',
  routes:[],trips:[],walk:8,theme:'system',przyklad:true,region:'wlkp',font:'Inter',btk:{st:'Gniezno',ztm:'A',ulga:0,extra:false,tab:0,open:null},sch:{set:'reg',linia:null,stacja:null}};
@@ -361,7 +385,7 @@ function rWyniki(){const el=$('#wyniki');
 function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
  if(!c){el.innerHTML='';el.classList.remove('otwarty');return}
  anim(el,S.sel);
- const w=wyjscie(c,day),d=cDelay(c,day),x=c.legs[0],pr=peron(x.t,x.i),zap=S.trips.some(t=>t.k===S.sel&&t.dz===iso(day));
+ const w=wyjscie(c,day),d=cDelay(c,day),x=c.legs[0],pr=peron(x.t,x.i),zap=S.trips.some(t=>t.k===S.sel&&t.dz===iso(day)),pow=S.trips.some(t=>t.k===S.sel&&t.dz===iso(day)&&t.pow);
  let osie='';c.legs.forEach((g,n)=>{
   if(n){const p=c.legs[n-1];osie+=`<div class="przes">${ic('pieszo',18)}Przesiadka na stacji ${krotko(g.t.st[g.i].n)} · ${g.dep-p.arr} min</div>`}
   const kr=kurs(g.t.id); // relacja całego pociągu, gdy kurs już wczytany
@@ -375,7 +399,7 @@ function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
   ${oPolaczeniu(c,day).map(kpas).join('')}
   ${osie}
   ${biletHtml(c)}
-  <div class="strony"><button class="drugi" data-a="mock" data-t="W gotowej wersji pobierzesz tu plik do kalendarza.">${ic('kal',18)}Do kalendarza</button><button class="drugi" data-a="mock" data-t="W gotowej wersji powiadomimy Cię o opóźnieniu i zmianie peronu.">${ic('dzwonek',18)}Powiadom mnie</button></div>
+  <div class="strony"><button class="drugi" data-a="mock" data-t="W gotowej wersji pobierzesz tu plik do kalendarza.">${ic('kal',18)}Do kalendarza</button><button class="drugi${pow?' wlaczony':''}" data-a="powiadom" aria-pressed="${pow}">${ic('dzwonek',18)}${pow?'Powiadomienia włączone':'Powiadom mnie'}</button></div>
   <div class="cta"><button class="glowny" data-a="obserwuj-podroz">${zap?'Obserwujesz podróż':'Obserwuj podróż'}</button><button class="kolo" data-a="na-mape" aria-label="Pokaż na mapie">${ic('mapa')}</button></div></div>`}
 function rStacje(){if(document.activeElement!==$('#stacja'))$('#stacja').value=S.station;
  $('#tryb').innerHTML=[['dep','Odjazdy'],['arr','Przyjazdy']].map(([k,t])=>`<button data-a="tryb" data-k="${k}" aria-pressed="${S.tryb===k}">${t}</button>`).join('');
@@ -465,8 +489,9 @@ function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr
 function uklad(){if(!MAP)return;const zaj=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3],wyb=o=>o.el.classList.contains('wybrany');
  for(const o of [...MKP.values()].sort((a,b)=>wyb(b)-wyb(a)||b.d-a.d)){const p=MAP.project(o.mk.getLngLat()),box=[p.x-13,p.y-13,p.x+o.w-13,p.y+13],pig=wyb(o)||!zaj.some(x=>kol(x,box));if(pig)zaj.push(box);o.el.classList.toggle('kropka',!pig)}}
 function rMoje(){const el=$('#v-moje');
+ for(const r of S.routes)if(r.pow&&Date.now()-r.pow.at>7*864e5&&typeof Notification!=='undefined'&&Notification.permission==='granted'){r.pow.at=Date.now();save();powiadomTrase(r).catch(()=>{})}
  const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
-  return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
+  return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo${r.pow?' wlaczony':''}" style="background:var(--papier)" data-a="pow-trasa" data-i="${i}" aria-pressed="${!!r.pow}" aria-label="${r.pow?'Powiadomienia o trasie włączone — zmień':'Włącz powiadomienia o trasie'}">${ic('dzwonek',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
   ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(cArr(c))}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,dzien(c.dep))}</button>`).join(''):`<p class="pusto">${all===undefined?'Sprawdzamy połączenia…':all===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p>`}
   <button class="tekstowy" data-a="trasa-szukaj" data-i="${i}">Więcej połączeń ${ic('strz',16)}</button></section>`}).join('');
  const pod=S.trips.map(t=>{const day=offDz(t.dz);let c=CON[t.k];if(!c&&day>=0&&t.a){const l=polaczenia(t.a,t.b,{min:day*1440+t.m-1,n:3,ttl:300});c=l&&l.find(x=>x.k===t.k)}return{c,day}}).filter(x=>x.c&&x.day>=0&&(x.day>0||cArr(x.c)>=now()-10));
@@ -1035,6 +1060,18 @@ function komHtml(n,zam){
  </section>`:'<p class="dr maly">Komunikat dotyczy wszystkich linii.</p>'}
  `}
 function arkKomunikat(id){const n=KOM().find(x=>x.id===id);if(!n)return;if(view==='komunikaty'&&desk()){S.kSel=id;rKomunikaty();return}ark(komHtml(n,zamk))}
+/* powiadomienia o trasie: okienka dni i godzin odjazdu dla każdego kierunku */
+let PW=null;
+function arkPowTrasa(i){const r=S.routes[i];if(!r)return;if(!PW||PW.i!==i)PW={i,okna:JSON.parse(JSON.stringify(r.pow?.okna||oknaDomyslne())),wl:{ab:true,ba:true}};
+ if(r.pow&&!PW.init){PW.init=1;PW.wl={ab:r.pow.okna.some(o=>o.dir==='ab'),ba:r.pow.okna.some(o=>o.dir==='ba')};for(const d of['ab','ba'])if(!PW.okna.some(o=>o.dir===d))PW.okna.push(oknaDomyslne().find(o=>o.dir===d))}
+ const kier=d=>{const o=PW.okna.find(o=>o.dir===d),wl=PW.wl[d],[A,B]=d==='ab'?[r.a,r.b]:[r.b,r.a];
+  return `<section class="plyta kol" style="gap:12px"><div class="przel-rz" style="padding:0"><span><b>${bkrotko(A)} → ${bkrotko(B)}</b><small>${wl?'odjazdy w wybrane dni i godziny':'bez powiadomień w tym kierunku'}</small></span><button class="przel" role="switch" aria-checked="${wl}" aria-label="Powiadomienia ${bkrotko(A)} → ${bkrotko(B)}" data-a="pw-kier" data-k="${d}"><i></i></button></div>
+  ${wl?`<div class="na-papierze wiersz zawin" style="gap:6px">${DNI_KR.map((n,x)=>`<button class="chip" style="height:40px;min-width:44px;justify-content:center" data-a="pw-dzien" data-k="${d}" data-d="${x+1}" aria-pressed="${o.days.includes(x+1)}">${n}</button>`).join('')}</div>
+  <div class="wiersz zawin" style="gap:8px 16px">${['start','end'].map(c=>`<div class="wiersz" style="gap:8px"><span class="dr maly">${c==='start'?'od':'do'}</span><div class="krok"><button data-a="pw-czas" data-k="${d}" data-c="${c}" data-d="-15" aria-label="${c==='start'?'Początek':'Koniec'} 15 minut wcześniej">−</button><b class="num">${o[c]}</b><button data-a="pw-czas" data-k="${d}" data-c="${c}" data-d="15" aria-label="${c==='start'?'Początek':'Koniec'} 15 minut później">+</button></div></div>`).join('')}</div>`:''}</section>`};
+ ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Powiadomienia o trasie</h2>${zamk}</div>
+ <p class="dr" style="font-size:14px">Powiadomimy Cię, gdy pociąg z wybranych godzin będzie opóźniony co najmniej 5 minut albo zostanie odwołany. Sprawdzamy od godziny przed początkiem okienka.</p>
+ ${kier('ab')}${kier('ba')}
+ <div class="strony">${r.pow?'<button class="drugi" data-a="pw-wylacz">Wyłącz powiadomienia</button>':''}<button class="glowny" style="height:48px;font-size:15px" data-a="pw-zapisz">Zapisz</button></div>`)}
 /* opcje wyszukiwania: jedno okno zamiast rzędu przełączników w formularzu */
 let O=null;
 function arkOpcje(){if(!O)O={bezp:S.bezp,minT:S.minT,bez:[...S.bez]};
@@ -1111,7 +1148,12 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'udostepnij':{const c=cFromKey(S.sel),t=`${cFrom(c)} → ${cTo(c)}, ${etykDnia(S.selDay).toLowerCase()} ${hm(c.dep)}–${hm(cArr(c))} · zanimwyjdziesz.pl`;
    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Skopiowano opis połączenia.')).catch(()=>toast(t));break}
   case'mock':toast(el.dataset.t);break;
-  case'obserwuj-podroz':{const dz=iso(S.selDay),k=S.trips.findIndex(t=>t.k===S.sel&&t.dz===dz);if(k<0){{const c=cFromKey(S.sel);S.trips.push({k:S.sel,dz,a:cFrom(c),b:cTo(c),m:((c.dep%1440)+1440)%1440})};toast('Dodano podróż do zakładki „Moje”.')}else{S.trips.splice(k,1);toast('Nie obserwujesz już tej podróży.')}save();rDetal();break}
+  case'obserwuj-podroz':{const dz=iso(S.selDay),k=S.trips.findIndex(t=>t.k===S.sel&&t.dz===dz);if(k<0){{const c=cFromKey(S.sel);S.trips.push({k:S.sel,dz,a:cFrom(c),b:cTo(c),m:((c.dep%1440)+1440)%1440})};toast('Dodano podróż do zakładki „Moje”.')}else{const t=S.trips[k];if(t.pow)wylaczPodroz(t).catch(()=>{});S.trips.splice(k,1);toast('Nie obserwujesz już tej podróży.')}save();rDetal();break}
+  case'powiadom':{const c=cFromKey(S.sel);if(!c)break;const dz=iso(S.selDay);let t=S.trips.find(t=>t.k===S.sel&&t.dz===dz);
+   if(t?.pow){wylaczPodroz(t).catch(()=>{});t.pow=false;save();rDetal();toast('Powiadomienia o tej podróży są wyłączone.');break}
+   if(!pushTu())break;el.disabled=true;toast('Włączamy powiadomienia…');
+   if(!t){t={k:S.sel,dz,a:cFrom(c),b:cTo(c),m:((c.dep%1440)+1440)%1440};S.trips.push(t)}
+   powiadomPodroz(t,c).then(()=>{t.pow=true;save();rDetal();toast('Powiadomimy Cię o opóźnieniu, odwołaniu albo zagrożonej przesiadce. Podróż jest w zakładce „Moje”.')}).catch(e=>{el.disabled=false;toast(e.message)});break}
   case'obserwuj-trase':{const k=S.routes.findIndex(r=>(r.a===S.from&&r.b===S.to)||(r.a===S.to&&r.b===S.from));
    if(k<0){if(S.przyklad){S.routes=[];S.przyklad=false}S.routes.unshift({a:S.from,b:S.to});toast('Dodano trasę do zakładki „Moje”.')}else{S.routes.splice(k,1);S.przyklad=false;toast('Nie obserwujesz już tej trasy.')}save();rWyjazd();rWyniki();break}
   case'na-mape':{const c=cFromKey(S.sel);S.mapSel=c.legs[0].t.id;S.mapFit=true;$('#detal').classList.remove('otwarty');go('mapa');break}
@@ -1120,17 +1162,27 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'stacja-mapa':{const s=SBN.get(el.dataset.s);S.mapCel=[s.lon,s.lat];go('mapa');break}
   case'ulga':S.ulga=el.dataset.k;S.ulgiOtw=false;save();rWyniki();break;
   case'ulgi':S.ulgiOtw=!S.ulgiOtw;rDetal();break;
+  case'pow-trasa':PW=null;arkPowTrasa(i);break;
+  case'pw-kier':PW.wl[el.dataset.k]=!PW.wl[el.dataset.k];arkPowTrasa(PW.i);break;
+  case'pw-dzien':{const o=PW.okna.find(o=>o.dir===el.dataset.k),d=+el.dataset.d,x=o.days.indexOf(d);if(x>=0)o.days.splice(x,1);else{o.days.push(d);o.days.sort()}arkPowTrasa(PW.i);break}
+  case'pw-czas':{const o=PW.okna.find(o=>o.dir===el.dataset.k),c=el.dataset.c,v=Math.max(0,Math.min(1425,hmM(o[c])+ +el.dataset.d)),s=c==='start'?v:hmM(o.start),e=c==='end'?v:hmM(o.end);
+   if(e<=s)toast('Koniec musi być później niż początek.');else if(e-s>360)toast('Okienko może trwać najwyżej 6 godzin.');else o[c]=hmS(v);arkPowTrasa(PW.i);break}
+  case'pw-zapisz':{const r=S.routes[PW.i],okna=PW.okna.filter(o=>PW.wl[o.dir]);
+   if(!okna.length){toast('Włącz powiadomienia w co najmniej jednym kierunku.');break}if(okna.some(o=>!o.days.length)){toast('Wybierz co najmniej jeden dzień.');break}
+   if(!pushTu())break;const stare=r.pow;r.pow={okna,at:Date.now()};ark('');PW=null;rMoje();
+   powiadomTrase(r).then(()=>{save();rMoje();toast('Zapisano powiadomienia o trasie.')}).catch(e=>{r.pow=stare;save();rMoje();toast(e.message)});break}
+  case'pw-wylacz':{const r=S.routes[PW.i];wylaczTrase(r).catch(()=>{});r.pow=null;save();ark('');PW=null;rMoje();toast('Powiadomienia o trasie są wyłączone.');break}
   case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
   case'poc-link':{const u='https://zanimwyjdziesz.pl'+(R.id==='mal'?'/malopolska':'')+'/pociag/'+el.dataset.n;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('Skopiowano link do pociągu.')).catch(()=>toast(u));break}
-  case'ark-zamknij':ark('');P=O=null;if(view==='mapa'&&S.mapSel){S.mapSel=null;rMapa()}break;
+  case'ark-zamknij':ark('');P=O=PW=null;if(view==='mapa'&&S.mapSel){S.mapSel=null;rMapa()}break;
   case'stacja-ark':arkStacja(el.dataset.s);break;
   case'stacja':S.station=el.dataset.s;ark('');if(view!=='stacje')go('stacje');else rStacje();break;
   case'stad':S.from=el.dataset.s;if(S.to===S.from)S.to=S.from===R.hub?R.cel:R.hub;S.when=null;S.day=0;S.kier='odj';ark('');formularz();szukaj();go('szukaj');break;
   case'tryb':S.tryb=el.dataset.k;rStacje();break;
   case'walk':S.walk=Math.max(0,Math.min(30,S.walk+ +el.dataset.d));save();rMoje();break;
   case'trasa-odwroc':{const r=S.routes[i];[r.a,r.b]=[r.b,r.a];save();rMoje();break}
-  case'trasa-usun':S.routes.splice(i,1);S.przyklad=false;save();rMoje();break;
+  case'trasa-usun':if(S.routes[i]?.pow)wylaczTrase(S.routes[i]).catch(()=>{});S.routes.splice(i,1);S.przyklad=false;save();rMoje();break;
   case'trasa-szukaj':{const r=S.routes[i];S.from=r.a;S.to=r.b;S.when=null;S.day=0;S.kier='odj';formularz();szukaj();if(view!=='szukaj')go('szukaj');else $('#wyniki').scrollIntoView({block:'start'});break}
  }});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){ark('');P=O=null;$('#detal').classList.remove('otwarty')}
