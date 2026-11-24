@@ -103,7 +103,7 @@ const KAT={KW:'Osobowy',KML:'Osobowy',REG:'REGIO',IR:'interREGIO',IC:'Intercity'
 function linia(route,ag,isBus){ag=ag||R.ag;const sh=route?.short||AGL(ag);if(route?.color)KOL[sh]=route.color;
  const przysp=/(\d| )P$/.test(sh),b=sh.replace(/ ?P$/,''),lin_=/^(PKM|SKA|K)\d/.test(b); // „KW P”, „K7P” — przyspieszony
  const kat=isBus?'Autobus zastępczy':(KAT[b]||(lin_?(ag==='PR'?'REGIO':'Osobowy'):''))+(przysp?' przyspieszony':'');
- return{id:route?.id||sh,badge:isBus?'BUS':lin_?b:AGL(ag),kat,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
+ return{id:route?.id||sh,badge:isBus?'BUS':lin_?b:AGL(ag),linia:lin_&&!isBus?b:'',kat,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
 // plakietka bez powtórzenia przewoźnika obok numeru („KW” + „KW 77100”) — wtedy sama kropka w kolorze linii
 const linN=l=>l.badge===AGL(l.ag)?`<span class="lin" style="--c:${l.color}"></span>`:lin(l);
 const linesOf=n=>{const s=new Set();return(SBN.get(n)?.lines||[]).map(x=>x.replace(/ ?P$/,'')).filter(x=>!s.has(x)&&s.add(x)).map(x=>({id:x,badge:x,color:KOL[x]||'#8A8F98'}))};
@@ -363,7 +363,7 @@ function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
  let osie='';c.legs.forEach((g,n)=>{
   if(n){const p=c.legs[n-1];osie+=`<div class="przes">${ic('pieszo',18)}Przesiadka na stacji ${krotko(g.t.st[g.i].n)} · ${g.dep-p.arr} min</div>`}
   const kr=kurs(g.t.id); // relacja całego pociągu, gdy kurs już wczytany
-  osie+=`<section class="plyta kol" style="gap:10px"><div class="kol" style="gap:2px;padding:0 2px"><div class="wiersz zawin" style="gap:4px 10px">${linN(g.t.l)}<b>${g.t.l.kat||g.t.l.kto}</b><button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button></div>
+  osie+=`<section class="plyta kol" style="gap:10px"><div class="kol" style="gap:2px;padding:0 2px"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${g.t.l.color}"></span><b>${[g.t.l.kat||g.t.l.kto,g.t.l.linia].filter(Boolean).join(' · ')}</b><button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button></div>
    <span class="dr maly">Przewoźnik: ${g.t.l.kto}. ${kropka(kr?`Pociąg relacji: ${krotko(esc(kr.origin))} – ${krotko(esc(kr.destination))}`:`Kierunek: ${krotko(esc(g.t.kier))}`)}</span></div><div>${postoje(g,day)}</div></section>`});
  el.innerHTML=`<div class="kol" style="gap:10px">
   <div class="detal-gl"><button class="kolo wroc" data-a="detal-zamknij" aria-label="Wróć do listy połączeń">${ic('wroc')}</button><b>${bkrotko(cFrom(c))} → ${bkrotko(cTo(c))}</b><button class="kolo" data-a="udostepnij" aria-label="Udostępnij">${ic('udost')}</button></div>
@@ -977,7 +977,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  else for(let k=0;k<=L;k++)os+=row(k);
  const POJ={emu:'zespół elektryczny',dmu:'szynobus',steam:'parowóz',diesel:'lokomotywa spalinowa'},vt=t.vt;
  ark(`<section class="blok kol" style="gap:12px">
-  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px">${linN(t.l)}<span class="dr maly">${t.l.kat?t.l.kat+' · ':''}${t.l.kto}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}${t.l.nazwa?' '+t.l.nazwa:''}</h2></div>${zamk}</div>
+  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${t.l.color}"></span><span class="dr maly">${[t.l.kat,t.l.linia,t.l.kto].filter(Boolean).join(' · ')}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}${t.l.nazwa?' '+t.l.nazwa:''}</h2></div>${zamk}</div>
   <div class="wiersz" style="gap:16px">${t.odw?'':tarcza(m)}<div style="min-width:0"><p class="num" style="font-weight:700;font-size:19px;line-height:1.25">${gl}</p><p class="dr">${sub}</p></div></div>
   <div><div class="bieg" style="--c:${c};--p:${post}%"><i></i></div>
   <div class="wiersz rozsun maly num" style="align-items:flex-start;margin-top:8px"><span><b>${hm(tm(0))}</b><br>${bkrotko(t.st[0].n)}</span><span style="text-align:right"><b>${hm(tm(L))}</b><br>${bkrotko(t.st[L].n)}</span></div></div>
