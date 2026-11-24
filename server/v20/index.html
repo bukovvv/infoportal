@@ -450,11 +450,19 @@ button.kpas:hover{background:var(--plyta-2)}
 
 /* mapa MapLibre: pastylki pociągów i znaczniki utrudnień (HTML) */
 #mapa-okno{height:65dvh;min-height:360px;overflow:hidden}
-.mpoc{display:flex;align-items:center;gap:5px;height:22px;padding:0 9px 0 2px;border-radius:11px;background:var(--tusz);color:var(--papier);font:700 11px/1 var(--f);white-space:nowrap;cursor:pointer}
-.mpoc i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--papier)}
-.mpoc em{font-style:normal;color:var(--opoz-tlo)}
-.mpoc.kropka{padding:0 0 0 5px;background:none}.mpoc.kropka b{display:none}.mpoc.kropka i{width:12px;height:12px}
-.mpoc.wybrany{z-index:2;box-shadow:0 0 0 2px var(--papier),0 0 0 4.5px var(--tusz)}
+.mpoc-m{cursor:pointer}
+.mpoc{display:flex;align-items:center;gap:6px;height:26px;padding:0 9px 0 3px;border-radius:13px;background:var(--papier);color:var(--tusz);font:700 12px/1 var(--f);white-space:nowrap;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--tusz) 10%,transparent),0 2px 6px rgba(0,0,0,.18);transition:transform .15s,box-shadow .15s,padding .15s,background .15s}
+.mpoc-k{flex:none;width:20px;height:20px;border-radius:50%;background:var(--c);display:grid;place-items:center;color:#fff;box-shadow:0 0 0 2px var(--papier)}
+.mpoc-k svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.mpoc-k i{width:6px;height:6px;border-radius:50%;background:#fff}
+.mpoc em{font-style:normal;font-size:11px;padding:2px 5px;margin-right:-4px;border-radius:7px;background:var(--opoz-tlo);color:var(--opoz)}
+.mpoc-m:hover .mpoc{transform:translateY(-1px);box-shadow:0 0 0 1px color-mix(in srgb,var(--tusz) 14%,transparent),0 4px 12px rgba(0,0,0,.24)}
+.mpoc-m.kropka .mpoc{padding:0 0 0 3px;background:none;box-shadow:none}
+.mpoc-m.kropka .mpoc b,.mpoc-m.kropka .mpoc em{display:none}
+.mpoc-m.kropka .mpoc-k{width:18px;height:18px;margin:1px;box-shadow:0 0 0 2px var(--papier),0 2px 5px rgba(0,0,0,.25)}
+.mpoc-m.wybrany{z-index:3}
+.mpoc-m.wybrany .mpoc{transform:scale(1.08);box-shadow:0 0 0 2.5px var(--tusz),0 4px 14px rgba(0,0,0,.28)}
 .mkom{width:26px;height:26px;padding:0;border-radius:50%;border:2.5px solid var(--plyta);font:700 15px/1 var(--f);display:grid;place-items:center;cursor:pointer}
 .mkom.utr{background:var(--opoz-tlo);color:var(--opoz)}.mkom.pow{background:var(--opoz);color:var(--papier)}
 .maplibregl-ctrl-group{border-radius:var(--r-m)!important;overflow:hidden}

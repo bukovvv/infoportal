@@ -402,16 +402,21 @@ async function stylMapy(){BAZA??=fetch('https://tiles.openfreemap.org/styles/pos
  s.layers=s.layers.filter(l=>!/shield|highway-name|aeroway|airport|boundary_3|boundary_disputed|waterway|water_name_line|highway_path|highway_minor|road_pier|road_area_pier|label_state/.test(l.id));
  for(const l of s.layers){if(l.layout?.['text-field']&&l.id.startsWith('label_'))l.layout['text-field']=['coalesce',['get','name:pl'],['get','name']];if(l.id==='label_village')l.minzoom=11}
  return s}
+// stacja pod punktem mapy (pole dotyku 12 px) i wyróżnienie wybranej stacji
+const stacjaPod=(m,p)=>m.queryRenderedFeatures([[p.x-12,p.y-12],[p.x+12,p.y+12]],{layers:['st0','st1','st2']})[0]?.properties.name||null;
+function stacjaWyb(n){const m=MAP;if(!m?._ok)return;if(m._wyb)m.setFeatureState({source:'stacje',id:m._wyb},{wyb:false});m._wyb=n;if(n)m.setFeatureState({source:'stacje',id:n},{wyb:true})}
 function mapaStop(){if(MAP)MAP.remove();MAP=null;MAPST='';MKP.clear();MKK=[];$('#mapa-okno').innerHTML=''}
 async function mapaStart(){const key=R.id+(ciemny()?'d':'j');if(MAPST===key)return;mapaStop();MAPST=key;const el=$('#mapa-okno');
  try{ML??=await import('./maplibre-gl.mjs');const style=await stylMapy();if(MAPST!==key)return;const h=SBN.get(R.hub);
   const m=MAP=new ML.Map({container:el,style,center:h?[h.lon,h.lat]:[17,52],zoom:desk()?8:8.6,dragRotate:false,pitchWithRotate:false,touchPitch:false,attributionControl:{compact:true}});
   m.touchZoomRotate.disableRotation();m.addControl(new ML.NavigationControl({showCompass:false}),'bottom-left');
   m.on('load',()=>{warstwy(m);m._ok=true;el.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');rMapa()});m.on('moveend',uklad);
-  m.on('click',ev=>{if(ev.originalEvent.target.closest?.('.mpoc,.mkom'))return;const p=ev.point,f=m.queryRenderedFeatures([[p.x-12,p.y-12],[p.x+12,p.y+12]],{layers:['st0','st1','st2']});if(f[0])arkStacja(f[0].properties.name)});
+  m.on('click',ev=>{if(ev.originalEvent.target.closest?.('.mpoc-m,.mkom'))return;const f=stacjaPod(m,ev.point);if(!f)return;const s=SBN.get(f);arkStacja(f);stacjaWyb(f);
+   const c=m.getContainer(),pad=desk()?{right:460}:{bottom:Math.round(c.clientHeight*.5)};if(s)m.easeTo({center:[s.lon,s.lat],zoom:Math.max(m.getZoom(),10.5),padding:pad,duration:450})});
+  m.on('mousemove',ev=>{const n=ev.originalEvent.target.closest?.('.mpoc-m,.mkom')?null:stacjaPod(m,ev.point);if(n!==m._hov){if(m._hov)m.setFeatureState({source:'stacje',id:m._hov},{hover:false});m._hov=n;if(n)m.setFeatureState({source:'stacje',id:n},{hover:true})}m.getCanvas().style.cursor=n?'pointer':''});
  }catch(e){if(MAPST===key){MAPST='';el.innerHTML='<p class="pusto">Nie udało się wczytać mapy. Spróbuj ponownie za chwilę.</p>'}}}
 function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--papier'),tu=cssv('--tusz'),t2=cssv('--tusz-2'),lr={'line-join':'round','line-cap':'round'},w=(a,b)=>['interpolate',['linear'],['zoom'],7,a,13,b];
- for(const s of['siec','kurs','stacje','utr'])m.addSource(s,{type:'geojson',data:e});
+ for(const s of['siec','kurs','stacje','utr'])m.addSource(s,{type:'geojson',data:e,...(s==='stacje'?{promoteId:'name'}:{})});
  m.addLayer({id:'siec-p',type:'line',source:'siec',filter:['==',['get','partner'],true],layout:lr,paint:{'line-color':['get','color'],'line-opacity':.35,'line-width':w(1,3)}});
  m.addLayer({id:'siec',type:'line',source:'siec',filter:['!=',['get','partner'],true],layout:lr,paint:{'line-color':['get','color'],'line-width':w(2,6)}});
  m.addLayer({id:'kurs-tlo',type:'line',source:'kurs',layout:lr,paint:{'line-color':pap,'line-width':w(8,14)}});
@@ -419,7 +424,7 @@ function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--p
  m.addLayer({id:'utr',type:'circle',source:'utr',paint:{'circle-radius':w(7,13),'circle-opacity':0,'circle-stroke-color':cssv('--opoz'),'circle-stroke-width':2.5}});
  // stacje według ważności: 3 węzeł regionu, 2 ważne, 1 ≥ 80 kursów (od przybliżenia 8), 0 przystanki (od 9,5)
  for(const[r,z,zt]of[[0,9.5,10.5],[1,8,9],[2,0,0]]){const f=r<2?['==',['get','r'],r]:['>=',['get','r'],2];
-  m.addLayer({id:'st'+r,type:'circle',source:'stacje',minzoom:z,filter:f,paint:{'circle-radius':['match',['get','r'],3,6.5,2,5,1,4,3],'circle-color':pap,'circle-stroke-color':tu,'circle-stroke-width':r>=2?2.5:1.5}});
+  m.addLayer({id:'st'+r,type:'circle',source:'stacje',minzoom:z,filter:f,paint:{'circle-radius':['+',['match',['get','r'],3,6.5,2,5,1,4,3],['case',['boolean',['feature-state','wyb'],false],4,['boolean',['feature-state','hover'],false],2,0]],'circle-color':['case',['boolean',['feature-state','wyb'],false],cssv('--akcja'),pap],'circle-stroke-color':tu,'circle-stroke-width':['case',['boolean',['feature-state','wyb'],false],3,r>=2?2.5:1.5],'circle-radius-transition':{duration:180}}});
   m.addLayer({id:'stn'+r,type:'symbol',source:'stacje',minzoom:zt,filter:f,layout:{'text-field':['get','l'],'text-font':[r>=2?'Noto Sans Bold':'Noto Sans Regular'],'text-size':r>=2?13:11.5,'text-anchor':'left','text-offset':[.8,0],'text-optional':true},paint:{'text-color':r>=2?tu:t2,'text-halo-color':pap,'text-halo-width':1.5}})}}
 function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr=(live?.trains||[]).filter(t=>t.key);
  $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now())+(R.id==='mal'&&tr.some(t=>t.source==='gps')?'. Pozycja na żywo dzięki Kolejom Małopolskim.':'');
@@ -446,17 +451,19 @@ function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr
    return new ML.Marker({element:el,offset:[18,-18]}).setLngLat([s.lon,s.lat]).addTo(m)})}
  // pociągi: pastylki HTML; pozycję ustawia MapLibre (transform), wygląd w klasie .mpoc
  const jest=new Set();
- for(const t of tr){jest.add(t.key);const d=t.delay||0,col=t.route?.color||KOL[t.route?.short]||'#8A8F98',h=`<i style="--c:${col}"></i><b>${krNum(t.number).split('/')[0]}${d?` <em>+${d}</em>`:''}</b>`;
+ for(const t of tr){jest.add(t.key);const d=t.delay||0,col=t.route?.color||KOL[t.route?.short]||'#8A8F98',nr=krNum(t.number).split('/')[0],
+   strz=t.bearing!=null?`<svg viewBox="0 0 24 24" style="transform:rotate(${Math.round(t.bearing)}deg)" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg>`:'<i></i>',
+   h=`<div class="mpoc"><span class="mpoc-k" style="--c:${col}">${strz}</span><b>${nr}</b>${d?`<em>+${d}</em>`:''}</div>`;
   let o=MKP.get(t.key);
-  if(!o){const el=document.createElement('div');el.className='mpoc';el.dataset.a='poc';el.dataset.id=t.key;el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label','Pociąg '+AGL(t.agency||R.ag)+' '+krNum(t.number));
-   o={el,mk:new ML.Marker({element:el,anchor:'left',offset:[-11,0]}).setLngLat([t.lon,t.lat]).addTo(m)};MKP.set(t.key,o)}
+  if(!o){const el=document.createElement('div');el.className='mpoc-m';el.dataset.a='poc';el.dataset.id=t.key;el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label','Pociąg '+AGL(t.agency||R.ag)+' '+krNum(t.number));
+   o={el,mk:new ML.Marker({element:el,anchor:'left',offset:[-13,0]}).setLngLat([t.lon,t.lat]).addTo(m)};MKP.set(t.key,o)}
   else o.mk.setLngLat([t.lon,t.lat]);
-  if(o.h!==h){o.h=h;o.el.innerHTML=h}o.d=d;o.w=30+(krNum(t.number).split('/')[0].length+(d?String(d).length+2:0))*7;o.el.classList.toggle('wybrany',t.key===S.mapSel)}
+  if(o.h!==h){o.h=h;o.el.innerHTML=h}o.d=d;o.w=40+nr.length*7.5+(d?22+String(d).length*7:0);o.el.classList.toggle('wybrany',t.key===S.mapSel)}
  for(const[k,o]of MKP)if(!jest.has(k)){o.mk.remove();MKP.delete(k)}
  uklad()}
 // pastylka, która zasłoniłaby inną, staje się kołem w kolorze linii (pierwszeństwo: wybrany, opóźnione)
 function uklad(){if(!MAP)return;const zaj=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3],wyb=o=>o.el.classList.contains('wybrany');
- for(const o of [...MKP.values()].sort((a,b)=>wyb(b)-wyb(a)||b.d-a.d)){const p=MAP.project(o.mk.getLngLat()),box=[p.x-11,p.y-11,p.x+o.w,p.y+11],pig=wyb(o)||!zaj.some(x=>kol(x,box));if(pig)zaj.push(box);o.el.classList.toggle('kropka',!pig)}}
+ for(const o of [...MKP.values()].sort((a,b)=>wyb(b)-wyb(a)||b.d-a.d)){const p=MAP.project(o.mk.getLngLat()),box=[p.x-13,p.y-13,p.x+o.w-13,p.y+13],pig=wyb(o)||!zaj.some(x=>kol(x,box));if(pig)zaj.push(box);o.el.classList.toggle('kropka',!pig)}}
 function rMoje(){const el=$('#v-moje');
  const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
   return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
@@ -961,12 +968,12 @@ function blokada(){const okno=$('#ark').firstChild&&!$('.tlo-ark.zamyka')&&!$('.
 new MutationObserver(blokada).observe($('#ark'),{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
 new MutationObserver(blokada).observe($('#detal'),{attributes:true,attributeFilter:['class']});
 addEventListener('resize',blokada);
-function ark(html){if(!html)ARK=null;clearTimeout(AZ);const box=$('#ark');
+function ark(html){if(!html){ARK=null;stacjaWyb(null)}clearTimeout(AZ);const box=$('#ark');
  if(!html&&box.firstChild&&!matchMedia('(prefers-reduced-motion:reduce)').matches){box.firstChild.classList.add('zamyka');AZ=setTimeout(()=>box.innerHTML='',170);return}
  if(html&&box.firstChild){box.querySelector('.ark').innerHTML=html;box.firstChild.classList.remove('zamyka');return} // zmiana treści otwartego okna bez ponownego wjazdu
  $('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
 const zamk=`<button class="kolo" data-a="ark-zamknij" aria-label="Zamknij">${ic('zamknij')}</button>`;
-function arkPociag(id){S.mapSel=id;const t=kurs(id);
+function arkPociag(id){S.mapSel=id;stacjaWyb(null);const t=kurs(id);
  if(!t){ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Pociąg</h2>${zamk}</div><p class="pusto">${t===null?'Nie udało się pobrać danych pociągu.':'Wczytujemy dane pociągu…'}</p>`);ARK={f:arkPociag,a:id,czeka:true};return}
  const nw=now(),d=delay(t),L=t.st.length-1,c=t.l.color,tm=k=>t.st[k].t+(t.st[k].d??d),ni=t.st.findIndex((s,k)=>tm(k)>=nw),przed=nw<tm(0),po=ni<0,dz=dzien(t.dep);
  const post=po?100:przed?0:Math.max(2,Math.min(98,Math.round((nw-tm(0))/Math.max(1,tm(L)-tm(0))*100)));
@@ -995,7 +1002,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
 function arkStacja(n){const b=tablica(n,'dep',5);
  ark(`<div class="wiersz rozsun"><div style="min-width:0"><h2 style="font-size:24px">${krotko(n)}</h2><div class="wiersz zawin" style="gap:10px">${linesOf(n).map(lin).join('')}</div></div>${zamk}</div>
  ${oStacji(n).map(kpas).join('')}
- <div class="plyta" style="padding:8px">${tabl(b,'dep')}</div>
+ <div class="kol" style="gap:6px"><b style="padding:0 4px">Najbliższe odjazdy</b><div class="plyta" style="padding:8px">${tabl(b,'dep')}</div></div>
  <div class="strony"><button class="drugi" data-a="stacja" data-s="${n}">Pełna tablica</button><button class="drugi" data-a="stad" data-s="${n}">Połączenie stąd</button></div>`);
  ARK={f:arkStacja,a:n,czeka:b===undefined}}
 /* wybór dnia i godziny: własny element systemu zamiast okna przeglądarki */
@@ -1127,7 +1134,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'trasa-szukaj':{const r=S.routes[i];S.from=r.a;S.to=r.b;S.when=null;S.day=0;S.kier='odj';formularz();szukaj();if(view!=='szukaj')go('szukaj');else $('#wyniki').scrollIntoView({block:'start'});break}
  }});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){ark('');P=O=null;$('#detal').classList.remove('otwarty')}
- if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a],.mpoc,.wyj')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+ if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a],.mpoc-m,.wyj')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
 $('#f').addEventListener('submit',e=>{e.preventDefault();if(czytaj())szukaj()});
 ['skad','dokad'].forEach(id=>$('#'+id).addEventListener('change',()=>{if(resolve($('#skad').value)&&resolve($('#dokad').value)&&czytaj())szukaj()}));
 ['skad','dokad','stacja'].forEach(id=>$('#'+id).addEventListener('focus',e=>e.target.select()));
