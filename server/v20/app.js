@@ -86,6 +86,9 @@ function dane(u,ttl=60,slot){const k=API()+u,e=C.get(k);
  fetch(k,{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{n.v=j}).catch(()=>{if(n.v===undefined)n.v=null})
   .finally(()=>{n.wait=false;n.at=Date.now();if(slot&&n.v)SL[slot]=n.v;przerysuj()});
  return n.v===undefined&&slot?SL[slot]:n.v}
+// ruch: dzieci elementu wchodzą po kolei, gdy zmienia się jego treść (klucz), a nie przy każdym odświeżeniu
+const AT=new WeakMap(),AK={};
+function anim(el,key,id=el?.id){if(!el||AK[id]===String(key))return;AK[id]=String(key);el.classList.remove('animuj');void el.offsetWidth;el.classList.add('animuj');clearTimeout(AT.get(el));AT.set(el,setTimeout(()=>el.classList.remove('animuj'),900))}
 function przerysuj(){clearTimeout(PT);PT=setTimeout(()=>{render();if(ARK?.czeka)ARK.f(ARK.a)},30)}
 /* stacje */
 let STN=[],SBN=new Map(),SBI=new Map();
@@ -96,8 +99,13 @@ function resolve(v){const q=norm(v);if(!q)return null;return STATIONS.find(s=>no
 const KOL={PKM1:'#3A76C2',PKM2:'#EA1A35',PKM3:'#3F9236',PKM4:'#823D8C',PKM5:'#E8B120',KW:'#E6000A',SKA1:'#00B1EB',SKA2:'#E82F89',SKA3:'#FBBA21',K3:'#E84D0F',K5:'#F29EC4',K7:'#008C36',K22:'#95C11F',K32:'#69BFAC',K33:'#951A80',K52:'#BD1621',K63:'#4464AC',K71:'#28235B'};
 const AGN={KW:'Koleje Wielkopolskie',KML:'Koleje Małopolskie',PR:'POLREGIO',IC:'PKP Intercity'};
 const AGL=a=>a==='KML'?'KMŁ':a;
+const KAT={KW:'Osobowy',KML:'Osobowy',REG:'REGIO',IR:'interREGIO',IC:'InterCity',TLK:'TLK',EIC:'Express InterCity',EIP:'Express InterCity Premium',EC:'EuroCity',EN:'EuroNight'};
 function linia(route,ag,isBus){ag=ag||R.ag;const sh=route?.short||AGL(ag);if(route?.color)KOL[sh]=route.color;
- return{id:route?.id||sh,badge:isBus?'BUS':sh,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
+ const przysp=/(\d| )P$/.test(sh),b=sh.replace(/ ?P$/,''),lin_=/^(PKM|SKA|K)\d/.test(b); // „KW P”, „K7P” — przyspieszony
+ const kat=isBus?'Autobus zastępczy':(KAT[b]||(lin_?(ag==='PR'?'REGIO':'Osobowy'):''))+(przysp?' przyspieszony':'');
+ return{id:route?.id||sh,badge:isBus?'BUS':lin_?b:AGL(ag),kat,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
+// plakietka bez powtórzenia przewoźnika obok numeru („KW” + „KW 77100”) — wtedy sama kropka w kolorze linii
+const linN=l=>l.badge===AGL(l.ag)?`<span class="lin" style="--c:${l.color}"></span>`:lin(l);
 const linesOf=n=>{const s=new Set();return(SBN.get(n)?.lines||[]).map(x=>x.replace(/ ?P$/,'')).filter(x=>!s.has(x)&&s.add(x)).map(x=>({id:x,badge:x,color:KOL[x]||'#8A8F98'}))};
 const krNum=n=>String(n||'').split(' ')[0]; // „33126/7 Dunajec” → „33126/7”
 const nazwaP=n=>String(n||'').split(' ').slice(1).join(' ');
@@ -105,7 +113,7 @@ const numery=n=>{const m=/^(\d+)(?:\/(\d+))?/.exec(n||'');return!m?[]:m[2]?[m[1]
 /* odcinek połączenia → kurs w kształcie z makiety: st = postoje od wsiadania do wysiadania */
 function zOdcinka(g){const l={...linia(g.route,g.agency,g.isBus),nazwa:nazwaP(g.number)},d=g.departureDelay||0;
  const st=[{n:g.from.name,t:mn(g.departure),d:g.departureDelay,p:g.platform,tor:g.track},...(g.stops||[]).map(s=>({n:s.name,t:mn(s.departure),d:s.delay})),{n:g.to.name,t:mn(g.arrival),d:g.arrivalDelay,p:g.arrivalPlatform}];
- return{id:g.key,l,st,dep:st[0].t,arr:st.at(-1).t,num:krNum(g.number),nums:numery(g.number),label:AGL(l.ag)+' '+krNum(g.number),raw:d,arrD:g.arrivalDelay??d,kier:g.headsign,kwT:g.kwTickets}}
+ return{id:g.key,l,st,dep:st[0].t,arr:st.at(-1).t,num:krNum(g.number),nums:numery(g.number),label:AGL(l.ag)+' '+krNum(g.number),raw:d,arrD:g.arrivalDelay??d,kier:g.headsign,kwT:g.kwTickets,km:g.distanceKm}}
 const CON={};
 function zPolaczenia(c){const legs=c.legs.map(g=>{const t=zOdcinka(g);return{t,i:0,j:t.st.length-1,dep:t.dep,arr:t.arr}});
  const o={legs,dep:legs[0].dep,arr:legs.at(-1).arr,km:c.distanceKm,kmP:c.distanceApprox};o.k=legs.map(x=>x.t.id).join('|');return CON[o.k]=o}
@@ -130,7 +138,7 @@ function tablica(st,mode,n){const s=SBN.get(st);if(!s)return[];const r=dane(`/st
 /* kurs z /trips: postoje z peronami i opóźnieniem na każdej stacji */
 function kurs(key){const r=dane('/trips/'+encodeURIComponent(key),30,'k'+key);if(!r)return r;if(r._t)return r._t;
  const L=r.stops.length-1,num=krNum(r.number),l={...linia(r.route,r.agency,r.isBus),nazwa:nazwaP(r.number)};
- const st=r.stops.map((s,k)=>({n:s.station.name,t:mn(k===L?s.arrival||s.departure:s.departure||s.arrival),d:k===L?s.arrivalDelay:s.departureDelay,p:s.platform,tor:s.track,skip:s.skipped}));
+ const st=r.stops.map((s,k)=>({n:s.station.name,t:mn(k===L?s.arrival||s.departure:s.departure||s.arrival),d:k===L?s.arrivalDelay:s.departureDelay,p:s.platform,tor:s.track,skip:s.skipped,prz:mn(s.arrival),odj:mn(s.departure),dp:s.arrivalDelay,dd:s.departureDelay,km:s.km}));
  return r._t={id:key,l,st,dep:st[0].t,arr:st[L].t,num,nums:numery(r.number),label:AGL(l.ag)+' '+num,raw:r.realtime?.delay||0,odw:r.realtime?.cancelled,km:r.distanceKm,vt:r.vehicleType,shape:r.shape||[],origin:r.origin,destination:r.destination,trimmed:r.trimmed}}
 /* komunikaty z serwisu w kształcie z makiety */
 let KR,KC=[];
@@ -179,6 +187,65 @@ function btkPodp(stacje){ // podpowiedź biletu miesięcznego: tylko Wielkopolsk
  const s=f.reduce((a,b)=>b.z>a.z?b:a),c=bCena(s.z,'A',0);if(c==null)return'';
  return `<button class="kpas" data-a="btk" data-s="${s.n}"><span class="kzn info m" aria-hidden="true">${s.z}</span><b>Bilet miesięczny Bus-Tramwaj-Kolej od ${zl(c)}</b></button>`}
 
+/* ---------- bilet jednorazowy: cenniki przewoźników ----------
+   Wygenerowane z PDF-ów przewoźników (ulgi sprawdzone z procentami co do grosza); przy zmianie cennika podmienić tabele i daty.
+   KW: „Cennik biletów jednorazowych od 15-12-2024” (koleje-wielkopolskie.com.pl/dla-pasazera/pociag/ceny-biletow/) — „Taryfa Razem” to bilety grupowe, nie ta.
+   Wiersz: [górna granica km, normalny, ulga 33%, 37%, 49%, 51%, 78%, 93%, 95%] w groszach.
+   KW han: ulgi handlowe na bilety jednorazowe [km, 25%, 50%] z „Cennika biletów jednorazowych z ulgami handlowymi od 15-12-2024”. */
+const CENY={
+ KW:{opis:'cennik KW od 15.12.2024',han:[[5,457,305],[10,502,335],[15,592,395],[20,735,490],[25,885,590],[30,952,635],[35,1102,735],[40,1215,810],[47,1365,910],[53,1537,1025],[59,1650,1100],[67,1725,1150],[73,1792,1195],[80,1942,1295],[90,2092,1395],[100,2227,1485],[120,2527,1685],[140,2707,1805],[160,2902,1935],[180,3037,2025],[200,3165,2110],[240,3315,2210],[280,3472,2315],[320,3615,2410],[360,3682,2455],[400,3825,2550],[500,3990,2660],[600,4177,2785],[700,4357,2905],[800,4590,3060]],pasma:[[5,610,409,384,311,299,134,43,30],[10,670,449,422,342,328,147,47,33],[15,790,529,498,403,387,174,55,39],[20,980,657,617,500,480,216,69,49],[25,1180,791,743,602,578,260,83,59],[30,1270,851,800,648,622,279,89,63],[35,1470,985,926,750,720,323,103,73],[40,1620,1085,1021,826,794,356,113,81],[47,1820,1219,1147,928,892,400,127,91],[53,2050,1373,1291,1045,1004,451,143,102],[59,2200,1474,1386,1122,1078,484,154,110],[67,2300,1541,1449,1173,1127,506,161,115],[73,2390,1601,1506,1219,1171,526,167,119],[80,2590,1735,1632,1321,1269,570,181,129],[90,2790,1869,1758,1423,1367,614,195,139],[100,2970,1990,1871,1515,1455,653,208,148],[120,3370,2258,2123,1719,1651,741,236,168],[140,3610,2419,2274,1841,1769,794,253,180],[160,3870,2593,2438,1974,1896,851,271,193],[180,4050,2713,2551,2065,1984,891,283,202],[200,4220,2827,2659,2152,2068,928,295,211],[240,4420,2961,2785,2254,2166,972,309,221],[280,4630,3102,2917,2361,2269,1019,324,231],[320,4820,3229,3037,2458,2362,1060,337,241],[360,4910,3290,3093,2504,2406,1080,344,245],[400,5100,3417,3213,2601,2499,1122,357,255],[500,5320,3564,3352,2713,2607,1170,372,266],[600,5570,3732,3509,2841,2729,1225,390,278],[700,5810,3893,3660,2963,2847,1278,407,290],[800,6120,4100,3856,3121,2999,1346,428,306]]},};
+// ulgi: ustawowe z „Tabel uprawnień do ulgowych lub bezpłatnych przejazdów na podstawie ustaw” (strona KW, bilety jednorazowe, 2. klasa),
+// handlowe KW z ofert specjalnych KW (Bilet 60+ — 25%, ulga 50% dla sfery budżetowej); handlowe tylko w pociągach KW
+const ULGI=[
+ {id:'n',pct:0,gr:'n',kto:'Bilet normalny'},
+ {id:'u100',pct:100,gr:'d',kto:'Dzieci do 4 lat'},
+ {id:'u37d',pct:37,gr:'d',kto:'Dzieci od 4 lat do rozpoczęcia rocznego przygotowania przedszkolnego'},
+ {id:'u37u',pct:37,gr:'d',kto:'Uczniowie, do ukończenia 24 lat'},
+ {id:'u51s',pct:51,gr:'s',kto:'Studenci do 26 lat i doktoranci do 35 lat'},
+ {id:'u33',pct:33,gr:'s',kto:'Nauczyciele i nauczyciele akademiccy'},
+ {id:'h25',pct:25,gr:'e',h:1,kto:'Bilet 60+ — osoby, które ukończyły 60 lat'},
+ {id:'u37e',pct:37,gr:'e',kto:'Emeryci i renciści oraz ich współmałżonkowie na utrzymaniu — 2 przejazdy w roku'},
+ {id:'u37k',pct:37,gr:'r',kto:'Rodzice i małżonkowie rodziców z Kartą Dużej Rodziny'},
+ {id:'u49',pct:49,gr:'z',kto:'Osoby niezdolne do samodzielnej egzystencji'},
+ {id:'u37n',pct:37,gr:'z',kto:'Osoby niewidome całkowicie niezdolne do pracy'},
+ {id:'u93',pct:93,gr:'z',kto:'Osoby niewidome niezdolne do samodzielnej egzystencji'},
+ {id:'u78d',pct:78,gr:'z',kto:'Dzieci i młodzież z niepełnosprawnością w drodze do szkoły lub placówki oraz ich rodzic lub opiekun'},
+ {id:'u95',pct:95,gr:'z',kto:'Opiekun osoby niezdolnej do samodzielnej egzystencji, przewodnik osoby niewidomej'},
+ {id:'h50',pct:50,gr:'w',h:1,kto:'Pracownicy jednostek sfery budżetowej i żołnierze zawodowi'},
+ {id:'u78w',pct:78,gr:'w',kto:'Żołnierze odbywający niezawodową służbę wojskową'},
+ {id:'u51k',pct:51,gr:'w',kto:'Kombatanci, działacze opozycji antykomunistycznej i osoby represjonowane z powodów politycznych'},
+ {id:'u78i',pct:78,gr:'w',kto:'Inwalidzi wojenni i wojskowi I grupy oraz kombatanci będący takimi inwalidami'},
+ {id:'u37i',pct:37,gr:'w',kto:'Inwalidzi wojenni i wojskowi II i III grupy oraz kombatanci będący takimi inwalidami'},
+ {id:'u37p',pct:37,gr:'i',kto:'Posiadacze Karty Polaka'}];
+const GRUPY_ULG=[['n','Bez ulgi'],['d','Dzieci i uczniowie'],['s','Studenci i nauczyciele'],['e','Seniorzy, emeryci i renciści'],['r','Rodziny'],
+ ['z','Osoby z niepełnosprawnością i opiekunowie'],['w','Praca w sferze budżetowej, wojsko i kombatanci'],['i','Inne']];
+const KOL_ULGI={0:0,33:1,37:2,49:3,51:4,78:5,93:6,95:7};
+const ulgaW=()=>ULGI.find(u=>u.id===S.ulga)||ULGI[0];
+// cena biletu (grosze) z wybraną ulgą; null — brak w cenniku
+function cenaU(b,u){const p=cena(b.km,b.a,b.b);if(!p)return null;if(u.pct===100)return 0;
+ if(u.h){const r=CENY[R.ag]?.han?.find(r=>b.km<=r[0]);return r?r[u.pct===25?1:2]:null}
+ return p[KOL_ULGI[u.pct]]}
+function cena(km,a,b){const T=CENY[R.ag];if(!T||!km)return null; // cena w groszach w kolejności kolumn z cennika
+ const r=T.pasma.find(r=>km<=r[0]);return r?r.slice(1):null}
+// bilety na połączenie: cena tylko dla pociągów przewoźnika regionu (KW); kolejne takie odcinki to jeden bilet, POLREGIO i Intercity bez ceny
+function bilety(c){const o=[];for(const x of c.legs){const ag=x.t.l.ag,own=ag===R.ag,l=o.at(-1);
+  if(l&&l.ag===ag&&(own||ag!=='PR'||l.kwT===(x.t.kwT!==false)))l.legs.push(x);else o.push({own,ag,kwT:x.t.kwT!==false,legs:[x]})}
+ return o.map(g=>({...g,a:g.legs[0].t.st[0].n,b:g.legs.at(-1).t.st.at(-1).n,km:g.legs.every(x=>x.t.km)?g.legs.reduce((s,x)=>s+x.t.km,0):null}))}
+// cena na karcie połączenia: tylko gdy całe połączenie jest na jeden bilet przewoźnika regionu
+function cenaPol(c){const b=bilety(c);if(b.length!==1||!b[0].own)return'';const p=cenaU(b[0],ulgaW());return p!=null?zl(p):''}
+function biletHtml(c){const bs=bilety(c),T=CENY[R.ag],u=ulgaW(),own=bs.filter(b=>b.own),inne=bs.filter(b=>!b.own),opis=bs.length>1;
+ const suma=v=>{let s=0;for(const b of own){const p=cenaU(b,v);if(p==null)return null;s+=p}return s};
+ const karty=own.map(b=>{const p=cenaU(b,u);
+  return `<div class="wiersz rozsun" style="align-items:flex-end;gap:12px"><div style="min-width:0"><span class="dr maly">Bilet jednorazowy ${AGL(R.ag)}${opis?' · '+bkrotko(b.a)+' – '+bkrotko(b.b):''}</span><p class="wielkie num" style="font-size:30px;margin-top:2px">${p!=null?zl(p):'—'}</p></div><span class="dr maly" style="text-align:right">${b.km?b.km+' km':''}</span></div>`}).join('');
+ // lista rozwijana ulg: każda opcja z ceną tego przejazdu
+ const opcja=v=>{const s=suma(v);return `<button role="option" aria-selected="${v===u}" data-a="ulga" data-k="${v.id}"><span class="pr">${v.pct?v.pct+'%':'—'}</span><span>${v.kto}${v.h?' <small class="tag">oferta KW</small>':''}</span><b class="num">${s!=null?zl(s):''}</b></button>`};
+ const grupa=(t,l)=>l.length?`<p class="et">${t}</p>${l.map(opcja).join('')}`:'';
+ const lista=own.length?`<div class="ulgi"><button class="ulga-wybor" data-a="ulgi" aria-expanded="${!!S.ulgiOtw}"><span><small>Ulga</small><b>${u.pct?u.pct+'% · ':''}${u.kto}</b></span>${ic(S.ulgiOtw?'gora':'dol',18)}</button>
+  ${S.ulgiOtw?`<div class="ulgi-lista" role="listbox" aria-label="Ulgi">${GRUPY_ULG.map(([k,t])=>grupa(t,ULGI.filter(v=>v.gr===k))).join('')}</div>`:''}</div>`:'';
+ const obce=inne.map(b=>b.ag==='PR'&&b.kwT?`<p style="font-size:14px"><b>Pociąg obsługiwany przez POLREGIO.</b> Na odcinkach wspólnych z ${R.id==='mal'?'Kolejami Małopolskimi':'Kolejami Wielkopolskimi'} obowiązuje wspólne honorowanie biletów.</p>`:b.ag==='IC'?'<p style="font-size:14px"><b>Pociąg obsługiwany przez PKP Intercity.</b> Bilety przewoźników regionalnych nie są w nim honorowane. Pamiętaj, żeby kupić osobny bilet!</p>':`<p style="font-size:14px"><b>Bilet POLREGIO</b> na odcinek ${bkrotko(b.a)} – ${bkrotko(b.b)}. Bilet ${R.kto} nie jest ważny na tym odcinku.</p>`).join('');
+ if(!T)return `<section class="plyta kol" style="gap:8px">${own.length?`<b>Bilet ${R.kto}</b><p class="dr" style="font-size:14px">Kupisz go w kasie, w automacie albo u konduktora.</p>`:''}${obce}</section>`;
+ return `<section class="plyta kol" style="gap:12px">${own.length?`<h3 style="font-size:17px;font-weight:700">Jaką kwotę zapłacisz za przejazd${inne.length?(own.length>1?' w pociągach ':' w pociągu ')+AGL(R.ag):''}?<sup class="przypis">*</sup></h3>`:''}${karty}${lista}${obce}
+  ${own.length&&T?`<p class="dr maly"><sup class="przypis">*</sup> Cena jest sugerowana. Pochodzi ona z oficjalnego cennika ${R.kto}. Bilety zakupisz wygodnie w aplikacjach mobilnych, w kasie biletowej oraz u obsługi pociągu.</p>`:''}</section>`}
 /* ---------- stan ---------- */
 const S={from:'',to:'',when:null,day:0,kier:'odj',bezp:false,minT:5,bez:[],start:0,sel:null,selDay:0,station:'',tryb:'dep',
  routes:[],trips:[],walk:8,theme:'system',przyklad:true,region:'wlkp',font:'Inter',btk:{st:'Gniezno',ztm:'A',ulga:0,extra:false,tab:0,open:null},sch:{set:'reg',linia:null,stacja:null}};
@@ -191,7 +258,7 @@ function region(id){S.region=id;R=REG[id];R.id=id;LINES=R.lines;POS=R.pos;WAZNE=
  Object.assign(S,z,{from:R.hub,to:R.cel,station:R.hub,when:null,day:0,kier:'odj',sel:null,selDay:0,mapSel:null,bezp:false,minT:5,bez:[],sch:{set:'reg',linia:null,stacja:null}});
  document.documentElement.dataset.region=id;zamknijListe();mapaStop()}
 const pismo=()=>document.documentElement.style.setProperty('--f',`'${S.font}',system-ui,-apple-system,'Segoe UI',sans-serif`);
-const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
+const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font,ulga:S.ulga}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
 async function zmienRegion(id){if(id===S.region)return;save();region(id);try{await wczytajStacje()}catch(e){toast('Nie udało się wczytać listy stacji.');return}save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2800)}
 
@@ -236,8 +303,22 @@ function polKarta(c,sel,day=0){const x=c.legs[0],pr=peron(x.t,x.i);
  const icl=c.legs.some(l=>l.t.l.ag==='IC'),km=oPolaczeniu(c,day).filter(n=>n.sev!=='info');
  return `<button class="pol" data-a="sel" data-k="${cKey(c)}" data-d="${day}" aria-current="${sel}">
  <span class="g">${godziny(c,day)}${stan(c,day)}</span>
- <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span>${pr.p?`<span>peron ${pr.p}</span>`:''}${icl?'<span class="znak neutr">osobny bilet</span>':''}</span>
+ <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span>${cenaPol(c)?`<span>${cenaPol(c)}</span>`:''}${pr.p?`<span>peron ${pr.p}</span>`:''}${icl?'<span class="znak neutr">osobny bilet</span>':''}</span>
  ${km.length?`<span class="kpas">${kzn(km[0],1)}<b>${km[0].tyt}</b>${km.length>1?`<em>i ${pl(km.length-1,'kolejny','kolejne','kolejnych')}</em>`:''}</span>`:''}</button>`}
+const kropka=s=>/\.$/.test(s)?s:s+'.'; // „Ostrów Wlkp.” bez drugiej kropki
+function odcinekKursu(g){const k=kurs(g.t.id);if(!k)return null;const A=g.t.st[0].n,B=g.t.st.at(-1).n,i=k.st.findIndex(s=>s.n===A),j=k.st.findIndex((s,x)=>x>i&&s.n===B);return i<0||j<0?null:{k,i,j}}
+function postoje(g,day=0){const o=odcinekKursu(g);if(!o)return osKursu(g.t,g.i,g.j,true,day); // przed wczytaniem kursu — dane z wyszukiwarki
+ const{k,i,j}=o,km0=k.st[i].km,c=g.t.l.color,nw=now();
+ const T=(m,d)=>m==null?'':d?`<span class="op">${hm(m+d)}</span><s>${hm(m)}</s>`:hm(m);
+ const row=(x,cls)=>{const s=k.st[x],first=x===i,last=x===j,dw=!first&&!last&&s.prz!=null&&s.odj!=null?s.odj-s.prz:0;
+  const czas=first?T(s.odj,s.dd):last?T(s.prz,s.dp):dw>0?`<small>${T(s.prz,s.dp)}</small>${T(s.odj,s.dd)}`:T(s.odj??s.prz,s.dd??s.dp);
+  const tm=last?s.prz+(s.dp||0):(s.odj??s.prz)+(s.dd||0);
+  const pod=[s.skip?'pociąg się tu nie zatrzyma':'',s.p?'peron '+s.p+(s.tor?' · tor '+s.tor:''):'',dw>=2?'postój '+dw+' min':''].filter(Boolean).join(' · ');
+  const km=!first&&s.km!=null&&km0!=null?Math.round(s.km-km0):null;
+  return `<div class="os pos ${cls} ${tm<nw?'byl':''}" style="--c:${c}"><time>${czas}</time><div class="sz"><i></i></div><div class="n"><span><b class="nz">${krotko(s.n)}</b>${pod?`<small>${pod}</small>`:''}</span>${km!=null?`<em>${km} km</em>`:''}</div></div>`};
+ let h=row(i,'gl p');const sr=[];for(let x=i+1;x<j;x++)sr.push(row(x,''));
+ if(sr.length){const otw=S.rozw?.has(g.t.id);h+=`<div class="os" style="--c:${c}"><span></span><div class="sz"></div><button class="chip" style="justify-self:start;height:36px" data-a="rozwin" data-k="${g.t.id}" aria-expanded="${!!otw}">${pl(sr.length,'przystanek','przystanki','przystanków')} po drodze ${ic(otw?'gora':'dol',14)}</button></div><div ${otw?'':'hidden'}>${sr.join('')}</div>`}
+ return h+row(j,'gl k')}
 function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t),c=t.l.color;let h='';
  const row=(k,cls)=>{const s=t.st[k],pr=peron(t,k),tm=s.t+(s.d??d),byl=tm<nw;
   return `<div class="os ${cls} ${byl?'byl':''}" style="--c:${c}"><time>${hm(tm)}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}</span>${cls.includes('gl')&&pr.p?`<small>peron ${pr.p}${pr.tor?' · tor '+pr.tor:''}</small>`:''}</div></div>`};
@@ -251,7 +332,7 @@ function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t),c=t.l.color;let h='
 function rWyjazd(){const el=$('#wyjazd'),r=S.routes[0];if(!r){el.innerHTML='';return}
  const cs=polaczenia(r.a,r.b,{min:Math.floor(now()/5)*5,n:6},'w'+r.a+'>'+r.b),c=cs&&cs.find(c=>doOdj(c)-S.walk>-1);
  if(!c){el.innerHTML=`<div class="blok"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p><p style="margin-top:6px;font-weight:600">${cs===undefined?'Sprawdzamy najbliższe połączenie…':cs===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p></div>`;return}
- const w=wyjscie(c,dzien(c.dep)),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);
+ const w=wyjscie(c,dzien(c.dep)),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);anim(el,c.k);
  el.innerHTML=`<div class="blok kol" style="gap:6px"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p>
   <div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
   <p class="dr maly">${x.t.l.badge}${pr.p?' · peron '+pr.p:''} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
@@ -266,6 +347,7 @@ function rWyniki(){const el=$('#wyniki');
  if(res===undefined){el.innerHTML='<div class="plyta pusto">Szukamy połączeń…</div>';rDetal();return}
  if(!res?.length){el.innerHTML=`<div class="plyta pusto">${res===null?'Nie udało się pobrać połączeń. Spróbuj ponownie za chwilę.':`Nie znaleźliśmy połączeń. ${ileOpcji()?'Zmień opcje wyszukiwania i wyszukaj ponownie.':'Zmień stacje albo godzinę i wyszukaj ponownie.'}`}</div>`;S.sel=null;rDetal();return}
  if(S.selAuto){S.selAuto=false;S.sel=res[0].k;S.selDay=dzien(res[0].dep)}
+ anim(el,S.from+S.to+S.q.min+S.q.arrive);
  el.innerHTML=`<div class="wiersz rozsun zawin" style="padding:8px 4px 0;gap:0 12px"><div><h2>Połączenia</h2><p class="dr maly num">${pelnaData(dzien(res[0].dep))} · odjazdy ${hm(res[0].dep)}–${hm(res.at(-1).dep)}</p></div>
   <button class="tekstowy" data-a="obserwuj-trase">${ic('moje',16)}${obs?'Obserwujesz trasę':'Obserwuj trasę'}</button></div>
   ${res.map(c=>polKarta(c,c.k===S.sel,dzien(c.dep))).join('')}
@@ -273,32 +355,33 @@ function rWyniki(){const el=$('#wyniki');
  rDetal()}
 function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
  if(!c){el.innerHTML='';el.classList.remove('otwarty');return}
+ anim(el,S.sel);
  const w=wyjscie(c,day),d=cDelay(c,day),x=c.legs[0],pr=peron(x.t,x.i),zap=S.trips.some(t=>t.k===S.sel&&t.dz===iso(day));
  let osie='';c.legs.forEach((g,n)=>{
   if(n){const p=c.legs[n-1];osie+=`<div class="przes">${ic('pieszo',18)}Przesiadka na stacji ${krotko(g.t.st[g.i].n)} · ${g.dep-p.arr} min</div>`}
-  osie+=`<section class="plyta"><div class="wiersz zawin" style="padding:0 2px 8px;gap:10px">${lin(g.t.l)}<button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button><span class="dr maly">kierunek: ${krotko(esc(g.t.kier))}</span></div>${osKursu(g.t,g.i,g.j,true,day)}</section>`});
- const ag=[...new Set(c.legs.map(g=>g.t.l.ag))];
- const bilet=ag.includes('IC')?['Potrzebny osobny bilet PKP Intercity',`Bilety ${R.kto} i POLREGIO nie są ważne w tym pociągu.`]:c.legs.some(g=>g.t.l.ag==='PR'&&g.t.kwT===false)?['Potrzebny bilet POLREGIO',`Bilety ${R.kto} nie są ważne na tym odcinku.`]:ag.includes('PR')?[`Wystarczy bilet ${R.kto}`,'Na tym odcinku jest ważny także w pociągach POLREGIO.']:[`Bilet ${R.kto}`,'Kupisz go w kasie, w automacie albo u konduktora.'];
+  const kr=kurs(g.t.id); // relacja całego pociągu, gdy kurs już wczytany
+  osie+=`<section class="plyta kol" style="gap:10px"><div class="kol" style="gap:2px;padding:0 2px"><div class="wiersz zawin" style="gap:4px 10px">${linN(g.t.l)}<b>${g.t.l.kat||g.t.l.kto}</b><button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button></div>
+   <span class="dr maly">Przewoźnik: ${g.t.l.kto}. ${kropka(kr?`Pociąg relacji: ${krotko(esc(kr.origin))} – ${krotko(esc(kr.destination))}`:`Kierunek: ${krotko(esc(g.t.kier))}`)}</span></div><div>${postoje(g,day)}</div></section>`});
  el.innerHTML=`<div class="kol" style="gap:10px">
   <div class="detal-gl"><button class="kolo wroc" data-a="detal-zamknij" aria-label="Wróć do listy połączeń">${ic('wroc')}</button><b>${bkrotko(cFrom(c))} → ${bkrotko(cTo(c))}</b><button class="kolo" data-a="udostepnij" aria-label="Udostępnij">${ic('udost')}</button></div>
-  <section class="blok kol" style="gap:6px"><div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
-   <p class="dr maly">${day?'Opóźnienia pokażemy w dniu podróży.':d?'Opóźnienie '+d+' min':'Na czas'} · przyjazd o ${hm(cArr(c))}</p>
+  <section class="blok kol" style="gap:6px">${desk()?`<p class="wielkie num">${hm(c.dep+d)} → ${hm(cArr(c))}</p><p>${day?w.sub:w.gl+(doOdj(c)>=0?', pociąg odjeżdża '+zaIle(doOdj(c)):'')}</p>`:`<div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>`}
+   <p class="dr maly">${day?'Opóźnienia pokażemy w dniu podróży.':d?'Opóźnienie '+d+' min':'Na czas'}${desk()?'':' · przyjazd o '+hm(cArr(c))}</p>
    <div class="kafle" style="margin-top:8px">${pr.p?`<div class="kafel"><span>peron</span><b>${pr.p}</b></div>`:''}${pr.tor?`<div class="kafel"><span>tor</span><b>${pr.tor}</b></div>`:''}<div class="kafel"><span>czas jazdy</span><b>${dur(c.arr-c.dep)}</b></div>${c.km?`<div class="kafel"><span>odległość</span><b>${c.kmP?'ok. ':''}${c.km} km</b></div>`:''}</div></section>
   ${oPolaczeniu(c,day).map(kpas).join('')}
   ${osie}
-  <section class="plyta"><b>${bilet[0]}</b><p class="dr" style="font-size:14px">${bilet[1]}</p></section>
+  ${biletHtml(c)}
   <div class="strony"><button class="drugi" data-a="mock" data-t="W gotowej wersji pobierzesz tu plik do kalendarza.">${ic('kal',18)}Do kalendarza</button><button class="drugi" data-a="mock" data-t="W gotowej wersji powiadomimy Cię o opóźnieniu i zmianie peronu.">${ic('dzwonek',18)}Powiadom mnie</button></div>
   <div class="cta"><button class="glowny" data-a="obserwuj-podroz">${zap?'Obserwujesz podróż':'Obserwuj podróż'}</button><button class="kolo" data-a="na-mape" aria-label="Pokaż na mapie">${ic('mapa')}</button></div></div>`}
 function rStacje(){if(document.activeElement!==$('#stacja'))$('#stacja').value=S.station;
  $('#tryb').innerHTML=[['dep','Odjazdy'],['arr','Przyjazdy']].map(([k,t])=>`<button data-a="tryb" data-k="${k}" aria-pressed="${S.tryb===k}">${t}</button>`).join('');
  $('#szybkie').innerHTML=R.szybkie.filter(s=>s!==S.station).slice(0,3).map(s=>`<button class="chip" style="height:40px" data-a="stacja" data-s="${s}">${bkrotko(s)}</button>`).join('');
  const b=tablica(S.station,S.tryb,desk()?20:12),ks=oStacji(S.station);
- const nad=ks.map(kpas).join('')+btkPodp([S.station]);$('#st-kom').hidden=!nad;$('#st-kom').innerHTML=nad;
- $('#tablica').innerHTML=tabl(b,S.tryb)}
+ const ls=linesOf(S.station),nad=ks.map(kpas).join('')+btkPodp([S.station])+(desk()&&SBN.has(S.station)?`<section class="plyta kol" style="gap:10px">${ls.length?`<span class="dr maly">Linie na tej stacji</span><div class="wiersz zawin" style="gap:10px">${ls.map(lin).join('')}</div>`:''}<div class="wiersz zawin" style="gap:8px"><button class="drugi" data-a="stad" data-s="${S.station}">Połączenie stąd</button><button class="drugi" data-a="stacja-mapa" data-s="${S.station}">${ic('mapa',18)}Na mapie</button></div></section>`:'');$('#st-kom').hidden=!nad;$('#st-kom').innerHTML=nad;
+ $('#tablica').innerHTML=tabl(b,S.tryb);anim($('#tablica'),S.station+S.tryb+(b?1:0))}
 const tabl=(b,mode)=>b===undefined?'<p class="pusto">Wczytujemy tablicę…</p>':!b?'<p class="pusto">Nie udało się pobrać tablicy. Spróbuj ponownie za chwilę.</p>':b.length?b.map(x=>rzad(x,mode)).join(''):'<p class="pusto">W najbliższej dobie nie ma tu pociągów.</p>';
 function rzad(x,mode){const d=x.delay||0,ag=x.agency||R.ag,l=linia(x.route,ag,x.isBus),tm=mn(x.scheduled),m=tm+d-now(),kier=mode==='dep'?x.destination:x.origin,num=krNum(x.number);
  return `<button class="rzad" data-a="poc" data-id="${esc(x.key)}"><span class="g ${d||x.cancelled?'op':''}">${x.cancelled?`<s>${hm(tm)}</s>`:hm(tm+d)}${d&&!x.cancelled?`<s>${hm(tm)}</s>`:''}</span>
- <span class="c"><b>${mode==='dep'?'':'ze stacji '}${krotko(esc(kier))}</b><span>${lin(l)}<span>${AGL(ag)} ${num}</span><span>${x.cancelled?'odwołany':x.skipped?'nie zatrzyma się':zaIle(m)+(d?' · +'+d+' min':'')}</span>${ag==='IC'?'<span>osobny bilet</span>':''}${KOM().some(n=>trwa(n)&&n.poc.some(p=>pasuje(p,ag,numery(x.number))))?'<span class="znak op" style="padding:1px 7px;font-size:12px">komunikat</span>':''}</span></span>${x.platform?`<span class="pe">peron<b>${x.platform}</b></span>`:''}</button>`}
+ <span class="c"><b>${mode==='dep'?'':'ze stacji '}${krotko(esc(kier))}</b><span>${linN(l)}<span>${AGL(ag)} ${num}</span><span>${x.cancelled?'odwołany':x.skipped?'nie zatrzyma się':zaIle(m)+(d?' · +'+d+' min':'')}</span>${ag==='IC'?'<span>osobny bilet</span>':''}${KOM().some(n=>trwa(n)&&n.poc.some(p=>pasuje(p,ag,numery(x.number))))?'<span class="znak op" style="padding:1px 7px;font-size:12px">komunikat</span>':''}</span></span>${x.platform?`<span class="pe">peron<b>${x.platform}</b></span>`:''}</button>`}
 /* mapa: MapLibre i podkład OpenFreeMap jak w obecnej wersji, przemalowany na barwy Tarczy (zmienne CSS motywu) */
 let ML=null,MAP=null,MAPST='',BAZA=null;const MKP=new Map();let MKK=[];
 const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -318,7 +401,7 @@ function mapaStop(){if(MAP)MAP.remove();MAP=null;MAPST='';MKP.clear();MKK=[];$('
 async function mapaStart(){const key=R.id+(ciemny()?'d':'j');if(MAPST===key)return;mapaStop();MAPST=key;const el=$('#mapa-okno');
  try{ML??=await import('./maplibre-gl.mjs');const style=await stylMapy();if(MAPST!==key)return;const h=SBN.get(R.hub);
   const m=MAP=new ML.Map({container:el,style,center:h?[h.lon,h.lat]:[17,52],zoom:8,dragRotate:false,pitchWithRotate:false,touchPitch:false,attributionControl:{compact:true}});
-  m.touchZoomRotate.disableRotation();m.addControl(new ML.NavigationControl({showCompass:false}),'top-left');
+  m.touchZoomRotate.disableRotation();m.addControl(new ML.NavigationControl({showCompass:false}),'bottom-left');
   m.on('load',()=>{warstwy(m);m._ok=true;rMapa()});m.on('moveend',uklad);
   m.on('click',ev=>{if(ev.originalEvent.target.closest?.('.mpoc,.mkom'))return;const p=ev.point,f=m.queryRenderedFeatures([[p.x-12,p.y-12],[p.x+12,p.y+12]],{layers:['st0','st1','st2']});if(f[0])arkStacja(f[0].properties.name)});
  }catch(e){if(MAPST===key){MAPST='';el.innerHTML='<p class="pusto">Nie udało się wczytać mapy. Spróbuj ponownie za chwilę.</p>'}}}
@@ -342,6 +425,7 @@ function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr
  if(m._stn!==STN){m._stn=STN;m.getSource('stacje').setData({type:'FeatureCollection',features:STN.filter(s=>R.id!=='wlkp'||s.kw!==false).map(s=>({type:'Feature',
   properties:{name:s.name,l:R.etyk?R.etyk(s.name):bkrotko(s.name),r:s.name===R.hub?3:WAZNE.includes(s.name)?2:s.daily>=80?1:0},geometry:{type:'Point',coordinates:[s.lon,s.lat]}}))})}
  // trasa wybranego pociągu; „Pokaż na mapie” dopasowuje widok do całej trasy, dotknięta pastylka — nie
+ if(S.mapCel){m.flyTo({center:S.mapCel,zoom:12});S.mapCel=null}
  if(!S.mapSel)S.mapFit=false;
  const sel=S.mapSel?kurs(S.mapSel):null,shape=sel?.shape?.length?sel.shape.map(([y,x])=>[x,y]):null;
  if(m._sel!==sel){m._sel=sel;m.getSource('kurs').setData(shape?{type:'Feature',properties:{color:sel.l.color},geometry:{type:'LineString',coordinates:shape}}:{type:'FeatureCollection',features:[]})}
@@ -866,7 +950,16 @@ function rONas(){const W=R.id==='wlkp',a=bkrotko(R.hub),b=bkrotko(R.cel);
   <a class="glowny" style="text-decoration:none;max-width:280px" href="https://buycoffee.to/zanimwyjdziesz" target="_blank" rel="noopener">Postaw kawę</a></section>`}
 
 /* ---------- arkusze ---------- */
-function ark(html){if(!html)ARK=null;$('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
+let AZ=0;
+function blokada(){const okno=$('#ark').firstChild&&!$('.tlo-ark.zamyka')&&!$('.tlo-ark.boczny'),detal=$('#detal').classList.contains('otwarty')&&!desk();
+ document.documentElement.classList.toggle('zablokuj',!!(okno||detal))}
+new MutationObserver(blokada).observe($('#ark'),{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+new MutationObserver(blokada).observe($('#detal'),{attributes:true,attributeFilter:['class']});
+addEventListener('resize',blokada);
+function ark(html){if(!html)ARK=null;clearTimeout(AZ);const box=$('#ark');
+ if(!html&&box.firstChild&&!matchMedia('(prefers-reduced-motion:reduce)').matches){box.firstChild.classList.add('zamyka');AZ=setTimeout(()=>box.innerHTML='',170);return}
+ if(html&&box.firstChild){box.querySelector('.ark').innerHTML=html;box.firstChild.classList.remove('zamyka');return} // zmiana treści otwartego okna bez ponownego wjazdu
+ $('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
 const zamk=`<button class="kolo" data-a="ark-zamknij" aria-label="Zamknij">${ic('zamknij')}</button>`;
 function arkPociag(id){S.mapSel=id;const t=kurs(id);
  if(!t){ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Pociąg</h2>${zamk}</div><p class="pusto">${t===null?'Nie udało się pobrać danych pociągu.':'Wczytujemy dane pociągu…'}</p>`);ARK={f:arkPociag,a:id,czeka:true};return}
@@ -882,7 +975,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  else for(let k=0;k<=L;k++)os+=row(k);
  const POJ={emu:'zespół elektryczny',dmu:'szynobus',steam:'parowóz',diesel:'lokomotywa spalinowa'},vt=t.vt;
  ark(`<section class="blok kol" style="gap:12px">
-  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px">${lin(t.l)}<span class="dr maly">${t.l.kto}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}${t.l.nazwa?' '+t.l.nazwa:''}</h2></div>${zamk}</div>
+  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px">${linN(t.l)}<span class="dr maly">${t.l.kat?t.l.kat+' · ':''}${t.l.kto}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}${t.l.nazwa?' '+t.l.nazwa:''}</h2></div>${zamk}</div>
   <div class="wiersz" style="gap:16px">${t.odw?'':tarcza(m)}<div style="min-width:0"><p class="num" style="font-weight:700;font-size:19px;line-height:1.25">${gl}</p><p class="dr">${sub}</p></div></div>
   <div><div class="bieg" style="--c:${c};--p:${post}%"><i></i></div>
   <div class="wiersz rozsun maly num" style="align-items:flex-start;margin-top:8px"><span><b>${hm(tm(0))}</b><br>${bkrotko(t.st[0].n)}</span><span style="text-align:right"><b>${hm(tm(L))}</b><br>${bkrotko(t.st[L].n)}</span></div></div>
@@ -910,7 +1003,7 @@ function arkKiedy(){if(!P){const t=S.when??now();P={day:S.day,h:Math.floor(t/60)
  <div class="kol" style="gap:6px"><b>Dzień</b><div class="dni na-papierze">${[0,1,2,3,4,5,6].map(o=>`<button class="chip" data-a="pk-dzien" data-d="${o}" aria-pressed="${P.day===o}">${etykDnia(o)}</button>`).join('')}</div><p class="dr maly">${pelnaData(P.day)}</p></div>
  <div class="kol" style="gap:6px"><b>Godzina</b><div class="zegar">${slup('h',P.h,'Godzina')}<span class="dw" aria-hidden="true">:</span>${slup('m',P.m,'Minuty')}</div></div>
  <div class="strony"><button class="drugi" data-a="pk-teraz">Teraz</button><button class="glowny" style="height:48px;font-size:15px" data-a="pk-ok">Pokaż połączenia</button></div>`)}
-function rKomunikaty(){const f=S.kfiltr||'wsz';
+function rKomunikaty(){const f=S.kfiltr||'wsz';setTimeout(()=>anim($('.kom-gl>.kol'),f+(KR?1:0),'kom-lista'));
  const moje=n=>S.routes.some(r=>(nast(r)||[]).some(c=>c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))));
  const l=KOM().filter(n=>n.do==null||n.do>=0).filter(n=>f==='wsz'||(f==='utr'?n.sev!=='info':moje(n))).sort((a,b)=>waga(a)-waga(b)||a.od-b.od);
  const sel=desk()&&(l.find(n=>n.id===S.kSel)||l[0]);
@@ -948,10 +1041,10 @@ function route(){const h=location.hash.slice(1);if($('.tlo-ark.boczny'))ark('');
  view=VIEWS.some(x=>x[0]===h)?h:'szukaj';
  VIEWS.forEach(([k])=>$('#v-'+k).hidden=k!==view);
  const a={system:'moje',btk:'moje',onas:'moje',schemat:'mapa'}[view]||view;
- $('#menu').innerHTML=VIEWS.slice(0,6).map(([k,t])=>`<a href="#${k}" ${k===(view==='system'?view:a)?'aria-current="page"':''}>${t}</a>`).join('');
+ $('#menu').innerHTML=VIEWS.slice(0,5).map(([k,t])=>`<a href="#${k}" ${k===(view==='system'?view:a)?'aria-current="page"':''}>${t}</a>`).join('');
  $('#dol').innerHTML=VIEWS.slice(0,5).map(([k,t])=>`<a href="#${k}" ${k===a?'aria-current="page"':''}><i>${ic(k)}</i>${t}</a>`).join('');
  $('#reg').innerHTML=R.nazwa+ic('dol',14);
- render();window.scrollTo(0,0)}
+ render();window.scrollTo(0,0);anim($('#v-'+view),view+Date.now())}
 function render(){({szukaj:()=>{rWyjazd();rWyniki()},stacje:rStacje,mapa:rMapa,komunikaty:rKomunikaty,moje:rMoje,system:rSystem,btk:rBtk,schemat:rSchemat,onas:rONas})[view]()}
 function motyw(){const r=document.documentElement;if(S.theme==='system')r.removeAttribute('data-theme');else r.dataset.theme=S.theme;
  const dark=S.theme==='dark'||(S.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);$('#motyw').innerHTML=ic(dark?'slonce':'ksiezyc');if(view==='schemat')rSchemat();else if(view==='mapa')rMapa()}
@@ -1003,7 +1096,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
     if(view!=='szukaj'||cFrom(c)!==S.from||cTo(c)!==S.to||!(wyniki()||[]).some(x=>x.k===c.k)){S.from=cFrom(c);S.to=cTo(c);S.day=S.selDay;S.when=((c.dep%1440)+1440)%1440;S.kier='odj';S.q={min:c.dep,arrive:false};formularz()}
     if(view!=='szukaj')go('szukaj');else rWyniki();$('#detal').classList.add('otwarty');$('#detal').scrollTop=0;break}
   case'detal-zamknij':$('#detal').classList.remove('otwarty');break;
-  case'rozwin':{const box=el.closest('.os').nextElementSibling;box.hidden=!box.hidden;el.setAttribute('aria-expanded',!box.hidden);break}
+  case'rozwin':{const box=el.closest('.os').nextElementSibling;box.hidden=!box.hidden;el.setAttribute('aria-expanded',!box.hidden);if(el.dataset.k){S.rozw??=new Set();S.rozw[box.hidden?'delete':'add'](el.dataset.k)}break}
   case'udostepnij':{const c=cFromKey(S.sel),t=`${cFrom(c)} → ${cTo(c)}, ${etykDnia(S.selDay).toLowerCase()} ${hm(c.dep)}–${hm(cArr(c))} · zanimwyjdziesz.pl`;
    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Skopiowano opis połączenia.')).catch(()=>toast(t));break}
   case'mock':toast(el.dataset.t);break;
@@ -1013,6 +1106,9 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'na-mape':{const c=cFromKey(S.sel);S.mapSel=c.legs[0].t.id;S.mapFit=true;$('#detal').classList.remove('otwarty');go('mapa');break}
   case'poc':arkPociag(el.dataset.id);if(view==='mapa')rMapa();break;
   case'poc-mapa':S.mapFit=true;ark('');go('mapa');break;
+  case'stacja-mapa':{const s=SBN.get(el.dataset.s);S.mapCel=[s.lon,s.lat];go('mapa');break}
+  case'ulga':S.ulga=el.dataset.k;S.ulgiOtw=false;save();rWyniki();break;
+  case'ulgi':S.ulgiOtw=!S.ulgiOtw;rDetal();break;
   case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
   case'poc-link':{const u='https://zanimwyjdziesz.pl'+(R.id==='mal'?'/malopolska':'')+'/pociag/'+el.dataset.n;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('Skopiowano link do pociągu.')).catch(()=>toast(u));break}
