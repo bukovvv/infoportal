@@ -203,8 +203,8 @@ const ULGI=[
  {id:'u37u',pct:37,gr:'d',kto:'Uczniowie, do ukończenia 24 lat'},
  {id:'u51s',pct:51,gr:'s',kto:'Studenci do 26 lat i doktoranci do 35 lat'},
  {id:'u33',pct:33,gr:'s',kto:'Nauczyciele i nauczyciele akademiccy'},
- {id:'h25',pct:25,gr:'e',h:1,kto:'Bilet 60+ — osoby, które ukończyły 60 lat'},
- {id:'u37e',pct:37,gr:'e',kto:'Emeryci i renciści oraz ich współmałżonkowie na utrzymaniu — 2 przejazdy w roku'},
+ {id:'h25',pct:25,gr:'e',h:1,kto:'Bilet 60+: osoby, które ukończyły 60 lat'},
+ {id:'u37e',pct:37,gr:'e',kto:'Emeryci i renciści oraz ich współmałżonkowie na utrzymaniu (2 przejazdy w roku)'},
  {id:'u37k',pct:37,gr:'r',kto:'Rodzice i małżonkowie rodziców z Kartą Dużej Rodziny'},
  {id:'u49',pct:49,gr:'z',kto:'Osoby niezdolne do samodzielnej egzystencji'},
  {id:'u37n',pct:37,gr:'z',kto:'Osoby niewidome całkowicie niezdolne do pracy'},
@@ -236,9 +236,9 @@ function cenaPol(c){const b=bilety(c);if(b.length!==1||!b[0].own)return'';const 
 function biletHtml(c){const bs=bilety(c),T=CENY[R.ag],u=ulgaW(),own=bs.filter(b=>b.own),inne=bs.filter(b=>!b.own),opis=bs.length>1;
  const suma=v=>{let s=0;for(const b of own){const p=cenaU(b,v);if(p==null)return null;s+=p}return s};
  const karty=own.map(b=>{const p=cenaU(b,u);
-  return `<div class="wiersz rozsun" style="align-items:flex-end;gap:12px"><div style="min-width:0"><span class="dr maly">Bilet jednorazowy ${AGL(R.ag)}${opis?' · '+bkrotko(b.a)+' – '+bkrotko(b.b):''}</span><p class="wielkie num" style="font-size:30px;margin-top:2px">${p!=null?zl(p):'—'}</p></div><span class="dr maly" style="text-align:right">${b.km?b.km+' km':''}</span></div>`}).join('');
+  return `<div class="wiersz rozsun" style="align-items:flex-end;gap:12px"><div style="min-width:0"><span class="dr maly">Bilet jednorazowy ${AGL(R.ag)}${opis?' · '+bkrotko(b.a)+' – '+bkrotko(b.b):''}</span><p class="wielkie num" style="font-size:30px;margin-top:2px">${p!=null?zl(p):'brak w cenniku'}</p></div><span class="dr maly" style="text-align:right">${b.km?b.km+' km':''}</span></div>`}).join('');
  // lista rozwijana ulg: każda opcja z ceną tego przejazdu
- const opcja=v=>{const s=suma(v);return `<button role="option" aria-selected="${v===u}" data-a="ulga" data-k="${v.id}"><span class="pr">${v.pct?v.pct+'%':'—'}</span><span>${v.kto}${v.h?' <small class="tag">oferta KW</small>':''}</span><b class="num">${s!=null?zl(s):''}</b></button>`};
+ const opcja=v=>{const s=suma(v);return `<button role="option" aria-selected="${v===u}" data-a="ulga" data-k="${v.id}"><span class="pr">${v.pct?v.pct+'%':''}</span><span>${v.kto}${v.h?' <small class="tag">oferta KW</small>':''}</span><b class="num">${s!=null?zl(s):''}</b></button>`};
  const grupa=(t,l)=>l.length?`<p class="et">${t}</p>${l.map(opcja).join('')}`:'';
  const lista=own.length?`<div class="ulgi"><button class="ulga-wybor" data-a="ulgi" aria-expanded="${!!S.ulgiOtw}"><span><small>Ulga</small><b>${u.pct?u.pct+'% · ':''}${u.kto}</b></span>${ic(S.ulgiOtw?'gora':'dol',18)}</button>
   ${S.ulgiOtw?`<div class="ulgi-lista" role="listbox" aria-label="Ulgi">${GRUPY_ULG.map(([k,t])=>grupa(t,ULGI.filter(v=>v.gr===k))).join('')}</div>`:''}</div>`:'';
@@ -491,7 +491,7 @@ function uklad(){if(!MAP)return;const zaj=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[
 function rMoje(){const el=$('#v-moje');
  for(const r of S.routes)if(r.pow&&Date.now()-r.pow.at>7*864e5&&typeof Notification!=='undefined'&&Notification.permission==='granted'){r.pow.at=Date.now();save();powiadomTrase(r).catch(()=>{})}
  const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
-  return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo${r.pow?' wlaczony':''}" style="background:var(--papier)" data-a="pow-trasa" data-i="${i}" aria-pressed="${!!r.pow}" aria-label="${r.pow?'Powiadomienia o trasie włączone — zmień':'Włącz powiadomienia o trasie'}">${ic('dzwonek',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
+  return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo${r.pow?' wlaczony':''}" style="background:var(--papier)" data-a="pow-trasa" data-i="${i}" aria-pressed="${!!r.pow}" aria-label="${r.pow?'Powiadomienia o trasie włączone. Zmień ustawienia':'Włącz powiadomienia o trasie'}">${ic('dzwonek',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
   ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(cArr(c))}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,dzien(c.dep))}</button>`).join(''):`<p class="pusto">${all===undefined?'Sprawdzamy połączenia…':all===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p>`}
   <button class="tekstowy" data-a="trasa-szukaj" data-i="${i}">Więcej połączeń ${ic('strz',16)}</button></section>`}).join('');
  const pod=S.trips.map(t=>{const day=offDz(t.dz);let c=CON[t.k];if(!c&&day>=0&&t.a){const l=polaczenia(t.a,t.b,{min:day*1440+t.m-1,n:3,ttl:300});c=l&&l.find(x=>x.k===t.k)}return{c,day}}).filter(x=>x.c&&x.day>=0&&(x.day>0||cArr(x.c)>=now()-10));
@@ -745,7 +745,7 @@ const LINES = [
       'Poznań Główny', 'Poznań Dębina', 'Poznań Starołęka', 'Środa Wielkopolska', 'Jarocin', 'Pleszew', 'Ostrów Wielkopolski', 'Nowe Skalmierzyce', 'Kalisz',
       'Opatówek', 'Sieradz', 'Zduńska Wola', 'Łask', 'Kolumna', 'Pabianice', 'Pabianice Północne', 'Łódź Retkinia', 'Łódź Kaliska',
     ],
-    note: 'Pociągi pospieszne KW — zatrzymują się tylko na wymienionych stacjach.',
+    note: 'Pociągi pospieszne KW zatrzymują się tylko na wymienionych stacjach.',
   },
   {
     id: 'leka', name: 'Poznań – Łęka Opatowska', color: '#FFCC00',
@@ -1006,7 +1006,7 @@ function punktualnosc(t){if(t.l.badge==='BUS')return'';const okres=S.pktOkres||3
   ${r.avgDelay!=null||naj?`<p style="font-size:14px">${r.avgDelay!=null?`Średnio <b>${min(r.avgDelay)}</b>`:''}${naj?`${r.avgDelay!=null?', ':''}najwięcej <b>${min(naj.delay)}</b> (${dataPL(naj.date)})`:''} na stacji końcowej.</p>`:''}
   <div class="kol" style="gap:6px"><span class="dr maly">Ostatnie przejazdy, od najstarszego</span>
    <div class="pkt-kropki">${ost.map(x=>`<span class="${x.cancelled?'k-odw':x.delay>r.threshold?'k-poz':'k-ok'}" title="${dataPL(x.date)}: ${x.cancelled?'odwołany':x.delay?'+'+x.delay+' min':'na czas'}">${x.cancelled?'×':x.delay>r.threshold?x.delay:''}</span>`).join('')}</div>
-   <span class="dr maly">Puste kółko — na czas (do ${r.threshold} min), liczba — minuty opóźnienia, × — odwołany.</span></div>`}
+   <span class="dr maly">Puste kółko oznacza przejazd na czas (do ${r.threshold} min), liczba to minuty opóźnienia, a × oznacza odwołanie.</span></div>`}
  const zw=!!S.pktZwin,mini=r&&r.runs>=5?`<span class="pkt-mini ${Math.round(r.share)>=90?'ok':Math.round(r.share)>=75?'opoz':'zle'}">${Math.round(r.share)}% na czas</span>`:'';
  return `<section class="plyta kol" style="gap:12px"><button class="pkt-nagl" data-a="pkt-zwin" aria-expanded="${!zw}"><b>Punktualność</b>${zw?mini:''}${ic(zw?'dol':'gora',18)}</button>${zw?'':`<div>${seg}</div>${tresc}`}</section>`}
 
