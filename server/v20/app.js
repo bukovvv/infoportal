@@ -1,14 +1,5 @@
 /* ---------- dane przykładowe ---------- */
-const REG={wlkp:{nazwa:'Wielkopolska',hub:'Poznań Główny',cel:'Gniezno',kto:'Kolei Wielkopolskich',ag:'KW',agN:'Koleje Wielkopolskie',kom:[
- {id:'w1',sev:'utr',tyt:'Prace torowe między stacjami Pobiedziska i Lednogóra',od:-3,do:10,lines:['PKM1'],st:['Pobiedziska','Fałkowo','Lednogóra'],poc:[],
-  tr:'Między stacjami Pobiedziska i Lednogóra pociągi jadą po jednym torze. Część pociągów odjeżdża kilka minut wcześniej albo później niż zwykle.\n\n- Sprawdź godzinę odjazdu przed wyjściem z domu.\n- Na stacji Fałkowo pociągi zatrzymują się przy peronie 1.\n- Bilety są ważne bez zmian.'},
- {id:'w2',sev:'pow',tyt:'Autobusy zamiast pociągów między stacjami Września i Konin',od:1,do:3,lines:['KWK'],st:['Września','Słupca','Konin'],poc:[77104,77105],
-  tr:'Z powodu wymiany rozjazdów na stacji Słupca pociągi kończą bieg na stacji Września. Dalej, do stacji Konin, jedzie autobus zastępczy.\n\n- Autobus odjeżdża sprzed budynku dworca.\n- Podróż autobusem trwa o około 20 min dłużej.\n- W autobusie nie przewozimy rowerów.'},
- {id:'w3',sev:'info',tyt:'Nieczynna winda na peronie 3 stacji Poznań Główny',od:-1,do:6,lines:[],st:['Poznań Główny'],poc:[],
-  tr:'Winda na peron 3 jest w naprawie. Na peron można dojść schodami albo pochylnią od strony mostu Dworcowego.\n\nJeśli potrzebujesz pomocy, zgłoś się do punktu obsługi na dworcu.'},
- {id:'w4',sev:'info',tyt:'Zmiana rocznego rozkładu jazdy',od:0,do:27,lines:[],st:[],poc:[],
-  tr:'W połowie grudnia zmienia się roczny rozkład jazdy. Część pociągów będzie odjeżdżać o innych godzinach.\n\nNowe godziny zobaczysz w wyszukiwarce, gdy wybierzesz dzień po zmianie rozkładu.'}
-],szybkie:['Poznań Główny','Gniezno','Września','Leszno'],wazne:['Poznań Główny','Gniezno','Września','Konin','Leszno','Kościan','Swarzędz','Pobiedziska','Mosina'],lines:[
+const REG={wlkp:{nazwa:'Wielkopolska',hub:'Poznań Główny',cel:'Gniezno',kto:'Kolei Wielkopolskich',ag:'KW',agN:'Koleje Wielkopolskie',szybkie:['Poznań Główny','Gniezno','Września','Leszno'],wazne:['Poznań Główny','Gniezno','Września','Konin','Leszno','Kościan','Swarzędz','Pobiedziska','Mosina'],lines:[
  {id:'PKM1',badge:'PKM1',ag:'KW',kto:'Koleje Wielkopolskie',color:'#2F6FC4',every:30,first:270,back:11,base:77500,map:1,peron:[1,16],
   stops:[['Poznań Główny',0],['Poznań Garbary',4],['Poznań Wschód',8],['Kobylnica',14],['Biskupice Wielkopolskie',19],['Promno',23],['Pobiedziska Letnisko',26],['Pobiedziska',29],['Fałkowo',34],['Lednogóra',38],['Pierzyska',43],['Gniezno',49]]},
  {id:'KWK',badge:'KW',ag:'KW',kto:'Koleje Wielkopolskie',color:'#1E9467',every:60,first:312,back:23,base:77100,map:1,peron:[3,8],
@@ -22,16 +13,7 @@ const REG={wlkp:{nazwa:'Wielkopolska',hub:'Poznań Główny',cel:'Gniezno',kto:'
 ],pos:{'Poznań Główny':[300,280,'L'],'Poznań Garbary':[330,255,'l'],'Poznań Wschód':[365,235,'l'],'Kobylnica':[410,205,'l'],'Biskupice Wielkopolskie':[440,188,'l'],'Promno':[465,175,'l'],'Pobiedziska Letnisko':[490,163,'l'],'Pobiedziska':[515,150,'l'],'Fałkowo':[545,135,'l'],'Lednogóra':[575,120,'l'],'Pierzyska':[605,105,'l'],'Gniezno':[640,88,'r'],
  'Swarzędz':[420,245,'b'],'Kostrzyn Wielkopolski':[480,262,'b'],'Nekla':[535,275,'t'],'Września':[595,290,'b'],'Słupca':[670,300,'t'],'Konin':[750,305,'b'],
  'Poznań Dębiec':[290,315,'r'],'Luboń koło Poznania':[280,345,'r'],'Puszczykowo':[285,380,'r'],'Mosina':[280,410,'r'],'Czempiń':[255,450,'r'],'Kościan':[225,490,'r'],'Leszno':[170,535,'r']}},
-mal:{nazwa:'Małopolska',hub:'Kraków Główny',cel:'Wieliczka Rynek-Kopalnia',kto:'Kolei Małopolskich',ag:'KML',agN:'Koleje Małopolskie',kom:[
- {id:'m1',sev:'utr',tyt:'Prace torowe między stacjami Kraków Bieżanów i Wieliczka Park',od:-2,do:8,lines:['SKA1'],st:['Kraków Bieżanów','Wieliczka Park','Wieliczka Rynek-Kopalnia'],poc:[],
-  tr:'Między stacjami Kraków Bieżanów i Wieliczka Park pociągi jadą po jednym torze. Część pociągów odjeżdża kilka minut wcześniej albo później niż zwykle.\n\n- Sprawdź godzinę odjazdu przed wyjściem z domu.\n- Bilety są ważne bez zmian.'},
- {id:'m2',sev:'pow',tyt:'Autobusy zamiast pociągów między stacjami Bochnia i Tarnów',od:2,do:4,lines:['SKA3'],st:['Bochnia','Brzesko Okocim','Tarnów'],poc:[33304,33305],
-  tr:'Z powodu naprawy sieci trakcyjnej pociągi kończą bieg na stacji Bochnia. Dalej, do stacji Tarnów, jedzie autobus zastępczy.\n\n- Autobus odjeżdża sprzed budynku dworca.\n- Podróż autobusem trwa o około 25 min dłużej.\n- W autobusie nie przewozimy rowerów.'},
- {id:'m3',sev:'info',tyt:'Nieczynna winda na peronie 4 stacji Kraków Główny',od:-1,do:5,lines:[],st:['Kraków Główny'],poc:[],
-  tr:'Winda na peron 4 jest w naprawie. Na peron można dojść schodami ruchomymi albo drugą windą od strony ulicy Bosackiej.\n\nJeśli potrzebujesz pomocy, zgłoś się do punktu obsługi na dworcu.'},
- {id:'m4',sev:'info',tyt:'Zmiana rocznego rozkładu jazdy',od:0,do:27,lines:[],st:[],poc:[],
-  tr:'W połowie grudnia zmienia się roczny rozkład jazdy. Część pociągów będzie odjeżdżać o innych godzinach.\n\nNowe godziny zobaczysz w wyszukiwarce, gdy wybierzesz dzień po zmianie rozkładu.'}
-],szybkie:['Kraków Główny','Tarnów','Miechów','Kraków Lotnisko'],wazne:['Kraków Główny','Kraków Lotnisko','Kraków Płaszów','Wieliczka Rynek-Kopalnia','Bochnia','Tarnów','Miechów','Słomniki'],
+mal:{nazwa:'Małopolska',hub:'Kraków Główny',cel:'Wieliczka Rynek-Kopalnia',kto:'Kolei Małopolskich',ag:'KML',agN:'Koleje Małopolskie',szybkie:['Kraków Główny','Tarnów','Miechów','Kraków Lotnisko'],wazne:['Kraków Główny','Kraków Lotnisko','Kraków Płaszów','Wieliczka Rynek-Kopalnia','Bochnia','Tarnów','Miechów','Słomniki'],
  etyk:n=>n==='Kraków Główny'?'Kraków Gł.':n.replace(/^Kraków /,''),lines:[
  {id:'SKA1',badge:'SKA1',ag:'KML',agl:'KMŁ',kto:'Koleje Małopolskie',color:'#C8376B',every:30,first:275,back:9,base:33100,map:1,peron:[3,4],
   stops:[['Kraków Lotnisko',0],['Kraków Olszanica',4],['Kraków Zakliki',6],['Kraków Młynówka',9],['Kraków Bronowice',11],['Kraków Łobzów',14],['Kraków Główny',18],['Kraków Grzegórzki',21],['Kraków Zabłocie',23],['Kraków Płaszów',27],['Kraków Prokocim',30],['Kraków Bieżanów',34],['Wieliczka Park',44],['Wieliczka Rynek-Kopalnia',46]]},
@@ -61,8 +43,7 @@ const pl=(n,a,b,c)=>n+' '+(n===1?a:(n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?b:c
 const dur=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'');
 const hash=s=>{let h=7;for(const ch of s)h=(h*31+ch.charCodeAt(0))>>>0;return h};
 const real=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()};
-const T0=Date.now(), DEMO=real()<300||real()>1290;
-const now=()=>DEMO?440+Math.floor((Date.now()-T0)/60000):real();
+const now=real;
 /* daty: jeden zapis w całym serwisie */
 const DNI=['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'],DSK=['niedz.','pon.','wt.','śr.','czw.','pt.','sob.'];
 const MIES=['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
@@ -91,44 +72,74 @@ const IK={
 };
 const ic=(n,s=20)=>`<svg aria-hidden="true" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IK[n]}</svg>`;
 
-/* ---------- rozkład ---------- */
-let ALL=[],TR={};
-function zbuduj(reg){R=REG[reg];R.id=reg;LINES=R.lines;POS=R.pos;WAZNE=R.wazne;STATIONS=Object.keys(POS).sort((a,b)=>a.localeCompare(b,'pl'));ALL=[];TR={};
-LINES.forEach((l,li)=>{const tot=l.stops.at(-1)[1];
- for(let d=0;d<2;d++)for(let k=0;l.first+k*l.every<=LAST;k++){
-  const dep=l.first+k*l.every+(d?l.back:0);
-  const st=(d?[...l.stops].reverse():l.stops).map(([n,t])=>({n,t:dep+(d?tot-t:t)}));
-  const id=li+'-'+d+'-'+k,h=hash(id)%12;
-  const t={id,l,li,d,st,dep,arr:st.at(-1).t,num:l.base+k*2+d,raw:h===9?3:h===10?6:h===11?12:0};
-  t.label=(l.agl||l.ag)+' '+t.num; ALL.push(t); TR[id]=t;
- }})}
-const delay=(t,day=0)=>{if(day)return 0;const n=now();return t.dep<n+90&&t.arr>n-30?t.raw:0};
-const peron=(t,i)=>t.st[i].n===R.hub?{p:t.l.peron[0],tor:t.l.peron[1]}:{p:t.d?2:1,tor:null};
-const linesOf=n=>LINES.filter(l=>l.stops.some(s=>s[0]===n));
-function legs(a,b){const o=[];for(const t of ALL){const i=t.st.findIndex(s=>s.n===a);if(i<0)continue;const j=t.st.findIndex(s=>s.n===b);if(j>i)o.push({t,i,j,dep:t.st[i].t,arr:t.st[j].t})}return o.sort((x,y)=>x.dep-y.dep)}
-function connections(a,b,o={}){
- const okAg=x=>!(o.bez||[]).includes(x.t.l.ag),minT=o.minT||5;
- let res=legs(a,b).filter(okAg).map(x=>({legs:[x],dep:x.dep,arr:x.arr}));
- if(!res.length&&!o.bezp){
-  const hubs=STATIONS.filter(h=>h!==a&&h!==b&&linesOf(a).some(l=>l.stops.some(s=>s[0]===h))&&linesOf(b).some(l=>l.stops.some(s=>s[0]===h)));
-  const best={};
-  for(const h of hubs){const A=legs(a,h).filter(okAg),B=legs(h,b).filter(okAg);
-   for(const x of A){const y=B.find(y=>y.dep>=x.arr+minT&&y.t.li!==x.t.li);if(!y)continue;
-    const c={legs:[x,y],dep:x.dep,arr:y.arr},p=best[x.t.id];
-    if(!p||c.arr<p.arr||(c.arr===p.arr&&x.arr>p.legs[0].arr))best[x.t.id]=c}}
-  res=Object.values(best);
- }
- res.sort((x,y)=>x.dep-y.dep||x.arr-y.arr);
- return res.filter(c=>!res.some(d=>d!==c&&d.dep>=c.dep&&d.arr<=c.arr&&(d.dep>c.dep||d.arr<c.arr)));
-}
-const cKey=c=>c.legs.map(x=>x.t.id+'.'+x.i+'.'+x.j).join('|');
-function cFromKey(k){try{const ls=k.split('|').map(p=>{const[id,i,j]=p.split('.');const t=TR[id];return{t,i:+i,j:+j,dep:t.st[+i].t,arr:t.st[+j].t}});return{legs:ls,dep:ls[0].dep,arr:ls.at(-1).arr}}catch(e){return null}}
-const cFrom=c=>c.legs[0].t.st[c.legs[0].i].n, cTo=c=>{const x=c.legs.at(-1);return x.t.st[x.j].n};
-const cDelay=(c,day=0)=>delay(c.legs[0].t,day);
-const doOdj=(c,day=0)=>c.dep+cDelay(c,day)-now()+day*1440;
-function board(st,mode,n){const nw=now(),o=[];for(const t of ALL){const i=t.st.findIndex(s=>s.n===st);if(i<0)continue;if(mode==='dep'?i===t.st.length-1:i===0)continue;const tm=t.st[i].t;if(tm+delay(t)<nw)continue;o.push({t,i,tm})}return o.sort((x,y)=>x.tm-y.tm).slice(0,n)}
+/* ---------- dane: API serwisu (te same co w obecnej wersji) ---------- */
+// czas = minuty od północy dzisiejszego dnia (jutro 07:30 = 1890), tak jak w makiecie
+const mn=s=>{if(!s)return null;const d=new Date();d.setHours(0,0,0,0);return Math.round((Date.parse(s)-d.getTime())/6e4)};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+const API=()=>'/api'+(R.id==='mal'?'/malopolska':'');
+const C=new Map(),SL={};let PT=0,ARK=null;
+// dane z pamięci albo undefined (wczytywanie) / null (błąd); po pobraniu przerysowuje widok (render jest synchroniczny)
+function dane(u,ttl=60,slot){const k=API()+u,e=C.get(k);
+ if(e&&(e.wait||Date.now()-e.at<ttl*1e3))return e.v===undefined&&slot?SL[slot]:e.v;
+ if(C.size>400)for(const[x,y]of C)if(!y.wait&&Date.now()-y.at>6e5)C.delete(x);
+ const n={v:e?.v,wait:true,at:0};C.set(k,n);
+ fetch(k,{credentials:'same-origin'}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(j=>{n.v=j}).catch(()=>{if(n.v===undefined)n.v=null})
+  .finally(()=>{n.wait=false;n.at=Date.now();if(slot&&n.v)SL[slot]=n.v;przerysuj()});
+ return n.v===undefined&&slot?SL[slot]:n.v}
+function przerysuj(){clearTimeout(PT);PT=setTimeout(()=>{render();if(ARK?.czeka)ARK.f(ARK.a)},30)}
+/* stacje */
+let STN=[],SBN=new Map(),SBI=new Map();
+async function wczytajStacje(){const r=await fetch(API()+'/stations');if(!r.ok)throw new Error(r.status);STN=await r.json();
+ SBN=new Map(STN.map(s=>[s.name,s]));SBI=new Map(STN.map(s=>[s.id,s.name]));STATIONS=STN.map(s=>s.name).sort((a,b)=>a.localeCompare(b,'pl'))}
 function resolve(v){const q=norm(v);if(!q)return null;return STATIONS.find(s=>norm(s)===q)||STATIONS.find(s=>norm(s).startsWith(q))||STATIONS.find(s=>norm(s).includes(q))||null}
-
+/* linie i przewoźnicy */
+const KOL={PKM1:'#3A76C2',PKM2:'#EA1A35',PKM3:'#3F9236',PKM4:'#823D8C',PKM5:'#E8B120',KW:'#E6000A',SKA1:'#00B1EB',SKA2:'#E82F89',SKA3:'#FBBA21',K3:'#E84D0F',K5:'#F29EC4',K7:'#008C36',K22:'#95C11F',K32:'#69BFAC',K33:'#951A80',K52:'#BD1621',K63:'#4464AC',K71:'#28235B'};
+const AGN={KW:'Koleje Wielkopolskie',KML:'Koleje Małopolskie',PR:'POLREGIO',IC:'PKP Intercity'};
+const AGL=a=>a==='KML'?'KMŁ':a;
+function linia(route,ag,isBus){ag=ag||R.ag;const sh=route?.short||AGL(ag);if(route?.color)KOL[sh]=route.color;
+ return{id:route?.id||sh,badge:isBus?'BUS':sh,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
+const linesOf=n=>{const s=new Set();return(SBN.get(n)?.lines||[]).map(x=>x.replace(/ ?P$/,'')).filter(x=>!s.has(x)&&s.add(x)).map(x=>({id:x,badge:x,color:KOL[x]||'#8A8F98'}))};
+const krNum=n=>String(n||'').split(' ')[0]; // „33126/7 Dunajec” → „33126/7”
+const nazwaP=n=>String(n||'').split(' ').slice(1).join(' ');
+const numery=n=>{const m=/^(\d+)(?:\/(\d+))?/.exec(n||'');return!m?[]:m[2]?[m[1],m[1].slice(0,m[1].length-m[2].length)+m[2]]:[m[1]]};
+/* odcinek połączenia → kurs w kształcie z makiety: st = postoje od wsiadania do wysiadania */
+function zOdcinka(g){const l={...linia(g.route,g.agency,g.isBus),nazwa:nazwaP(g.number)},d=g.departureDelay||0;
+ const st=[{n:g.from.name,t:mn(g.departure),d:g.departureDelay,p:g.platform,tor:g.track},...(g.stops||[]).map(s=>({n:s.name,t:mn(s.departure),d:s.delay})),{n:g.to.name,t:mn(g.arrival),d:g.arrivalDelay,p:g.arrivalPlatform}];
+ return{id:g.key,l,st,dep:st[0].t,arr:st.at(-1).t,num:krNum(g.number),nums:numery(g.number),label:AGL(l.ag)+' '+krNum(g.number),raw:d,arrD:g.arrivalDelay??d,kier:g.headsign,kwT:g.kwTickets}}
+const CON={};
+function zPolaczenia(c){const legs=c.legs.map(g=>{const t=zOdcinka(g);return{t,i:0,j:t.st.length-1,dep:t.dep,arr:t.arr}});
+ const o={legs,dep:legs[0].dep,arr:legs.at(-1).arr,km:c.distanceKm,kmP:c.distanceApprox};o.k=legs.map(x=>x.t.id).join('|');return CON[o.k]=o}
+// połączenia z API: q.min — minuta odjazdu (albo przyjazdu przy q.arrive), q.o — opcje wyszukiwania
+function polaczenia(a,b,q={},slot){const A=SBN.get(a),B=SBN.get(b);if(!A||!B||a===b)return[];
+ const m=q.min??now(),o=q.o||{},p=new URLSearchParams({from:A.id,to:B.id,date:iso(Math.floor(m/1440)),time:hm(((m%1440)+1440)%1440),limit:q.n||4});
+ if(q.arrive)p.set('arrive','1');if(o.bezp)p.set('direct','1');if(o.minT)p.set('minTransfer',o.minT);
+ if(o.bez?.length)p.set('agencies',agencje().map(x=>x[0]).filter(k=>!o.bez.includes(k)).join(','));
+ const r=dane('/connections?'+p,q.ttl??60,slot);return r===undefined?undefined:r?(r._c??=r.connections.map(zPolaczenia)):null}
+// najbliższe połączenia trasy (20 min wstecz, żeby opóźniony pociąg został do faktycznego odjazdu)
+const nast=r=>polaczenia(r.a,r.b,{min:Math.floor((now()-20)/10)*10,n:6},'m'+r.a+'>'+r.b);
+const cKey=c=>c.k;
+const cFromKey=k=>CON[k]||null;
+const cFrom=c=>c.legs[0].t.st[c.legs[0].i].n, cTo=c=>{const x=c.legs.at(-1);return x.t.st[x.j].n};
+const delay=t=>t.raw||0;
+const cDelay=c=>delay(c.legs[0].t);
+const cArr=c=>c.arr+(c.legs.at(-1).t.arrD||0);
+const doOdj=c=>c.dep+cDelay(c)-now();
+const dzien=m=>Math.floor(m/1440);
+const peron=(t,i)=>({p:t.st[i].p,tor:t.st[i].tor});
+function tablica(st,mode,n){const s=SBN.get(st);if(!s)return[];const r=dane(`/stations/${s.id}/board?mode=${mode}&limit=${n}`,60,'t'+st+mode+n);return r===undefined?undefined:r?r.rows:null}
+/* kurs z /trips: postoje z peronami i opóźnieniem na każdej stacji */
+function kurs(key){const r=dane('/trips/'+encodeURIComponent(key),30,'k'+key);if(!r)return r;if(r._t)return r._t;
+ const L=r.stops.length-1,num=krNum(r.number),l={...linia(r.route,r.agency,r.isBus),nazwa:nazwaP(r.number)};
+ const st=r.stops.map((s,k)=>({n:s.station.name,t:mn(k===L?s.arrival||s.departure:s.departure||s.arrival),d:k===L?s.arrivalDelay:s.departureDelay,p:s.platform,tor:s.track,skip:s.skipped}));
+ return r._t={id:key,l,st,dep:st[0].t,arr:st[L].t,num,nums:numery(r.number),label:AGL(l.ag)+' '+num,raw:r.realtime?.delay||0,odw:r.realtime?.cancelled,km:r.distanceKm,vt:r.vehicleType,shape:r.shape||[],origin:r.origin,destination:r.destination,trimmed:r.trimmed}}
+/* komunikaty z serwisu w kształcie z makiety */
+let KR,KC=[];
+function KOM(){const r=dane('/notices',120);if(r!==KR){KR=r;const dz=s=>dzien(mn(s));
+ KC=(r||[]).map(n=>({id:String(n.id),sev:{warning:'utr',danger:'pow'}[n.severity]||'info',tyt:esc(n.title),tr:esc(n.body),od:n.startsAt?dz(n.startsAt):-999,do:n.endsAt?dz(n.endsAt):null,lines:n.lines||[],st:(n.stations||[]).map(i=>SBI.get(i)).filter(Boolean),poc:(n.trains||[]).map(esc)}))}
+ return KC}
+const schLinia=id=>R.id==='wlkp'?SCH.LINES.find(l=>l.id===id)||SCH.PKM_LINES.find(l=>l.id===id):null;
+// „77600” = pociąg przewoźnika regionu, „PR 85724” / „IC 1804” = partner
+const pasuje=(p,ag,nums)=>{const m=/^(?:([A-ZŁ]+)\s*)?(\d+)/.exec(p);if(!m)return false;const pa=m[1]?(m[1]==='KMŁ'?'KML':m[1]):R.ag;return pa===ag&&nums.includes(m[2])};
 /* ---------- Bus-Tramwaj-Kolej: prawdziwa taryfa z serwisu (ceny w groszach: normalny, ulga 49%, ulga 51%) ---------- */
 const BTK={data:'1 września 2026',
  ulgi:['Normalny','Uczeń −49%','Student −51%'],
@@ -175,13 +186,13 @@ const FONTS=['Inter','Instrument Sans','IBM Plex Sans','Nunito Sans','Rubik','Fi
 const czyt=k=>{try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e){return null}};
 Object.assign(S,czyt('zw3-tarcza-ust')||{});
 if(!REG[S.region])S.region='wlkp'; if(!FONTS.includes(S.font))S.font='Inter';
-function region(id){S.region=id;zbuduj(id); // trasy i podróże osobno dla każdego regionu
+function region(id){S.region=id;R=REG[id];R.id=id;LINES=R.lines;POS=R.pos;WAZNE=R.wazne; // trasy i podróże osobno dla każdego regionu
  const z=czyt('zw3-tarcza@'+id)||{routes:[{a:R.hub,b:R.cel}],trips:[],przyklad:true};
  Object.assign(S,z,{from:R.hub,to:R.cel,station:R.hub,when:null,day:0,kier:'odj',sel:null,selDay:0,mapSel:null,bezp:false,minT:5,bez:[],sch:{set:'reg',linia:null,stacja:null}});
  document.documentElement.dataset.region=id;zamknijListe();$('#mapa-okno').innerHTML=''}
 const pismo=()=>document.documentElement.style.setProperty('--f',`'${S.font}',system-ui,-apple-system,'Segoe UI',sans-serif`);
 const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
-function zmienRegion(id){if(id===S.region)return;save();region(id);save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
+async function zmienRegion(id){if(id===S.region)return;save();region(id);try{await wczytajStacje()}catch(e){toast('Nie udało się wczytać listy stacji.');return}save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2800)}
 
 /* ---------- klocki ---------- */
@@ -193,17 +204,19 @@ const tarcza=m=>wKole(m)?`<div class="tarcza" aria-hidden="true"><svg viewBox="0
 const RODZ={info:'informacja',utr:'utrudnienie',pow:'poważne utrudnienie'},waga=n=>({pow:0,utr:1,info:2})[n.sev];
 const cap=s=>s[0].toUpperCase()+s.slice(1);
 const dM=o=>{const d=dzienD(o);return d.getDate()+' '+MIES[d.getMonth()]};
-function okres(n){if(n.do==null)return'od '+dM(n.od)+' do odwołania';if(n.od===n.do)return dM(n.od);
+function okres(n){if(n.od<-900)return n.do==null?'do odwołania':'do '+dM(n.do);if(n.do==null)return'od '+dM(n.od)+' do odwołania';if(n.od===n.do)return dM(n.od);
  const a=dzienD(n.od),b=dzienD(n.do);return a.getMonth()===b.getMonth()?a.getDate()+'–'+dM(n.do):dM(n.od)+' – '+dM(n.do)}
 const trwa=(n,day=0)=>n.od<=day&&(n.do==null||n.do>=day);
 const kStan=n=>trwa(n)?'trwa':n.od===1?'od jutra':'od '+dM(n.od);
 const kzn=(n,m)=>`<span class="kzn ${n.sev}${m?' m':''}" aria-hidden="true">${n.sev==='info'?'i':'!'}</span>`;
 function oOdcinku(n,t,i,j){ // czy komunikat dotyczy pociągu t między postojami i–j
- if(n.poc.includes(t.num))return true;
- if(n.lines.length)return n.lines.includes(t.l.id)&&(!n.st.length||n.st.some(s=>{const k=t.st.findIndex(x=>x.n===s);return k>=i&&k<=j}));
+ if(n.poc.some(p=>pasuje(p,t.l.ag,t.nums)))return true;
+ if(t.l.ag!==R.ag)return false; // stacje i linie komunikatu dotyczą tylko pociągów przewoźnika regionu
+ const sts=t.st.slice(i,j+1).map(s=>s.n);
+ if(n.lines.some(id=>{const l=schLinia(id);return l&&sts.filter(s=>l.stations.includes(s)).length>=2}))return true;
  return n.st.includes(t.st[i].n)||n.st.includes(t.st[j].n)}
-const oPolaczeniu=(c,day=0)=>R.kom.filter(n=>trwa(n,day)&&c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))).sort((a,b)=>waga(a)-waga(b));
-const oStacji=s=>R.kom.filter(n=>trwa(n)&&(n.st.includes(s)||(n.lines.length&&!n.st.length&&linesOf(s).some(l=>n.lines.includes(l.id))))).sort((a,b)=>waga(a)-waga(b));
+const oPolaczeniu=(c,day=0)=>KOM().filter(n=>trwa(n,day)&&c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))).sort((a,b)=>waga(a)-waga(b));
+const oStacji=s=>KOM().filter(n=>trwa(n)&&(n.st.includes(s)||n.lines.some(id=>schLinia(id)?.stations.includes(s)))).sort((a,b)=>waga(a)-waga(b));
 const kpas=n=>`<button class="kpas" data-a="kom" data-id="${n.id}">${kzn(n,1)}<b>${n.tyt}</b></button>`;
 const agencje=()=>[[R.ag,R.agN],['PR','POLREGIO'],['IC','PKP Intercity']];
 const ileOpcji=()=>(S.bezp?1:0)+(!S.bezp&&S.minT!==5?1:0)+S.bez.length;
@@ -211,23 +224,23 @@ function stan(c,day){ // „za 12 min” i opóźnienie zawsze słowami
  if(day)return'';const d=cDelay(c),m=doOdj(c);if(m<0)return'<span class="znak neutr">odjechał</span>';
  return `<span class="znak ${d?'op':m<=60?'ok':'neutr'}">${zaIle(m)}${d?' · +'+d+' min':''}</span>`}
 function wyjscie(c,day){ // najważniejsza informacja: o której wyjść z domu albo o której odjeżdża pociąg
- const d=cDelay(c,day),odj=c.dep+d,o=doOdj(c,day);
+ const d=cDelay(c),odj=c.dep+d,o=doOdj(c);
  if(day)return{gl:'Odjazd o '+hm(odj),sub:etykDnia(day)+', '+pelnaData(day)};
  if(o<0)return{gl:'Pociąg odjechał o '+hm(odj),sub:'Wybierz późniejsze połączenie.'};
  if(S.walk>0){const m=o-S.walk;
   return m>0?{m,gl:'Wyjdź z domu o '+hm(odj-S.walk),sub:(wKole(m)?'Pociąg':zaIle(m)+' · pociąg')+' odjeżdża o '+hm(odj)}:{gl:'Wyjdź z domu teraz',sub:'Pociąg odjeżdża o '+hm(odj)+', '+zaIle(o)+'.'}}
  return{m:o,gl:'Odjazd o '+hm(odj),sub:wKole(o)?'':zaIle(o)}}
-const godziny=(c,day)=>{const d=cDelay(c,day);return `<span class="godz">${d?`<s>${hm(c.dep)}</s>`:''}<span>${hm(c.dep+d)}</span><em>→</em><span>${hm(c.arr)}</span></span>`};
+const godziny=(c,day)=>{const d=cDelay(c);return `<span class="godz">${d?`<s>${hm(c.dep)}</s>`:''}<span>${hm(c.dep+d)}</span><em>→</em><span>${hm(cArr(c))}</span></span>`};
 function polKarta(c,sel,day=0){const x=c.legs[0],pr=peron(x.t,x.i);
- const ile=c.legs.length===1?'bez przesiadek':'1 przesiadka ('+bkrotko(c.legs[0].t.st[c.legs[0].j].n)+')';
+ const ile=c.legs.length===1?'bez przesiadek':c.legs.length===2?'1 przesiadka ('+bkrotko(c.legs[0].t.st[c.legs[0].j].n)+')':pl(c.legs.length-1,'przesiadka','przesiadki','przesiadek');
  const icl=c.legs.some(l=>l.t.l.ag==='IC'),km=oPolaczeniu(c,day).filter(n=>n.sev!=='info');
  return `<button class="pol" data-a="sel" data-k="${cKey(c)}" data-d="${day}" aria-current="${sel}">
  <span class="g">${godziny(c,day)}${stan(c,day)}</span>
- <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span><span>peron ${pr.p}</span>${icl?'<span class="znak neutr">osobny bilet</span>':''}</span>
+ <span class="meta">${c.legs.map(l=>lin(l.t.l)).join('')}<span>${dur(c.arr-c.dep)}</span><span>${ile}</span>${pr.p?`<span>peron ${pr.p}</span>`:''}${icl?'<span class="znak neutr">osobny bilet</span>':''}</span>
  ${km.length?`<span class="kpas">${kzn(km[0],1)}<b>${km[0].tyt}</b>${km.length>1?`<em>i ${pl(km.length-1,'kolejny','kolejne','kolejnych')}</em>`:''}</span>`:''}</button>`}
-function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t,day),c=t.l.color;let h='';
- const row=(k,cls)=>{const s=t.st[k],pr=peron(t,k),byl=!day&&s.t+d<nw;
-  return `<div class="os ${cls} ${byl?'byl':''}" style="--c:${c}"><time>${hm(s.t+d)}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}</span>${cls.includes('gl')?`<small>peron ${pr.p}${pr.tor?' · tor '+pr.tor:''}</small>`:''}</div></div>`};
+function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t),c=t.l.color;let h='';
+ const row=(k,cls)=>{const s=t.st[k],pr=peron(t,k),tm=s.t+(s.d??d),byl=tm<nw;
+  return `<div class="os ${cls} ${byl?'byl':''}" style="--c:${c}"><time>${hm(tm)}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}</span>${cls.includes('gl')&&pr.p?`<small>peron ${pr.p}${pr.tor?' · tor '+pr.tor:''}</small>`:''}</div></div>`};
  h+=row(i,'gl p');
  const sr=[];for(let k=i+1;k<j;k++)sr.push(row(k,''));
  if(sr.length&&zwin)h+=`<div class="os" style="--c:${c}"><span></span><div class="sz"></div><button class="chip" style="justify-self:start;height:36px" data-a="rozwin" aria-expanded="false">${pl(sr.length,'przystanek','przystanki','przystanków')} po drodze ${ic('dol',14)}</button></div><div hidden>${sr.join('')}</div>`;
@@ -236,87 +249,97 @@ function osKursu(t,i,j,zwin,day=0){const nw=now(),d=delay(t,day),c=t.l.color;let
 
 /* ---------- widoki ---------- */
 function rWyjazd(){const el=$('#wyjazd'),r=S.routes[0];if(!r){el.innerHTML='';return}
- const c=connections(r.a,r.b).find(c=>doOdj(c)-S.walk>-1);
- if(!c){el.innerHTML=`<div class="blok"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p><p style="margin-top:6px;font-weight:600">Dziś nie ma już połączeń na tej trasie.</p></div>`;return}
- const w=wyjscie(c,0),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);
+ const cs=polaczenia(r.a,r.b,{min:Math.floor(now()/5)*5,n:6},'w'+r.a+'>'+r.b),c=cs&&cs.find(c=>doOdj(c)-S.walk>-1);
+ if(!c){el.innerHTML=`<div class="blok"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p><p style="margin-top:6px;font-weight:600">${cs===undefined?'Sprawdzamy najbliższe połączenie…':cs===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p></div>`;return}
+ const w=wyjscie(c,dzien(c.dep)),d=cDelay(c),x=c.legs[0],pr=peron(x.t,x.i);
  el.innerHTML=`<div class="blok kol" style="gap:6px"><p class="dr maly" style="font-weight:600">Twoja trasa: ${bkrotko(r.a)} → ${bkrotko(r.b)}</p>
   <div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
-  <p class="dr maly">${x.t.l.badge} · peron ${pr.p} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
+  <p class="dr maly">${x.t.l.badge}${pr.p?' · peron '+pr.p:''} · ${d?'opóźnienie '+d+' min':'na czas'}${S.walk?' · dojście na stację '+S.walk+' min':''}</p>
   ${oPolaczeniu(c).filter(n=>n.sev!=='info').map(kpas).join('')}
-  <div class="wiersz" style="margin-top:8px;gap:8px"><button class="drugi" data-a="sel" data-k="${cKey(c)}" data-d="0">Szczegóły</button><button class="drugi" data-a="trasa-szukaj" data-i="0">Inne godziny</button></div></div>`}
-function szukaj(){S.all=connections(S.from,S.to,S);const a=S.all,t=S.when??now();let i;
- if(S.kier==='prz'){i=-1;a.forEach((c,k)=>{if(c.arr<=t)i=k});S.pusto=i<0;S.start=Math.max(0,i-3)}
- else{i=a.findIndex(c=>c.dep+cDelay(c,S.day)>=t);S.pusto=i<0;S.start=i<0?Math.max(0,a.length-4):i}
- S.sel=a[S.start]?cKey(a[S.start]):null;S.selDay=S.day;rWyniki()}
-function rWyniki(){const el=$('#wyniki'),a=S.all||[],res=a.slice(S.start,S.start+4);
+  <div class="wiersz" style="margin-top:8px;gap:8px"><button class="drugi" data-a="sel" data-k="${cKey(c)}" data-d="${dzien(c.dep)}">Szczegóły</button><button class="drugi" data-a="trasa-szukaj" data-i="0">Inne godziny</button></div></div>`}
+function szukaj(){S.q={min:(S.when??now())+S.day*1440,arrive:S.kier==='prz'};S.selAuto=true;rWyniki()}
+const wyniki=()=>polaczenia(S.from,S.to,{min:S.q.min,arrive:S.q.arrive,o:S});
+function rWyniki(){const el=$('#wyniki');
  const obs=S.routes.some(r=>(r.a===S.from&&r.b===S.to)||(r.a===S.to&&r.b===S.from));
  if(S.from===S.to){el.innerHTML='<div class="plyta pusto">Wybierz dwie różne stacje.</div>';S.sel=null;rDetal();return}
- if(!a.length){el.innerHTML=`<div class="plyta pusto">Nie znaleźliśmy połączeń. ${ileOpcji()?'Zmień opcje wyszukiwania i wyszukaj ponownie.':'Zmień stacje i wyszukaj ponownie.'}</div>`;S.sel=null;rDetal();return}
- const tyt=!S.pusto?'Połączenia':S.kier==='prz'?'Najwcześniejsze połączenia tego dnia':'Ostatnie połączenia tego dnia';
- el.innerHTML=`<div class="wiersz rozsun zawin" style="padding:8px 4px 0;gap:0 12px"><div><h2>${tyt}</h2><p class="dr maly num">${pelnaData(S.day)} · odjazdy ${hm(res[0].dep)}–${hm(res.at(-1).dep)}</p></div>
+ const res=wyniki();
+ if(res===undefined){el.innerHTML='<div class="plyta pusto">Szukamy połączeń…</div>';rDetal();return}
+ if(!res?.length){el.innerHTML=`<div class="plyta pusto">${res===null?'Nie udało się pobrać połączeń. Spróbuj ponownie za chwilę.':`Nie znaleźliśmy połączeń. ${ileOpcji()?'Zmień opcje wyszukiwania i wyszukaj ponownie.':'Zmień stacje albo godzinę i wyszukaj ponownie.'}`}</div>`;S.sel=null;rDetal();return}
+ if(S.selAuto){S.selAuto=false;S.sel=res[0].k;S.selDay=dzien(res[0].dep)}
+ el.innerHTML=`<div class="wiersz rozsun zawin" style="padding:8px 4px 0;gap:0 12px"><div><h2>Połączenia</h2><p class="dr maly num">${pelnaData(dzien(res[0].dep))} · odjazdy ${hm(res[0].dep)}–${hm(res.at(-1).dep)}</p></div>
   <button class="tekstowy" data-a="obserwuj-trase">${ic('moje',16)}${obs?'Obserwujesz trasę':'Obserwuj trasę'}</button></div>
-  ${res.map(c=>polKarta(c,cKey(c)===S.sel,S.day)).join('')}
-  <div class="strony na-papierze"><button class="drugi" data-a="wczesniej" ${S.start===0?'disabled':''}>Wcześniejsze</button><button class="drugi" data-a="pozniej" ${S.start+4>=a.length?'disabled':''}>Późniejsze</button></div>${btkPodp([S.from,S.to])}`;
+  ${res.map(c=>polKarta(c,c.k===S.sel,dzien(c.dep))).join('')}
+  <div class="strony na-papierze"><button class="drugi" data-a="wczesniej">Wcześniejsze</button><button class="drugi" data-a="pozniej">Późniejsze</button></div>${btkPodp([S.from,S.to])}`;
  rDetal()}
 function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
  if(!c){el.innerHTML='';el.classList.remove('otwarty');return}
  const w=wyjscie(c,day),d=cDelay(c,day),x=c.legs[0],pr=peron(x.t,x.i),zap=S.trips.some(t=>t.k===S.sel&&t.dz===iso(day));
- const km=Math.round((c.arr-c.dep)*1.02);
  let osie='';c.legs.forEach((g,n)=>{
   if(n){const p=c.legs[n-1];osie+=`<div class="przes">${ic('pieszo',18)}Przesiadka na stacji ${krotko(g.t.st[g.i].n)} · ${g.dep-p.arr} min</div>`}
-  osie+=`<section class="plyta"><div class="wiersz zawin" style="padding:0 2px 8px;gap:10px">${lin(g.t.l)}<button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button><span class="dr maly">kierunek: ${krotko(g.t.st.at(-1).n)}</span></div>${osKursu(g.t,g.i,g.j,true,day)}</section>`});
+  osie+=`<section class="plyta"><div class="wiersz zawin" style="padding:0 2px 8px;gap:10px">${lin(g.t.l)}<button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}${g.t.l.nazwa?' '+g.t.l.nazwa:''}</button><span class="dr maly">kierunek: ${krotko(esc(g.t.kier))}</span></div>${osKursu(g.t,g.i,g.j,true,day)}</section>`});
  const ag=[...new Set(c.legs.map(g=>g.t.l.ag))];
- const bilet=ag.includes('IC')?['Potrzebny osobny bilet PKP Intercity',`Bilety ${R.kto} i POLREGIO nie są ważne w tym pociągu.`]:ag.includes('PR')?[`Wystarczy bilet ${R.kto}`,'Na tym odcinku jest ważny także w pociągach POLREGIO.']:[`Bilet ${R.kto}`,'Kupisz go w kasie, w automacie albo u konduktora.'];
+ const bilet=ag.includes('IC')?['Potrzebny osobny bilet PKP Intercity',`Bilety ${R.kto} i POLREGIO nie są ważne w tym pociągu.`]:c.legs.some(g=>g.t.l.ag==='PR'&&g.t.kwT===false)?['Potrzebny bilet POLREGIO',`Bilety ${R.kto} nie są ważne na tym odcinku.`]:ag.includes('PR')?[`Wystarczy bilet ${R.kto}`,'Na tym odcinku jest ważny także w pociągach POLREGIO.']:[`Bilet ${R.kto}`,'Kupisz go w kasie, w automacie albo u konduktora.'];
  el.innerHTML=`<div class="kol" style="gap:10px">
   <div class="detal-gl"><button class="kolo wroc" data-a="detal-zamknij" aria-label="Wróć do listy połączeń">${ic('wroc')}</button><b>${bkrotko(cFrom(c))} → ${bkrotko(cTo(c))}</b><button class="kolo" data-a="udostepnij" aria-label="Udostępnij">${ic('udost')}</button></div>
   <section class="blok kol" style="gap:6px"><div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>
-   <p class="dr maly">${day?'Opóźnienia pokażemy w dniu podróży.':d?'Opóźnienie '+d+' min':'Na czas'} · przyjazd o ${hm(c.arr)}</p>
-   <div class="kafle" style="margin-top:8px"><div class="kafel"><span>peron</span><b>${pr.p}</b></div>${pr.tor?`<div class="kafel"><span>tor</span><b>${pr.tor}</b></div>`:''}<div class="kafel"><span>czas jazdy</span><b>${dur(c.arr-c.dep)}</b></div><div class="kafel"><span>odległość</span><b>ok. ${km} km</b></div></div></section>
+   <p class="dr maly">${day?'Opóźnienia pokażemy w dniu podróży.':d?'Opóźnienie '+d+' min':'Na czas'} · przyjazd o ${hm(cArr(c))}</p>
+   <div class="kafle" style="margin-top:8px">${pr.p?`<div class="kafel"><span>peron</span><b>${pr.p}</b></div>`:''}${pr.tor?`<div class="kafel"><span>tor</span><b>${pr.tor}</b></div>`:''}<div class="kafel"><span>czas jazdy</span><b>${dur(c.arr-c.dep)}</b></div>${c.km?`<div class="kafel"><span>odległość</span><b>${c.kmP?'ok. ':''}${c.km} km</b></div>`:''}</div></section>
   ${oPolaczeniu(c,day).map(kpas).join('')}
   ${osie}
   <section class="plyta"><b>${bilet[0]}</b><p class="dr" style="font-size:14px">${bilet[1]}</p></section>
   <div class="strony"><button class="drugi" data-a="mock" data-t="W gotowej wersji pobierzesz tu plik do kalendarza.">${ic('kal',18)}Do kalendarza</button><button class="drugi" data-a="mock" data-t="W gotowej wersji powiadomimy Cię o opóźnieniu i zmianie peronu.">${ic('dzwonek',18)}Powiadom mnie</button></div>
   <div class="cta"><button class="glowny" data-a="obserwuj-podroz">${zap?'Obserwujesz podróż':'Obserwuj podróż'}</button><button class="kolo" data-a="na-mape" aria-label="Pokaż na mapie">${ic('mapa')}</button></div></div>`}
-function rStacje(){$('#stacja').value=S.station;
+function rStacje(){if(document.activeElement!==$('#stacja'))$('#stacja').value=S.station;
  $('#tryb').innerHTML=[['dep','Odjazdy'],['arr','Przyjazdy']].map(([k,t])=>`<button data-a="tryb" data-k="${k}" aria-pressed="${S.tryb===k}">${t}</button>`).join('');
  $('#szybkie').innerHTML=R.szybkie.filter(s=>s!==S.station).slice(0,3).map(s=>`<button class="chip" style="height:40px" data-a="stacja" data-s="${s}">${bkrotko(s)}</button>`).join('');
- const b=board(S.station,S.tryb,12),ks=oStacji(S.station);
+ const b=tablica(S.station,S.tryb,12),ks=oStacji(S.station);
  const nad=ks.map(kpas).join('')+btkPodp([S.station]);$('#st-kom').hidden=!nad;$('#st-kom').innerHTML=nad;
- $('#tablica').innerHTML=b.length?b.map(x=>rzad(x,S.tryb)).join(''):'<p class="pusto">Dziś nie ma już pociągów na tej stacji.</p>'}
-function rzad({t,i,tm},mode){const d=delay(t),pr=peron(t,i),m=tm+d-now(),kier=mode==='dep'?t.st.at(-1).n:t.st[0].n;
- return `<button class="rzad" data-a="poc" data-id="${t.id}"><span class="g ${d?'op':''}">${hm(tm+d)}${d?`<s>${hm(tm)}</s>`:''}</span>
- <span class="c"><b>${mode==='dep'?'':'ze stacji '}${krotko(kier)}</b><span>${lin(t.l)}<span>${t.label}</span><span>${zaIle(m)}${d?' · +'+d+' min':''}</span>${t.l.ag==='IC'?'<span>osobny bilet</span>':''}${R.kom.some(n=>trwa(n)&&n.poc.includes(t.num))?'<span class="znak op" style="padding:1px 7px;font-size:12px">komunikat</span>':''}</span></span><span class="pe">peron<b>${pr.p}</b></span></button>`}
-function jadace(){const nw=now(),o=[];for(const t of ALL){if(!t.l.map)continue;const d=delay(t),n=nw-d;if(n<t.dep||n>t.arr)continue;
- let s=t.st.findIndex((x,k)=>k<t.st.length-1&&t.st[k+1].t>=n);const A=t.st[s],B=t.st[s+1],f=(n-A.t)/Math.max(1,B.t-A.t),a=POS[A.n],b=POS[B.n];
- o.push({t,d,x:a[0]+(b[0]-a[0])*f,y:a[1]+(b[1]-a[1])*f})}return o}
-function rMapa(){const tr=jadace();
+ $('#tablica').innerHTML=tabl(b,S.tryb)}
+const tabl=(b,mode)=>b===undefined?'<p class="pusto">Wczytujemy tablicę…</p>':!b?'<p class="pusto">Nie udało się pobrać tablicy. Spróbuj ponownie za chwilę.</p>':b.length?b.map(x=>rzad(x,mode)).join(''):'<p class="pusto">W najbliższej dobie nie ma tu pociągów.</p>';
+function rzad(x,mode){const d=x.delay||0,ag=x.agency||R.ag,l=linia(x.route,ag,x.isBus),tm=mn(x.scheduled),m=tm+d-now(),kier=mode==='dep'?x.destination:x.origin,num=krNum(x.number);
+ return `<button class="rzad" data-a="poc" data-id="${esc(x.key)}"><span class="g ${d||x.cancelled?'op':''}">${x.cancelled?`<s>${hm(tm)}</s>`:hm(tm+d)}${d&&!x.cancelled?`<s>${hm(tm)}</s>`:''}</span>
+ <span class="c"><b>${mode==='dep'?'':'ze stacji '}${krotko(esc(kier))}</b><span>${lin(l)}<span>${AGL(ag)} ${num}</span><span>${x.cancelled?'odwołany':x.skipped?'nie zatrzyma się':zaIle(m)+(d?' · +'+d+' min':'')}</span>${ag==='IC'?'<span>osobny bilet</span>':''}${KOM().some(n=>trwa(n)&&n.poc.some(p=>pasuje(p,ag,numery(x.number))))?'<span class="znak op" style="padding:1px 7px;font-size:12px">komunikat</span>':''}</span></span>${x.platform?`<span class="pe">peron<b>${x.platform}</b></span>`:''}</button>`}
+/* mapa: prawdziwa sieć i pozycje pociągów (/network, /live) rysowane w jednym SVG, bez podkładu z kafelkami */
+let MP=null;
+function rzut(net){if(MP?.net===net)return MP;let a=180,b=-180,c=90,d=-90;
+ for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
+ const cos=Math.cos((c+d)/2*Math.PI/180),K=900/((b-a)*cos),pad=30,p=(lon,lat)=>[(lon-a)*cos*K+pad,(d-lat)*K+pad];
+ const linie=[...net.features].sort((x,y)=>y.properties.partner-x.properties.partner).map(f=>{let o=[],q=null;
+  for(const[x,y]of f.geometry.coordinates){const r=p(x,y);if(!q||Math.hypot(r[0]-q[0],r[1]-q[1])>1.5){o.push(r[0].toFixed(1)+','+r[1].toFixed(1));q=r}}
+  const pr=f.properties.partner;return `<polyline points="${o.join(' ')}" fill="none" stroke="${pr?'var(--kreska)':f.properties.color}" stroke-width="${pr?2:3.5}" stroke-linejoin="round" stroke-linecap="round"/>`}).join('');
+ return MP={net,p,vb:[0,0,Math.round(900+2*pad),Math.round((d-c)*K+2*pad)],linie}}
+function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),ok=$('#mapa-okno');
+ if(!net){ok.innerHTML=`<p class="pusto">${net===null?'Nie udało się wczytać mapy.':'Wczytujemy mapę…'}</p>`;return}
+ const M=rzut(net),tr=(live?.trains||[]).filter(t=>t.key);
  $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now());
- const ML=LINES.filter(l=>l.map);
- let g=ML.map(l=>{const p=l.stops.map(s=>POS[s[0]].slice(0,2).join(',')).join(' ');return `<polyline points="${p}" fill="none" stroke="var(--plyta)" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/><polyline points="${p}" fill="none" stroke="${l.color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`}).join('');
- let zn=''; // utrudnienia: odcinek linii rysowany przerywaną kreską i koło z wykrzyknikiem obok
- for(const n of R.kom){if(!trwa(n)||n.sev==='info')continue;
-  for(const l of ML){if(!n.lines.includes(l.id))continue;
-   const ix=n.st.map(s=>l.stops.findIndex(x=>x[0]===s)).filter(k=>k>=0);
-   const a=ix.length>1?Math.min(...ix):0,b=ix.length>1?Math.max(...ix):l.stops.length-1,pts=l.stops.slice(a,b+1).map(s=>POS[s[0]]);
-   g+=`<polyline points="${pts.map(p=>p[0]+','+p[1]).join(' ')}" fill="none" stroke="var(--plyta)" stroke-width="6" stroke-dasharray="5 6"/>`;
-   const k=Math.max(0,Math.floor(pts.length/2)-1),p=pts[k],q=pts[k+1],dx=q[0]-p[0],dy=q[1]-p[1],len=Math.hypot(dx,dy)||1;
-   zn+=`<g class="kmap ${n.sev}" data-a="kom" data-id="${n.id}" transform="translate(${((p[0]+q[0])/2-dy/len*20).toFixed(1)},${((p[1]+q[1])/2+dx/len*20).toFixed(1)})" tabindex="0" role="button" aria-label="${cap(RODZ[n.sev])}: ${n.tyt}"><circle r="12"/><text y="5.500" text-anchor="middle">!</text></g>`}
-  if(!n.lines.length)for(const s of n.st){const p=POS[s];if(p)g+=`<circle cx="${p[0]}" cy="${p[1]}" r="13" fill="none" stroke="var(--opoz)" stroke-width="2.500" stroke-dasharray="4 4"/>`}}
- for(const n of STATIONS){const[x,y,m]=POS[n],w=WAZNE.includes(n),r=n===R.hub?8:w?6:4;
-  const tx=m==='l'||m==='L'?[x-10,y-6,'end']:m==='r'?[x+12,y+4,'start']:m==='b'?[x,y+22,'middle']:[x,y-13,'middle'];
-  g+=`<circle cx="${x}" cy="${y}" r="${r}" fill="var(--papier)" stroke="var(--tusz)" stroke-width="${w?3:2}"/><text x="${tx[0]}" y="${tx[1]}" text-anchor="${tx[2]}" class="${w?'wazna':''}">${R.etyk?R.etyk(n):bkrotko(n)}</text><circle class="st-hit" cx="${x}" cy="${y}" r="15" data-a="stacja-ark" data-s="${n}" tabindex="0" role="button" aria-label="Stacja ${n}"/>`}
+ let g=M.linie;
+ const sel=S.mapSel&&kurs(S.mapSel);
+ if(sel?.shape?.length)g+=`<polyline points="${sel.shape.map(([y,x])=>M.p(x,y).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--papier)" stroke-width="9" stroke-linejoin="round"/><polyline points="${sel.shape.map(([y,x])=>M.p(x,y).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${sel.l.color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;
+ let zn=''; // utrudnienia: przerywany pierścień przy stacjach komunikatu i koło z wykrzyknikiem
+ for(const n of KOM()){if(!trwa(n)||n.sev==='info')continue;const sts=n.st.length?n.st:n.lines.flatMap(id=>schLinia(id)?.stations||[]);
+  const pts=sts.map(s=>SBN.get(s)).filter(Boolean).map(s=>M.p(s.lon,s.lat));if(!pts.length)continue;
+  for(const q of pts)g+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="9" fill="none" stroke="var(--opoz)" stroke-width="2.500" stroke-dasharray="4 4"/>`;
+  const q=pts[Math.floor(pts.length/2)];
+  zn+=`<g class="kmap ${n.sev}" data-a="kom" data-id="${n.id}" transform="translate(${(q[0]+18).toFixed(1)},${(q[1]-18).toFixed(1)})" tabindex="0" role="button" aria-label="${cap(RODZ[n.sev])}: ${n.tyt}"><circle r="12"/><text y="5.500" text-anchor="middle">!</text></g>`}
+ const naj=STN.filter(s=>s.kw!==false||R.id!=='wlkp').map(s=>s.daily).sort((a,b)=>b-a)[14]||0;
+ for(const s of STN){if(R.id==='wlkp'&&s.kw===false)continue;const[x,y]=M.p(s.lon,s.lat),w=WAZNE.includes(s.name)||s.daily>=naj,r=s.name===R.hub?6:w?4.500:2.500;
+  g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="var(--papier)" stroke="var(--tusz)" stroke-width="${w?2.500:1.500}"/>${w?`<text x="${(x+9).toFixed(1)}" y="${(y+4).toFixed(1)}" class="wazna">${R.etyk?R.etyk(s.name):bkrotko(s.name)}</text>`:''}<circle class="st-hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" data-a="stacja-ark" data-s="${s.name}" tabindex="0" role="button" aria-label="Stacja ${s.name}"/>`}
  g+=zn;
- for(const p of tr){const txt=p.t.num+(p.d?' +'+p.d:''),wd=p.d?66:46,sel=S.mapSel===p.t.id;
-  g+=`<g class="poc" data-a="poc" data-id="${p.t.id}" transform="translate(${p.x.toFixed(1)},${p.y.toFixed(1)})" tabindex="0" role="button" aria-label="Pociąg ${p.t.label}">${sel?'<circle r="16" fill="none" stroke="var(--tusz)" stroke-width="2.500"/>':''}<rect x="6" y="-11" width="${wd+10}" height="22" rx="11" fill="var(--tusz)"/><circle r="10" fill="${p.t.l.color}" stroke="var(--papier)" stroke-width="2.500"/><text x="16" y="4">${txt}</text></g>`}
- const ok=$('#mapa-okno'),first=!ok.firstChild,sl=ok.scrollLeft;
- ok.innerHTML=`<svg viewBox="150 60 640 500" role="img" aria-label="Schemat linii z jadącymi pociągami">${g}</svg>`;
- ok.scrollLeft=first?Math.max(0,(ok.scrollWidth-ok.clientWidth)*.25):sl}
+ // pastylka, która zasłoniłaby inną, staje się kołem w kolorze linii (pierwszeństwo: wybrany, opóźnione)
+ const zajete=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+ for(const t of [...tr].sort((a,b)=>(b.key===S.mapSel)-(a.key===S.mapSel)||(b.delay||0)-(a.delay||0))){
+  const[x,y]=M.p(t.lon,t.lat),d=t.delay||0,txt=krNum(t.number).split('/')[0]+(d?' +'+d:''),wd=txt.length*7+10,sel=S.mapSel===t.key,col=t.route?.color||KOL[t.route?.short]||'#8A8F98';
+  const box=[x-10,y-11,x+16+wd,y+11],pig=sel||!zajete.some(b=>kol(b,box));if(pig)zajete.push(box);
+  g+=`<g class="poc" data-a="poc" data-id="${esc(t.key)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})" tabindex="0" role="button" aria-label="Pociąg ${AGL(t.agency||R.ag)} ${krNum(t.number)}">${sel?'<circle r="16" fill="none" stroke="var(--tusz)" stroke-width="2.500"/>':''}${pig?`<rect x="6" y="-11" width="${wd}" height="22" rx="11" fill="var(--tusz)"/><circle r="10" fill="${col}" stroke="var(--papier)" stroke-width="2.500"/><text x="16" y="4">${txt}</text>`:`<circle r="6" fill="${col}" stroke="var(--papier)" stroke-width="2"/>`}</g>`}
+ const first=!ok.querySelector('svg'),sl=ok.scrollLeft,[vx,vy,vw,vh]=M.vb,h=SBN.get(R.hub);
+ ok.innerHTML=`<svg viewBox="${vx} ${vy} ${vw} ${vh}" role="img" aria-label="Mapa linii z jadącymi pociągami">${g}</svg>`;
+ ok.scrollLeft=first&&h?Math.max(0,M.p(h.lon,h.lat)[0]/vw*ok.scrollWidth-ok.clientWidth/2):sl}
 function rMoje(){const el=$('#v-moje');
- const trasy=S.routes.map((r,i)=>{const cs=connections(r.a,r.b).filter(c=>doOdj(c)>=0).slice(0,3);
+ const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
   return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
-  ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(c.arr)}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,0)}</button>`).join(''):'<p class="pusto">Dziś nie ma już połączeń na tej trasie.</p>'}
+  ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(cArr(c))}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,dzien(c.dep))}</button>`).join(''):`<p class="pusto">${all===undefined?'Sprawdzamy połączenia…':all===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p>`}
   <button class="tekstowy" data-a="trasa-szukaj" data-i="${i}">Więcej połączeń ${ic('strz',16)}</button></section>`}).join('');
- const pod=S.trips.map(t=>({c:cFromKey(t.k),day:offDz(t.dz)})).filter(x=>x.c&&x.day>=0&&(x.day>0||x.c.arr>=now()-10));
+ const pod=S.trips.map(t=>{const day=offDz(t.dz);let c=CON[t.k];if(!c&&day>=0&&t.a){const l=polaczenia(t.a,t.b,{min:day*1440+t.m-1,n:3,ttl:300});c=l&&l.find(x=>x.k===t.k)}return{c,day}}).filter(x=>x.c&&x.day>=0&&(x.day>0||cArr(x.c)>=now()-10));
  el.innerHTML=`<h1>Moje</h1>
   <section class="plyta kol" style="gap:10px"><div class="wiersz rozsun zawin"><div style="min-width:0;flex:1 1 220px"><b>Dojście na stację</b><p class="dr" style="font-size:14px">Podaj, ile minut idziesz na stację. Pokażemy, o której wyjść z domu.</p></div>
    <div class="krok"><button data-a="walk" data-d="-1" aria-label="Zmniejsz czas dojścia o minutę">−</button><b>${S.walk?S.walk+' min':'nie podano'}</b><button data-a="walk" data-d="1" aria-label="Zwiększ czas dojścia o minutę">+</button></div></div></section>
@@ -342,7 +365,7 @@ function rBtk(){const el=$('#v-btk'),b=S.btk;
    ${x==='czempin'?'<p class="dr maly">Ten bilet kupisz na razie tylko w kasach Kolei Wielkopolskich.</p>':''}`}</section>`;
  /* tarcza stref: Poznań w środku, każda strefa to kolejny pierścień; zakres biletu przyciemniony */
  const zi=z?'ABCDEFG'.indexOf(z):-1,Rr=i=>16+i*15.5;
- let ang=-35;if(st){const k=STATIONS.find(n=>bKey(n)===bKey(st.n));if(k&&k!==R.hub&&POS[k]){const p=POS[k],h=POS[R.hub];ang=Math.atan2(p[1]-h[1],p[0]-h[0])*180/Math.PI}}
+ let ang=-35;if(st){const k=STATIONS.find(n=>bKey(n)===bKey(st.n));const p=SBN.get(k),h=SBN.get(R.hub);if(k&&k!==R.hub&&p&&h){ang=Math.atan2(h.lat-p.lat,(p.lon-h.lon)*.62)*180/Math.PI}}
  const gora=ang>-125&&ang<-55?1:-1; // litery po drugiej stronie niż kropka stacji
  let svg='';for(let i=6;i>=0;i--)svg+=`<circle cx="120" cy="120" r="${Rr(i)}" fill="${i<=zi?'var(--tusz)':'none'}" fill-opacity="${i<=zi?.07:0}" stroke="${i===zi?'var(--tusz)':'var(--kreska)'}" stroke-width="${i===zi?2.5:1.2}"/>`;
  'ABCDEFG'.split('').forEach((l,i)=>{const y=i?120+gora*(Rr(i)+Rr(i-1))/2:120;svg+=`<text x="120" y="${y+4}" text-anchor="middle" class="${i===zi?'wyb':''}">${l}</text>`});
@@ -732,7 +755,7 @@ function schDane(){
   const lines=R.lines.filter(l=>l.ag==='KML').map(l=>({id:l.id,badge:l.badge,name:R.etyk(l.stops[0][0])+' – '+R.etyk(l.stops.at(-1)[0]),color:l.color,path:l.stops.map(s=>s[0]),stations:l.stops.map(s=>s[0])}));
   SCHM={nodes,lista:lines,draw:lines,region:null,vb:[140,40,680,500],ref:nodes['Kraków Główny']}}
  return SCHM}
-const kLinii=l=>R.kom.filter(n=>(n.do==null||n.do>=0)&&(n.lines.some(i=>(SCHID[i]||i)===l.id)||n.st.filter(s=>l.stations.includes(s)).length>=2)).sort((a,b)=>waga(a)-waga(b));
+const kLinii=l=>KOM().filter(n=>(n.do==null||n.do>=0)&&(n.lines.some(i=>(SCHID[i]||i)===l.id)||n.st.filter(s=>l.stations.includes(s)).length>=2)).sort((a,b)=>waga(a)-waga(b));
 function rSchemat(){const el=$('#v-schemat'),D=schDane(),c=S.sch,dark=ciemny(),col=l=>dark&&l.dark?l.dark:l.color,klucz=R.id+c.set;
  if(el.dataset.k!==klucz){el.dataset.k=klucz;
   el.innerHTML=`<div class="wiersz rozsun zawin"><h1>Schemat połączeń</h1><div class="na-papierze" id="sch-seg"></div></div>
@@ -808,36 +831,41 @@ function rONas(){const W=R.id==='wlkp',a=bkrotko(R.hub),b=bkrotko(R.cel);
   <a class="glowny" style="text-decoration:none;max-width:280px" href="https://buycoffee.to/zanimwyjdziesz" target="_blank" rel="noopener">Postaw kawę</a></section>`}
 
 /* ---------- arkusze ---------- */
-function ark(html){$('#ark').innerHTML=html?`<div class="tlo-ark" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
+function ark(html){if(!html)ARK=null;$('#ark').innerHTML=html?`<div class="tlo-ark" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
 const zamk=`<button class="kolo" data-a="ark-zamknij" aria-label="Zamknij">${ic('zamknij')}</button>`;
-function arkPociag(id){const t=TR[id];if(!t)return;S.mapSel=id;const nw=now(),d=delay(t);
- const L=t.st.length-1,c=t.l.color,ni=t.st.findIndex(s=>s.t+d>=nw),przed=nw<t.dep+d,po=ni<0;
- const post=po?100:przed?0:Math.max(2,Math.min(98,Math.round((nw-d-t.dep)/(t.arr-t.dep)*100)));
- const m=przed?t.dep+d-nw:po?0:t.st[ni].t+d-nw;
- const gl=przed?'Odjazd o '+hm(t.dep+d):po?'Pociąg dojechał do stacji końcowej':'Następna stacja: '+krotko(t.st[ni].n);
- const sub=przed?(wKole(m)?'':zaIle(m)+' · ')+krotko(t.st[0].n)+', peron '+peron(t,0).p:po?'Przyjazd o '+hm(t.arr+d):'Przyjazd o '+hm(t.st[ni].t+d)+(wKole(m)?'':', '+zaIle(m));
+function arkPociag(id){S.mapSel=id;const t=kurs(id);
+ if(!t){ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Pociąg</h2>${zamk}</div><p class="pusto">${t===null?'Nie udało się pobrać danych pociągu.':'Wczytujemy dane pociągu…'}</p>`);ARK={f:arkPociag,a:id,czeka:true};return}
+ const nw=now(),d=delay(t),L=t.st.length-1,c=t.l.color,tm=k=>t.st[k].t+(t.st[k].d??d),ni=t.st.findIndex((s,k)=>tm(k)>=nw),przed=nw<tm(0),po=ni<0,dz=dzien(t.dep);
+ const post=po?100:przed?0:Math.max(2,Math.min(98,Math.round((nw-tm(0))/Math.max(1,tm(L)-tm(0))*100)));
+ const m=przed?tm(0)-nw:po?0:tm(ni)-nw,p0=peron(t,0).p;
+ const gl=t.odw?'Pociąg odwołany':przed?'Odjazd '+(dz?etykDnia(dz).toLowerCase()+' ':'')+'o '+hm(tm(0)):po?'Pociąg dojechał do stacji końcowej':'Następna stacja: '+krotko(t.st[ni].n);
+ const sub=t.odw?'Wybierz inne połączenie.':przed?(wKole(m)||dz?'':zaIle(m)+' · ')+krotko(t.st[0].n)+(p0?', peron '+p0:''):po?'Przyjazd o '+hm(tm(L)):'Przyjazd o '+hm(tm(ni))+(wKole(m)?'':', '+zaIle(m));
  const row=k=>{const s=t.st[k],pr=peron(t,k),cls=(k===0?'p ':'')+(k===L?'k ':'')+(k===0||k===L||(k===ni&&!przed)?'gl ':'')+(po||k<ni?'byl':'');
-  return `<div class="os ${cls}" style="--c:${c}"><time>${hm(s.t+d)}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}${k===ni&&!przed?' <span class="znak neutr" style="margin-left:6px">następna</span>':''}</span><small>peron ${pr.p}</small></div></div>`};
+  return `<div class="os ${cls}" style="--c:${c}"><time>${s.skip?`<s>${hm(s.t)}</s>`:hm(tm(k))}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}${k===ni&&!przed?' <span class="znak neutr" style="margin-left:6px">następna</span>':''}</span>${pr.p?`<small>peron ${pr.p}</small>`:''}</div></div>`};
  let os='';
  if(!po&&ni>1){os+=`<div class="os" style="--c:${c}"><span></span><div class="sz"></div><button class="chip" style="justify-self:start;height:36px" data-a="rozwin" aria-expanded="false">${pl(ni,'stacja','stacje','stacji')} za pociągiem ${ic('dol',14)}</button></div><div hidden>${t.st.slice(0,ni).map((s,k)=>row(k)).join('')}</div>`;for(let k=ni;k<=L;k++)os+=row(k)}
  else for(let k=0;k<=L;k++)os+=row(k);
+ const POJ={emu:'zespół elektryczny',dmu:'szynobus',steam:'parowóz',diesel:'lokomotywa spalinowa'},vt=t.vt;
  ark(`<section class="blok kol" style="gap:12px">
   <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px">${lin(t.l)}<span class="dr maly">${t.l.kto}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}${t.l.nazwa?' '+t.l.nazwa:''}</h2></div>${zamk}</div>
-  <div class="wiersz" style="gap:16px">${tarcza(m)}<div style="min-width:0"><p class="num" style="font-weight:700;font-size:19px;line-height:1.25">${gl}</p><p class="dr">${sub}</p></div></div>
+  <div class="wiersz" style="gap:16px">${t.odw?'':tarcza(m)}<div style="min-width:0"><p class="num" style="font-weight:700;font-size:19px;line-height:1.25">${gl}</p><p class="dr">${sub}</p></div></div>
   <div><div class="bieg" style="--c:${c};--p:${post}%"><i></i></div>
-  <div class="wiersz rozsun maly num" style="align-items:flex-start;margin-top:8px"><span><b>${hm(t.dep+d)}</b><br>${bkrotko(t.st[0].n)}</span><span style="text-align:right"><b>${hm(t.arr+d)}</b><br>${bkrotko(t.st[L].n)}</span></div></div>
-  <div class="wiersz zawin" style="gap:6px"><span class="znak ${d?'op':'ok'}">${d?'opóźnienie '+d+' min':'na czas'}</span>${t.l.ag==='IC'?'<span class="znak neutr">osobny bilet</span>':''}</div>
+  <div class="wiersz rozsun maly num" style="align-items:flex-start;margin-top:8px"><span><b>${hm(tm(0))}</b><br>${bkrotko(t.st[0].n)}</span><span style="text-align:right"><b>${hm(tm(L))}</b><br>${bkrotko(t.st[L].n)}</span></div></div>
+  <div class="wiersz zawin" style="gap:6px"><span class="znak ${t.odw||d?'op':'ok'}">${t.odw?'odwołany':d?'opóźnienie '+d+' min':'na czas'}</span>${t.l.ag==='IC'?'<span class="znak neutr">osobny bilet</span>':''}</div>
  </section>
- <section class="plyta kol" style="gap:12px"><div class="fakty"><div><span>czas jazdy</span><b>${dur(t.arr-t.dep)}</b></div><div><span>odległość</span><b>ok. ${Math.round((t.arr-t.dep)*1.02)} km</b></div><div><span>stacje</span><b>${L+1}</b></div><div><span>pojazd</span><b>${t.l.ag==='IC'?'skład wagonowy':'zespół elektryczny'}</b></div></div>
-  <div class="wiersz zawin" style="gap:6px"><span class="znak neutr">miejsca na rowery</span><span class="znak neutr">miejsce na wózek</span></div></section>
- ${R.kom.filter(n=>trwa(n)&&oOdcinku(n,t,0,L)).sort((a,b)=>waga(a)-waga(b)).map(kpas).join('')}
+ <section class="plyta kol" style="gap:12px"><div class="fakty"><div><span>czas jazdy</span><b>${dur(t.arr-t.dep)}</b></div>${t.km?`<div><span>odległość</span><b>${t.km} km</b></div>`:''}<div><span>stacje</span><b>${L+1}</b></div>${vt?`<div><span>pojazd</span><b>${POJ[vt.kind]||'pociąg'}</b></div>`:''}</div>
+  ${vt?.bikes||vt?.wheelchair?`<div class="wiersz zawin" style="gap:6px">${vt.bikes?'<span class="znak neutr">miejsca na rowery</span>':''}${vt.wheelchair?'<span class="znak neutr">miejsce na wózek</span>':''}</div>`:''}
+  ${t.trimmed?`<p class="dr maly">Pociąg jedzie z ${esc(t.origin)} do ${esc(t.destination)}. Pokazujemy stacje w regionie.</p>`:''}</section>
+ ${KOM().filter(n=>trwa(n)&&oOdcinku(n,t,0,L)).sort((a,b)=>waga(a)-waga(b)).map(kpas).join('')}
  <section class="plyta">${os}</section>
- <div class="strony">${t.l.map?`<button class="drugi" data-a="poc-mapa">${ic('mapa',18)}Pokaż na mapie</button>`:''}<button class="drugi" data-a="mock" data-t="W gotowej wersji skopiujesz tu link do pociągu.">${ic('udost',18)}Udostępnij</button></div>`)}
-function arkStacja(n){const b=board(n,'dep',5);
+ <div class="strony">${t.shape.length?`<button class="drugi" data-a="poc-mapa">${ic('mapa',18)}Pokaż na mapie</button>`:''}<button class="drugi" data-a="poc-link" data-n="${t.nums[0]||t.num}">${ic('udost',18)}Udostępnij</button></div>`);
+ ARK={f:arkPociag,a:id}}
+function arkStacja(n){const b=tablica(n,'dep',5);
  ark(`<div class="wiersz rozsun"><div style="min-width:0"><h2 style="font-size:24px">${krotko(n)}</h2><div class="wiersz zawin" style="gap:10px">${linesOf(n).map(lin).join('')}</div></div>${zamk}</div>
  ${oStacji(n).map(kpas).join('')}
- <div class="plyta" style="padding:8px">${b.length?b.map(x=>rzad(x,'dep')).join(''):'<p class="pusto">Dziś nie ma już odjazdów z tej stacji.</p>'}</div>
- <div class="strony"><button class="drugi" data-a="stacja" data-s="${n}">Pełna tablica</button><button class="drugi" data-a="stad" data-s="${n}">Połączenie stąd</button></div>`)}
+ <div class="plyta" style="padding:8px">${tabl(b,'dep')}</div>
+ <div class="strony"><button class="drugi" data-a="stacja" data-s="${n}">Pełna tablica</button><button class="drugi" data-a="stad" data-s="${n}">Połączenie stąd</button></div>`);
+ ARK={f:arkStacja,a:n,czeka:b===undefined}}
 /* wybór dnia i godziny: własny element systemu zamiast okna przeglądarki */
 let P=null;
 function arkKiedy(){if(!P){const t=S.when??now();P={day:S.day,h:Math.floor(t/60)%24,m:t%60,kier:S.kier}}
@@ -848,25 +876,24 @@ function arkKiedy(){if(!P){const t=S.when??now();P={day:S.day,h:Math.floor(t/60)
  <div class="kol" style="gap:6px"><b>Godzina</b><div class="zegar">${slup('h',P.h,'Godzina')}<span class="dw" aria-hidden="true">:</span>${slup('m',P.m,'Minuty')}</div></div>
  <div class="strony"><button class="drugi" data-a="pk-teraz">Teraz</button><button class="glowny" style="height:48px;font-size:15px" data-a="pk-ok">Pokaż połączenia</button></div>`)}
 function rKomunikaty(){const f=S.kfiltr||'wsz';
- const moje=n=>S.routes.some(r=>connections(r.a,r.b).some(c=>c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))));
- const l=R.kom.filter(n=>n.do==null||n.do>=0).filter(n=>f==='wsz'||(f==='utr'?n.sev!=='info':moje(n))).sort((a,b)=>waga(a)-waga(b)||a.od-b.od);
+ const moje=n=>S.routes.some(r=>(nast(r)||[]).some(c=>c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))));
+ const l=KOM().filter(n=>n.do==null||n.do>=0).filter(n=>f==='wsz'||(f==='utr'?n.sev!=='info':moje(n))).sort((a,b)=>waga(a)-waga(b)||a.od-b.od);
  $('#v-komunikaty').innerHTML=`<h1>Komunikaty</h1>
  <div class="na-papierze"><div class="seg">${[['wsz','Wszystkie'],['utr','Utrudnienia'],['moje','Na moich trasach']].map(([k,t])=>`<button data-a="kfiltr" data-k="${k}" aria-pressed="${f===k}">${t}</button>`).join('')}</div></div>
  ${l.length?l.map(n=>`<button class="kom" data-a="kom" data-id="${n.id}">${kzn(n)}<span><span class="t">${n.tyt}</span><span class="o">${n.tr.split('\n')[0]}</span>
-  <span class="meta"><span>${RODZ[n.sev]}</span><span>${okres(n)}</span><span>${kStan(n)}</span>${LINES.filter(x=>n.lines.includes(x.id)).map(lin).join('')}</span></span></button>`).join(''):`<div class="plyta pusto">${f==='moje'?'Na Twoich trasach nie ma teraz komunikatów.':'Nie ma teraz utrudnień.'}</div>`}
- <p class="dr maly">Komunikaty w makiecie są przykładowe.</p>`}
-function arkKomunikat(id){const n=R.kom.find(x=>x.id===id);if(!n)return;
+  <span class="meta"><span>${RODZ[n.sev]}</span><span>${okres(n)}</span><span>${kStan(n)}</span>${n.lines.map(schLinia).filter(Boolean).map(l=>lin({badge:l.badge||l.name,color:l.color})).join('')}</span></span></button>`).join(''):`<div class="plyta pusto">${KR===undefined?'Wczytujemy komunikaty…':f==='moje'?'Na Twoich trasach nie ma teraz komunikatów.':f==='utr'?'Nie ma teraz utrudnień.':'Nie ma teraz komunikatów.'}</div>`}`}
+function arkKomunikat(id){const n=KOM().find(x=>x.id===id);if(!n)return;
  const bl=n.tr.split('\n\n').map(b=>b.startsWith('- ')?`<ul>${b.split('\n').map(x=>`<li>${x.slice(2)}</li>`).join('')}</ul>`:`<p>${b}</p>`).join('');
- const ls=LINES.filter(l=>n.lines.includes(l.id)),pc=n.poc.map(num=>ALL.find(t=>t.num===num)).filter(Boolean);
+ const ls=n.lines.map(schLinia).filter(Boolean),pc=n.poc;
  ark(`<div class="wiersz rozsun" style="align-items:flex-start"><div class="wiersz" style="gap:10px">${kzn(n)}<div><b>${cap(RODZ[n.sev])}</b><p class="dr maly">${okres(n)} · ${kStan(n)}</p></div></div>${zamk}</div>
  <h2 style="font-size:22px;line-height:1.25;text-wrap:balance">${n.tyt}</h2>
  <div class="tresc">${bl}</div>
  ${ls.length||n.st.length||pc.length?`<section class="plyta kol" style="gap:12px"><b>Czego dotyczy</b>
-  ${ls.length?`<div class="kol" style="gap:4px"><span class="dr maly">Linia</span>${ls.map(l=>`<button class="sch-wiersz" style="padding:6px 0;min-height:44px" data-a="sch-pokaz" data-k="${SCHID[l.id]||l.id}">${lin(l)}<span class="nz maly">${bkrotko(l.stops[0][0])} – ${bkrotko(l.stops.at(-1)[0])}</span><span class="dr maly">na schemacie</span>${ic('strz',16)}</button>`).join('')}</div>`:''}
+  ${ls.length?`<div class="kol" style="gap:4px"><span class="dr maly">Linia</span>${ls.map(l=>`<button class="sch-wiersz" style="padding:6px 0;min-height:44px" data-a="sch-pokaz" data-k="${l.id}">${lin({badge:l.badge||'Linia',color:l.color})}<span class="nz maly">${l.name}</span><span class="dr maly">na schemacie</span>${ic('strz',16)}</button>`).join('')}</div>`:''}
   ${n.st.length?`<div class="kol" style="gap:4px"><span class="dr maly">${n.st.length===1?'Stacja':'Stacje'}</span><div class="wiersz zawin" style="gap:6px">${n.st.map(s=>`<button class="chip" style="height:40px" data-a="stacja" data-s="${s}">${bkrotko(s)}</button>`).join('')}</div></div>`:''}
-  ${pc.length?`<div class="kol" style="gap:4px"><span class="dr maly">Pociągi</span><div class="wiersz zawin" style="gap:6px">${pc.map(t=>`<button class="chip" style="height:40px" data-a="poc" data-id="${t.id}">${t.label}</button>`).join('')}</div></div>`:''}
+  ${pc.length?`<div class="kol" style="gap:4px"><span class="dr maly">Pociągi</span><div class="wiersz zawin" style="gap:6px">${pc.map(p=>`<button class="chip" style="height:40px" data-a="poc-nr" data-n="${p}">${p}</button>`).join('')}</div></div>`:''}
  </section>`:'<p class="dr maly">Komunikat dotyczy wszystkich linii.</p>'}
- <p class="dr maly">Źródło: ${R.agN}. Treść przykładowa.</p>`)}
+ `)}
 /* opcje wyszukiwania: jedno okno zamiast rzędu przełączników w formularzu */
 let O=null;
 function arkOpcje(){if(!O)O={bezp:S.bezp,minT:S.minT,bez:[...S.bez]};
@@ -932,23 +959,24 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'op-ag':{const k=el.dataset.k,ix=O.bez.indexOf(k);if(ix>=0)O.bez.splice(ix,1);else if(O.bez.length<2)O.bez.push(k);else toast('Zostaw co najmniej jednego przewoźnika.');arkOpcje();break}
   case'op-reset':O={bezp:false,minT:5,bez:[]};arkOpcje();break;
   case'op-ok':Object.assign(S,O);O=null;ark('');formularz();if(czytaj())szukaj();break;
-  case'wczesniej':S.start=Math.max(0,S.start-4);S.pusto=false;rWyniki();break;
-  case'pozniej':if(S.start+4<S.all.length){S.start+=4;S.pusto=false;rWyniki()}break;
-  case'sel':{S.sel=el.dataset.k;S.selDay=+(el.dataset.d||0);const c=cFromKey(S.sel);ark('');if(c){S.from=cFrom(c);S.to=cTo(c);S.all=connections(S.from,S.to,S);if(!S.all.some(x=>cKey(x)===S.sel)){S.bezp=false;S.minT=5;S.bez=[];S.all=connections(S.from,S.to,S)}
-    if(S.day!==S.selDay){S.day=S.selDay;S.when=S.day?c.dep:null;S.kier='odj'}
-    const ix=S.all.findIndex(x=>cKey(x)===S.sel);S.start=Math.max(0,ix-(ix%4));S.pusto=false;formularz()}
+  case'wczesniej':{const r=wyniki();if(r?.length){S.q={min:r[0].arr-1,arrive:true};S.selAuto=true;rWyniki();$('#wyniki').scrollIntoView({block:'start'})}break}
+  case'pozniej':{const r=wyniki();if(r?.length){S.q={min:r.at(-1).dep+1,arrive:false};S.selAuto=true;rWyniki();$('#wyniki').scrollIntoView({block:'start'})}break}
+  case'sel':{const c=cFromKey(el.dataset.k);ark('');if(!c)break;S.sel=c.k;S.selDay=dzien(c.dep);S.selAuto=false;
+    if(view!=='szukaj'||cFrom(c)!==S.from||cTo(c)!==S.to||!(wyniki()||[]).some(x=>x.k===c.k)){S.from=cFrom(c);S.to=cTo(c);S.day=S.selDay;S.when=((c.dep%1440)+1440)%1440;S.kier='odj';S.q={min:c.dep,arrive:false};formularz()}
     if(view!=='szukaj')go('szukaj');else rWyniki();$('#detal').classList.add('otwarty');$('#detal').scrollTop=0;break}
   case'detal-zamknij':$('#detal').classList.remove('otwarty');break;
   case'rozwin':{const box=el.closest('.os').nextElementSibling;box.hidden=!box.hidden;el.setAttribute('aria-expanded',!box.hidden);break}
-  case'udostepnij':{const c=cFromKey(S.sel),t=`${cFrom(c)} → ${cTo(c)}, ${etykDnia(S.selDay).toLowerCase()} ${hm(c.dep)}–${hm(c.arr)} · zanimwyjdziesz.pl`;
+  case'udostepnij':{const c=cFromKey(S.sel),t=`${cFrom(c)} → ${cTo(c)}, ${etykDnia(S.selDay).toLowerCase()} ${hm(c.dep)}–${hm(cArr(c))} · zanimwyjdziesz.pl`;
    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Skopiowano opis połączenia.')).catch(()=>toast(t));break}
   case'mock':toast(el.dataset.t);break;
-  case'obserwuj-podroz':{const dz=iso(S.selDay),k=S.trips.findIndex(t=>t.k===S.sel&&t.dz===dz);if(k<0){S.trips.push({k:S.sel,dz});toast('Dodano podróż do zakładki „Moje”.')}else{S.trips.splice(k,1);toast('Nie obserwujesz już tej podróży.')}save();rDetal();break}
+  case'obserwuj-podroz':{const dz=iso(S.selDay),k=S.trips.findIndex(t=>t.k===S.sel&&t.dz===dz);if(k<0){{const c=cFromKey(S.sel);S.trips.push({k:S.sel,dz,a:cFrom(c),b:cTo(c),m:((c.dep%1440)+1440)%1440})};toast('Dodano podróż do zakładki „Moje”.')}else{S.trips.splice(k,1);toast('Nie obserwujesz już tej podróży.')}save();rDetal();break}
   case'obserwuj-trase':{const k=S.routes.findIndex(r=>(r.a===S.from&&r.b===S.to)||(r.a===S.to&&r.b===S.from));
    if(k<0){if(S.przyklad){S.routes=[];S.przyklad=false}S.routes.unshift({a:S.from,b:S.to});toast('Dodano trasę do zakładki „Moje”.')}else{S.routes.splice(k,1);S.przyklad=false;toast('Nie obserwujesz już tej trasy.')}save();rWyjazd();rWyniki();break}
   case'na-mape':{const c=cFromKey(S.sel);S.mapSel=c.legs[0].t.id;$('#detal').classList.remove('otwarty');go('mapa');break}
   case'poc':arkPociag(el.dataset.id);if(view==='mapa')rMapa();break;
   case'poc-mapa':ark('');go('mapa');break;
+  case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
+  case'poc-link':{const u='https://zanimwyjdziesz.pl'+(R.id==='mal'?'/malopolska':'')+'/pociag/'+el.dataset.n;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('Skopiowano link do pociągu.')).catch(()=>toast(u));break}
   case'ark-zamknij':ark('');P=O=null;break;
   case'stacja-ark':arkStacja(el.dataset.s);break;
   case'stacja':S.station=el.dataset.s;ark('');if(view!=='stacje')go('stacje');else rStacje();break;
@@ -1003,6 +1031,6 @@ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',motyw);
 
 region(S.region);pismo();
 $('.zamien').innerHTML=ic('zamien',18);
-if(DEMO){$('#demo').hidden=false;$('#demo').textContent='O tej porze pociągi nie jeżdżą, dlatego makieta pokazuje rozkład z godziny 07:20.'}
-motyw();formularz();szukaj();route();
+motyw();
+wczytajStacje().then(()=>{formularz();szukaj();route()}).catch(()=>{$('#demo').hidden=false;$('#demo').textContent='Nie udało się wczytać listy stacji. Odśwież stronę.'});
 setInterval(()=>{if($('#ark').firstChild||document.activeElement?.matches('input'))return;if(S.when==null&&!S.day)formularz();render()},30000);
