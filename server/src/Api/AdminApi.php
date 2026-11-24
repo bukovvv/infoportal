@@ -9,6 +9,7 @@ use KwInfo\Auth\AdminLog;
 use KwInfo\Config;
 use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Http\ApiException;
+use KwInfo\Http\FileResponse;
 use KwInfo\Http\Response;
 use KwInfo\Http\Router;
 use KwInfo\Notices\NoticeRepository;
@@ -28,6 +29,18 @@ final class AdminApi
         $body = Router::body();
 
         return new Response(['loggedIn' => true] + AdminAuth::login((string) ($body['username'] ?? ''), (string) ($body['password'] ?? '')));
+    }
+
+    /** Testowa wersja 2.0 (makieta „Tarcza” z server/v20) — tylko z sesją panelu; strona /v20 pokazuje ją w ramce. */
+    public function v20(array $p): FileResponse
+    {
+        AdminAuth::require(false);
+        $types = ['index.html' => 'text/html; charset=utf-8', 'app.js' => 'text/javascript; charset=utf-8', 'inter-latin.woff2' => 'font/woff2', 'inter-latin-ext.woff2' => 'font/woff2',
+            // MapLibre (kopia z web/node_modules/maplibre-gl/dist — przy aktualizacji biblioteki podmienić)
+            'maplibre-gl.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl-shared.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl-worker.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl.css' => 'text/css; charset=utf-8'];
+        $type = $types[$p['file']] ?? throw new ApiException('Nie znaleziono pliku.', 404);
+
+        return new FileResponse(dirname(__DIR__, 2) . '/v20/' . $p['file'], $type, 0, true);
     }
 
     public function logout(): Response

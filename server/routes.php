@@ -54,5 +54,6 @@ $router->delete('/admin/notices/{id}', [$admin, 'deleteNotice']);
 $router->get('/admin/log', [$admin, 'log']);
 $router->get('/admin/health', [$admin, 'health']);
 $router->post('/admin/import', [$admin, 'import']);
+$router->get('/admin/v20/{file}', [$admin, 'v20']);
 
 return $router;
