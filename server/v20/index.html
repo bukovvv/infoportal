@@ -530,6 +530,11 @@ html{scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))} /* nagłówki
 .wyj{cursor:pointer}
 .wyj-strz{display:inline-flex;opacity:.7}
 .kafle{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr))}
+.kafel b small{font-size:13px;font-weight:600;opacity:.75}
+.trasa-gl{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.trasa-gl h2{flex:1;min-width:0;padding-top:6px}
+.trasa-gl>span{flex:none}
+@media (max-width:599px){.trasa-gl .kolo{width:40px;height:40px}.trasa-gl h2{font-size:19px;padding-top:8px}}
 .fakty{grid-template-columns:repeat(auto-fit,minmax(72px,1fr))}
 .dni{display:flex;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .dni::-webkit-scrollbar{display:none}
@@ -551,7 +556,17 @@ html{scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))} /* nagłówki
   #v-mapa>.wiersz{position:absolute;z-index:2;top:10px;left:10px;right:10px;gap:6px 10px;padding:8px 8px 8px 14px;background:var(--papier);border-radius:var(--r-l);box-shadow:0 8px 24px rgba(0,0,0,.16)}
   #v-mapa h1{display:none}
   #v-mapa #mapa-opis{font-size:13px}
-  #v-mapa>.wiersz .drugi{height:40px;padding:0 12px}
+  #v-mapa>.wiersz{flex-wrap:nowrap}
+  #v-mapa>.wiersz>span{flex:1;flex-wrap:nowrap;justify-content:flex-end}
+  #v-mapa #mapa-opis{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #v-mapa .mapa-godz,.tylko-duzy{display:none}
+  #v-mapa>.wiersz .drugi{height:36px;padding:0 12px;flex:none}
+  /* karta pociągu i stacji: niski panel od dołu, mapa nad nim dalej działa; uchwyt rozwija */
+  .tlo-ark.boczny{background:none;pointer-events:none}
+  .tlo-ark.boczny .ark{pointer-events:auto;max-height:48dvh;padding-top:6px;box-shadow:0 -10px 32px rgba(0,0,0,.28);transition:max-height .28s cubic-bezier(.2,.9,.25,1)}
+  .tlo-ark.boczny.pelny .ark{max-height:88dvh}
+  .uchwyt{position:sticky;top:-6px;z-index:2;display:grid;place-items:center;height:22px;margin:-6px -16px 0;background:var(--papier);flex:none}
+  .uchwyt i{width:40px;height:5px;border-radius:3px;background:var(--kreska)}
   #v-mapa>p{display:none}
   #mapa-okno{height:100%;min-height:0;border-radius:0}
 }
@@ -577,6 +592,7 @@ html{scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))} /* nagłówki
 @media (prefers-reduced-motion:no-preference){.animuj .pkt-tarcza circle:not(.tlo),.pkt-tarcza circle:not(.tlo){transition:stroke-dasharray .6s cubic-bezier(.2,.8,.2,1)}}
 .moje-gl,.kom-gl{display:flex;flex-direction:column;gap:12px}
 @media (min-width:920px){
+  .uchwyt,.tylko-maly{display:none}
   #mapa-okno{height:calc(100dvh - 200px)}
   .tlo-ark.boczny{inset:80px 16px 16px auto;background:none;pointer-events:none;align-items:flex-start}
   .tlo-ark.boczny .ark{pointer-events:auto;width:420px;max-height:100%;box-shadow:0 16px 48px rgba(0,0,0,.28)}
@@ -656,7 +672,7 @@ html{scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))} /* nagłówki
   <section id="v-onas" class="kol onas" hidden></section>
 
   <section id="v-mapa" class="kol" hidden>
-    <div class="wiersz rozsun zawin"><h1>Mapa</h1><span class="wiersz zawin" style="gap:8px 14px"><span class="dr" id="mapa-opis"></span><button class="drugi" data-a="mapa-cala">Cała sieć</button><a class="drugi" href="#schemat">Schemat połączeń</a></span></div>
+    <div class="wiersz rozsun zawin"><h1>Mapa</h1><span class="wiersz zawin" style="gap:8px 14px"><span class="dr" id="mapa-opis"></span><button class="drugi" data-a="mapa-cala">Cała sieć</button><a class="drugi" href="#schemat">Schemat<span class="tylko-duzy"> połączeń</span></a></span></div>
     <div class="mapa-okno" id="mapa-okno"></div>
     <p class="dr maly">Wybierz stację, żeby zobaczyć odjazdy, albo pociąg, żeby zobaczyć jego trasę. Koło z wykrzyknikiem oznacza utrudnienie. Położenie pociągów obliczamy z rozkładu i opóźnień.</p>
   </section>

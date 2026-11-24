@@ -402,7 +402,7 @@ function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
   <div class="detal-gl"><button class="kolo wroc" data-a="detal-zamknij" aria-label="Wróć do listy połączeń">${ic('wroc')}</button><b>${bkrotko(cFrom(c))} → ${bkrotko(cTo(c))}</b><button class="kolo" data-a="udostepnij" aria-label="Udostępnij">${ic('udost')}</button></div>
   <section class="blok kol" style="gap:6px">${desk()?`<p class="wielkie num">${hm(c.dep+d)} → ${hm(cArr(c))}</p><p>${day?w.sub:w.gl+(doOdj(c)>=0?', pociąg odjeżdża '+zaIle(doOdj(c)):'')}</p>`:`<div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>`}
    <p class="dr maly">${day?'Opóźnienia pokażemy w dniu podróży.':d?'Opóźnienie '+d+' min':'Na czas'}${desk()?'':' · przyjazd o '+hm(cArr(c))}</p>
-   <div class="kafle" style="margin-top:8px">${pr.p?`<div class="kafel"><span>peron</span><b>${pr.p}</b></div>`:''}${pr.tor?`<div class="kafel"><span>tor</span><b>${pr.tor}</b></div>`:''}<div class="kafel"><span>czas jazdy</span><b>${dur(c.arr-c.dep)}</b></div>${c.km?`<div class="kafel"><span>odległość</span><b>${c.kmP?'ok. ':''}${c.km} km</b></div>`:''}</div></section>
+   <div class="kafle" style="margin-top:8px">${pr.p?`<div class="kafel"><span>peron</span><b>${pr.p}${pr.tor?`<small> · tor ${pr.tor}</small>`:''}</b></div>`:''}<div class="kafel"><span>czas jazdy</span><b>${dur(c.arr-c.dep)}</b></div>${c.km?`<div class="kafel"><span>odległość</span><b>${c.kmP?'ok. ':''}${c.km} km</b></div>`:''}</div></section>
   ${oPolaczeniu(c,day).map(kpas).join('')}
   ${osie}
   ${biletHtml(c)}
@@ -458,7 +458,7 @@ function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--p
   m.addLayer({id:'st'+r,type:'circle',source:'stacje',minzoom:z,filter:f,paint:{'circle-radius':['+',['match',['get','r'],3,6.5,2,5,1,4,3],['case',['boolean',['feature-state','wyb'],false],4,['boolean',['feature-state','hover'],false],2,0]],'circle-color':['case',['boolean',['feature-state','wyb'],false],cssv('--akcja'),pap],'circle-stroke-color':tu,'circle-stroke-width':['case',['boolean',['feature-state','wyb'],false],3,r>=2?2.5:1.5],'circle-radius-transition':{duration:180}}});
   m.addLayer({id:'stn'+r,type:'symbol',source:'stacje',minzoom:zt,filter:f,layout:{'text-field':['get','l'],'text-font':[r>=2?'Noto Sans Bold':'Noto Sans Regular'],'text-size':r>=2?13:11.5,'text-anchor':'left','text-offset':[.8,0],'text-optional':true},paint:{'text-color':r>=2?tu:t2,'text-halo-color':pap,'text-halo-width':1.5}})}}
 function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr=(live?.trains||[]).filter(t=>t.key);
- $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now())+(R.id==='mal'&&tr.some(t=>t.source==='gps')?'. Pozycja na żywo dzięki Kolejom Małopolskim.':'');
+ $('#mapa-opis').innerHTML='<span class="tylko-duzy">W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+'</span><span class="tylko-maly">'+tr.length+' w ruchu</span><span class="mapa-godz"> · godz. '+hm(now())+'</span>'+(R.id==='mal'&&tr.some(t=>t.source==='gps')?'<span class="mapa-godz">. Pozycja na żywo dzięki Kolejom Małopolskim.</span>':'');
  mapaStart();const m=MAP;if(!m?._ok)return;m.resize();
  if(net&&m._net!==net){m._net=net;m.getSource('siec').setData(net);let a=180,b=-180,c=90,d=-90;
   for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
@@ -471,7 +471,7 @@ function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr
  const sel=S.mapSel?kurs(S.mapSel):null,shape=sel?.shape?.length?sel.shape.map(([y,x])=>[x,y]):null;
  if(m._sel!==sel){m._sel=sel;m.getSource('kurs').setData(shape?{type:'Feature',properties:{color:sel.l.color},geometry:{type:'LineString',coordinates:shape}}:{type:'FeatureCollection',features:[]})}
  if(S.mapFit&&shape){S.mapFit=false;let a=180,b=-180,c=90,d=-90;for(const[x,y]of shape){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
-  m.fitBounds([[a,c],[b,d]],{padding:desk()?{top:48,bottom:48,left:48,right:480}:40})}
+  m.fitBounds([[a,c],[b,d]],{padding:desk()?{top:48,bottom:48,left:48,right:480}:{top:70,left:30,right:30,bottom:Math.round(m.getContainer().clientHeight*.5)}})}
  // utrudnienia: pierścień przy stacjach komunikatu i koło z wykrzyknikiem
  const ut=[],kk=[];
  for(const n of KOM()){if(!trwa(n)||n.sev==='info')continue;const sts=(n.st.length?n.st:n.lines.flatMap(id=>schLinia(id)?.stations||[])).map(s=>SBN.get(s)).filter(Boolean);if(!sts.length)continue;
@@ -498,7 +498,7 @@ function uklad(){if(!MAP)return;const zaj=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[
 function rMoje(){const el=$('#v-moje');
  for(const r of S.routes)if(r.pow&&Date.now()-r.pow.at>7*864e5&&typeof Notification!=='undefined'&&Notification.permission==='granted'){r.pow.at=Date.now();save();powiadomTrase(r).catch(()=>{})}
  const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
-  return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo${r.pow?' wlaczony':''}" style="background:var(--papier)" data-a="pow-trasa" data-i="${i}" aria-pressed="${!!r.pow}" aria-label="${r.pow?'Powiadomienia o trasie włączone. Zmień ustawienia':'Włącz powiadomienia o trasie'}">${ic('dzwonek',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
+  return `<section class="plyta"><div class="trasa-gl"><h2>${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo${r.pow?' wlaczony':''}" style="background:var(--papier)" data-a="pow-trasa" data-i="${i}" aria-pressed="${!!r.pow}" aria-label="${r.pow?'Powiadomienia o trasie włączone. Zmień ustawienia':'Włącz powiadomienia o trasie'}">${ic('dzwonek',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
   ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(cArr(c))}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,dzien(c.dep))}</button>`).join(''):`<p class="pusto">${all===undefined?'Sprawdzamy połączenia…':all===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p>`}
   <button class="tekstowy" data-a="trasa-szukaj" data-i="${i}">Więcej połączeń ${ic('strz',16)}</button></section>`}).join('');
  const pod=S.trips.map(t=>{const day=offDz(t.dz);let c=CON[t.k];if(!c&&day>=0&&t.a){const l=polaczenia(t.a,t.b,{min:day*1440+t.m-1,n:3,ttl:300});c=l&&l.find(x=>x.k===t.k)}return{c,day}}).filter(x=>x.c&&x.day>=0&&(x.day>0||cArr(x.c)>=now()-10));
@@ -1026,8 +1026,9 @@ new MutationObserver(blokada).observe($('#detal'),{attributes:true,attributeFilt
 addEventListener('resize',blokada);
 function ark(html){if(!html){const by=ARK;ARK=null;stacjaWyb(null);if(by)zapiszAdres(false)}clearTimeout(AZ);const box=$('#ark');
  if(!html&&box.firstChild&&!matchMedia('(prefers-reduced-motion:reduce)').matches){box.firstChild.classList.add('zamyka');AZ=setTimeout(()=>box.innerHTML='',170);return}
- if(html&&box.firstChild){box.querySelector('.ark').innerHTML=html;box.firstChild.classList.remove('zamyka');return} // zmiana treści otwartego okna bez ponownego wjazdu
- $('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
+ const uch=view==='mapa'?`<button class="uchwyt" data-a="ark-rozwin" aria-label="Rozwiń lub zwiń kartę"><i></i></button>`:''; // tylko telefon (CSS)
+ if(html&&box.firstChild){box.querySelector('.ark').innerHTML=uch+html;box.firstChild.classList.remove('zamyka');return} // zmiana treści otwartego okna bez ponownego wjazdu
+ $('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${uch}${html}</div></div>`:''}
 const zamk=`<button class="kolo" data-a="ark-zamknij" aria-label="Zamknij">${ic('zamknij')}</button>`;
 function arkPociag(id){const nowa=ARK?.a!==id;S.mapSel=id;stacjaWyb(null);const t=kurs(id);
  if(!t){ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Pociąg</h2>${zamk}</div><p class="pusto">${t===null?'Nie udało się pobrać danych pociągu.':'Wczytujemy dane pociągu…'}</p>`);ARK={f:arkPociag,a:id,czeka:true};zapiszAdres(nowa);return}
@@ -1168,7 +1169,7 @@ function go(v){location.hash=regP()+SCIEZKA[v];if(view===v)route()}
 function route(){const o=czytajAdres();
  if(location.hash.startsWith('#/')&&o.reg!==S.region){S.region=o.reg;save();location.reload();return} // inny region w adresie
  if($('.tlo-ark.boczny'))ark(''); // panel z boku mapy nie przechodzi na inne widoki
- const zmiana=view!==o.view||!GOTOWE;view=o.view;zAdresu(o);
+ const zmiana=view!==o.view||!GOTOWE;view=o.view;zAdresu(o);if(view!=='szukaj')$('#detal').classList.remove('otwarty');
  VIEWS.forEach(([k])=>$('#v-'+k).hidden=k!==view);
  const a={system:'moje',btk:'moje',onas:'moje',schemat:'mapa'}[view]||view;
  $('#menu').innerHTML=VIEWS.slice(0,5).map(([k,t])=>`<a href="#${regP()}${SCIEZKA[k]}" ${k===(view==='system'?view:a)?'aria-current="page"':''}>${t}</a>`).join('');
@@ -1228,8 +1229,9 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'pozniej':{const r=wyniki();if(r?.length){S.q={min:r.at(-1).dep+1,arrive:false};S.selAuto=true;rWyniki();$('#wyniki').scrollIntoView({block:'start'})}break}
   case'sel':{const c=cFromKey(el.dataset.k);ark('');if(!c)break;S.sel=c.k;S.selDay=dzien(c.dep);S.selAuto=false;
     if(view!=='szukaj'||cFrom(c)!==S.from||cTo(c)!==S.to||!(wyniki()||[]).some(x=>x.k===c.k)){S.from=cFrom(c);S.to=cTo(c);S.day=S.selDay;S.when=((c.dep%1440)+1440)%1440;S.kier='odj';S.q={min:c.dep,arrive:false};formularz()}
-    if(view!=='szukaj')go('szukaj');else rWyniki();$('#detal').classList.add('otwarty');$('#detal').scrollTop=0;break}
-  case'detal-zamknij':$('#detal').classList.remove('otwarty');break;
+    if(view!=='szukaj')go('szukaj');else rWyniki();$('#detal').classList.add('otwarty');$('#detal').scrollTop=0;
+    if(!desk()&&!history.state?.detal)history.pushState({detal:1},'',location.hash);break} // „wstecz” zamyka szczegóły
+  case'detal-zamknij':$('#detal').classList.remove('otwarty');if(history.state?.detal)history.back();break;
   case'rozwin':{const box=el.closest('.os').nextElementSibling;box.hidden=!box.hidden;el.setAttribute('aria-expanded',!box.hidden);if(el.dataset.k){S.rozw??=new Set();S.rozw[box.hidden?'delete':'add'](el.dataset.k)}break}
   case'udostepnij':{const c=cFromKey(S.sel);if(!c)break;const A=SBN.get(cFrom(c)),B=SBN.get(cTo(c));if(!A||!B)break;
    const q=new URLSearchParams({z:A.id,do:B.id,data:iso(dzien(c.dep)),godz:hm(c.dep),przes:c.legs.length>1?'2':'0'});
@@ -1261,6 +1263,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'pw-wylacz':{const r=S.routes[PW.i];wylaczTrase(r).catch(()=>{});r.pow=null;save();ark('');PW=null;rMoje();toast('Powiadomienia o trasie są wyłączone.');break}
   case'pkt-zwin':S.pktZwin=!S.pktZwin;save();if(ARK?.f===arkPociag)arkPociag(ARK.a);break;
   case'pkt-okres':S.pktOkres=+el.dataset.k;save();if(ARK?.f===arkPociag)arkPociag(ARK.a);break;
+  case'ark-rozwin':{const t=$('.tlo-ark');t?.classList.toggle('pelny');if(t&&!t.classList.contains('pelny'))t.querySelector('.ark').scrollTop=0;break}
   case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
   case'poc-link':udostepnij('Pociąg '+el.dataset.n,'https://zanimwyjdziesz.pl'+regP()+'/pociag/'+el.dataset.n);break;
@@ -1314,6 +1317,7 @@ document.addEventListener('keydown',e=>{if(!LI||e.target!==LI.inp)return;const n
 $('#lista').addEventListener('mousedown',e=>{e.preventDefault();const o=e.target.closest('[role="option"]');if(o)wybierz(+o.dataset.i)});
 window.addEventListener('resize',zamknijListe);
 window.addEventListener('hashchange',route);
+window.addEventListener('popstate',e=>{if(!e.state?.detal)$('#detal').classList.remove('otwarty')});
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',motyw);
 
 {const o=czytajAdres();if(location.hash.startsWith('#/'))S.region=o.reg}
