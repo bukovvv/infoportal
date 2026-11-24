@@ -1182,7 +1182,10 @@ function route(){const o=czytajAdres();
  GOTOWE=true;zapiszAdres(false)}
 function render(){({szukaj:()=>{rWyjazd();rWyniki()},stacje:rStacje,mapa:rMapa,komunikaty:rKomunikaty,moje:rMoje,system:rSystem,btk:rBtk,schemat:rSchemat,onas:rONas})[view]()}
 function motyw(){const r=document.documentElement;if(S.theme==='system')r.removeAttribute('data-theme');else r.dataset.theme=S.theme;
- const dark=S.theme==='dark'||(S.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);$('#motyw').innerHTML=ic(dark?'slonce':'ksiezyc');if(view==='schemat')rSchemat();else if(view==='mapa')rMapa()}
+ const dark=S.theme==='dark'||(S.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);$('#motyw').innerHTML=ic(dark?'slonce':'ksiezyc');
+ // w ramce /v20 strona nadrzędna dostaje kolor tła: przeglądarka telefonu barwi nim paski u góry i u dołu
+ if(parent!==window)try{const pd=parent.document,c=getComputedStyle(document.documentElement).getPropertyValue('--papier').trim();pd.documentElement.style.background=pd.body.style.background=c;
+  const ms=pd.querySelectorAll('meta[name="theme-color"]');ms.forEach((m,i)=>{if(i)m.remove();else{m.removeAttribute('media');m.content=c}})}catch(e){}if(view==='schemat')rSchemat();else if(view==='mapa')rMapa()}
 function formularz(){$('#skad').value=S.from;$('#dokad').value=S.to;
  const k=S.kier==='prz'?'Przyjazd':'Odjazd';
  $('#kiedy').innerHTML=ic('zegar',18)+(S.when==null&&!S.day?k+': teraz':k+': '+etykDnia(S.day).toLowerCase()+', '+hm(S.when??now()));
