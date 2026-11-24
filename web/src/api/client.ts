@@ -1,5 +1,5 @@
 import { region } from '@/utils/region'
-import type { AdminLogEntry, AdminSession, Board, ConnectionsResult, Live, Notice, Punctuality, Station, Status, TrainMatch, Trip } from './types'
+import type { AdminLogEntry, AdminSecurity, AdminSession, Board, ConnectionsResult, Live, Notice, Punctuality, Station, Status, TrainMatch, Trip } from './types'
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -70,8 +70,13 @@ export const api = {
   },
   admin: {
     session: () => request<AdminSession>('GET', '/admin/session'),
-    login: (username: string, password: string) => request<AdminSession>('POST', '/admin/login', { username, password }),
+    login: (username: string, password: string, code?: string) => request<AdminSession>('POST', '/admin/login', { username, password, code }),
     logout: () => request<AdminSession>('POST', '/admin/logout', {}),
+    logoutAll: () => request<AdminSession>('POST', '/admin/logout-all', {}),
+    security: () => request<AdminSecurity>('GET', '/admin/security'),
+    twoFactorSetup: () => request<{ secret: string; uri: string }>('POST', '/admin/2fa/setup', {}),
+    twoFactorEnable: (code: string) => request<AdminSecurity & { recoveryCodes: string[] }>('POST', '/admin/2fa/enable', { code }),
+    twoFactorDisable: (code: string) => request<AdminSecurity>('POST', '/admin/2fa/disable', { code }),
     notices: () => request<Notice[]>('GET', '/admin/notices'),
     saveNotice: (notice: Partial<Notice>, id?: number) =>
       id ? request<Notice>('PUT', `/admin/notices/${id}`, notice) : request<Notice>('POST', '/admin/notices', notice),

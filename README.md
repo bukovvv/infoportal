@@ -1,62 +1,95 @@
-# zanimwyjdziesz.pl 1.0
+# zanimwyjdziesz.pl
 
-Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże, komunikaty oraz zakładka Bus-Tramwaj-Kolej (taryfa wspólnego biletu KW + POLREGIO + ZTM Poznań). Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite. Krój: Figtree (OFL), hostowany lokalnie.
+Rozkład, opóźnienia i komunikaty dla pasażerów Kolei Wielkopolskich i Kolei Małopolskich. Strona działa pod
+[zanimwyjdziesz.pl](https://zanimwyjdziesz.pl) (Małopolska: [/malopolska](https://zanimwyjdziesz.pl/malopolska)).
+
+To prywatny projekt, nie strona przewoźnika. Dane pochodzą z otwartych źródeł, więc w razie rozbieżności rację ma
+informacja na stacji.
+
+## Co jest w środku
+
+- wyszukiwarka połączeń z przesiadkami, w tym pociągi POLREGIO i PKP Intercity jadące przez region,
+- tablice odjazdów i przyjazdów na każdej stacji,
+- mapa z pociągami (pozycja liczona z rozkładu i opóźnień; w Małopolsce część pociągów ma GPS),
+- strona pociągu z trasą, peronami, opóźnieniem i punktualnością z ostatnich tygodni,
+- „Moje trasy” i obserwowane podróże z powiadomieniami push o opóźnieniach i odwołaniach,
+- komunikaty o utrudnieniach (pisane w panelu albo podsuwane jako szkice z danych PKP PLK),
+- kalkulator biletu Bus-Tramwaj-Kolej i schemat połączeń Wielkopolski.
+
+Konta nie ma. Ulubione stacje, trasy i ustawienia zostają w przeglądarce.
+
+## Jak to działa
+
+Backend to PHP 8.1+ bez frameworka i SQLite. CRON raz na dobę importuje rozkład GTFS, a co minutę buduje plik
+`live.json` z opóźnieniami. Zapytania pasażerów czytają tylko lokalną bazę i ten plik, więc ruch na stronie nie
+obciąża zewnętrznych serwisów.
+
+Frontend to Vue 3, Vuetify 4 (Material Design 3), Pinia i MapLibre, budowany Vite do `public/`.
+
+```text
+server/     PHP: import GTFS, wyszukiwarka, dane na żywo, API, push, panel
+  bin/        skrypty CLI i CRON (import, odświeżanie, kopie, testy)
+  v20/        wersja 2.0 w przygotowaniu (tylko dla admina, /v20)
+  storage/    bazy i pliki generowane, poza gitem
+web/        Vue (src/views, src/components, src/stores, src/utils)
+public/     katalog WWW: zbudowany frontend i public/api/index.php
+docs/       makiety i pliki marki
+```
+
+Regiony opisuje `Config::REGIONS` w `server/src/Config.php` i `web/src/utils/region.ts`. Każdy region ma swoje
+pliki w `server/storage/<region>/`, a skrypty CRON przechodzą po kolei przez wszystkie.
 
 ## Źródła danych
 
-| Dane | Źródło | Odświeżanie |
-|---|---|---|
-| Rozkład jazdy | GTFS `polish_trains.zip` z [mkuran.pl](https://mkuran.pl/gtfs/) (PKP PLK), filtr agencji KW | codziennie (CRON) |
-| Opóźnienia, odwołania | GTFS-Realtime mkuran.pl | co ok. 2 min |
-| Pozycje GPS | wyłączone (`gps_enabled`), bo Mapa BILKOM od dawna nie zwraca pozycji | — |
-| Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
-| Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
-| Pojazdy (zestawienia, rysunki) | vagonWEB.cz — **wyłączone** (`vagonweb_enabled`) do czasu zgody serwisu; działają tylko ręczne przypisania | — |
-| Rodzaj pojazdu (EZT, szynobus, parowóz) i udogodnienia | GTFS Kolei Wielkopolskich `ws.kolejewlkp.pl:83/gtfs_kw.zip` (otwarte dane z BIP KW), tylko Wielkopolska | przy imporcie rozkładu (CRON 03:30) |
+| Co | Skąd |
+|---|---|
+| Rozkład jazdy | GTFS `polish_trains.zip` od [Mikołaja Kuranowskiego](https://mkuran.pl/gtfs/) na danych PKP PLK |
+| Opóźnienia i odwołania | GTFS-Realtime z tego samego źródła |
+| Rodzaj pojazdu (EZT, szynobus, parowóz) | GTFS Kolei Wielkopolskich (otwarte dane z BIP KW) |
+| GPS w Małopolsce | `realtime.pb` Kolei Małopolskich |
+| Utrudnienia (szkice komunikatów) | API PKP Polskich Linii Kolejowych |
+| Podkład mapy | OpenFreeMap, © OpenStreetMap |
 
-Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
+## Uruchomienie u siebie
 
-**Regiony.** Wielkopolska (Koleje Wielkopolskie, `/`) i Małopolska (Koleje Małopolskie, `/malopolska`, API `/api/malopolska/…`). Region = ustawienia w `server/src/Config.php` (`REGIONS`: przewoźnik, prefiks GTFS-RT, granica województwa, pliki w `server/storage/<region>/`) i `web/src/utils/region.ts` (base routera, prefiks API, nazwy, części serwisu). `import-gtfs.php` i `refresh-live.php` obsługują po kolei wszystkie regiony (`--region=malopolska` — tylko jeden); archiwum rozkładu i feed GTFS-RT pobierane raz.
-
-## Struktura
-
-```text
-server/          PHP 8.1+ (bez frameworka)
-  src/Gtfs/        import GTFS, rozkład dnia, wyszukiwarka połączeń, estymacja pozycji
-  src/Live/        klienci GPS, dekoder GTFS-RT, budowa live.json
-  src/Api/         publiczne i administracyjne JSON API
-  src/Vehicles/    zestawienia pociągów z vagonWEB (pojazd na stronie pociągu)
-  bin/             import-gtfs, refresh-live, fetch-vehicles, selftest, preflight, import-legacy-notices
-  storage/         bazy i pliki generowane (poza gitem)
-public/          katalog dokumentów: zbudowany frontend + api/index.php
-web/             Vue 3 + Vite + TypeScript + Vuetify 4 (blueprint MD3) + Pinia + MapLibre
-docs/            makieta MD3
-legacy/          poprzednia wersja 0.x (tylko wgląd)
-```
-
-## Praca lokalna
+Potrzebne: PHP 8.1+ (`pdo_sqlite`, `curl`, `openssl`) i Node.js.
 
 ```powershell
-php server/bin/import-gtfs.php                                   # rozkład
-php server/bin/refresh-live.php                                  # dane na żywo (ręcznie, zamiast CRON-a)
-php server/bin/fetch-vehicles.php --limit=10                     # pojazdy z vagonWEB (bez --limit: wszystkie, ok. 15 min)
-php -S localhost:8080 -t public server/dev-router.php            # API (+ zbudowany frontend)
-node web/node_modules/vite/bin/vite.js web                       # frontend z HMR na :5173 (proxy /api)
+php server/bin/import-gtfs.php                          # rozkład (kilka minut przy pierwszym razie)
+php server/bin/refresh-live.php                         # opóźnienia, ręcznie zamiast CRON-a
+php -S localhost:8080 -t public server/dev-router.php   # API
+cd web; npm install; npm run dev                        # frontend na :5173, /api idzie na :8080
 ```
 
-Panel administratora: `/admin`, użytkownik `admin`, hasło ustawione przez `php server/bin/set-admin-password.php` (po zmianie: wdrożenie wysyła hash na serwer). Hasło `kw-demo` działa tylko lokalnie na `php -S` i tylko bez pliku `server/config/admin-password.php`.
+Panel jest pod `/admin`. Lokalnie, bez pliku `server/config/admin-password.php`, wpuszcza użytkownika `admin` z hasłem
+`kw-demo`. Własne hasło ustawia `php server/bin/set-admin-password.php` (zapisuje tylko hash).
 
-## Testy i build
+## Panel i bezpieczeństwo
+
+Do logowania potrzebne jest hasło, a po włączeniu w panelu (Zabezpieczenia) także 6-cyfrowy kod z aplikacji w
+telefonie, z ośmioma kodami zapasowymi. Po 5 błędnych próbach z jednego adresu logowanie stoi 15 minut, przy
+kolejnych seriach w ciągu doby godzinę, potem dobę. Sesja trzyma się w ciasteczku tylko dla `/api/admin` (HttpOnly,
+Secure, SameSite=Strict) i wygasa po 2 h bezczynności. Każda zmiana wymaga tokenu CSRF. Dziennik zapisuje logowania i
+zmiany komunikatów.
+
+Bez telefonu i kodów zapasowych kod z aplikacji wyłącza się na serwerze:
+`php server/bin/admin-2fa.php --disable`. Ten sam skrypt z `--logout-all` kończy wszystkie sesje.
+
+## Testy
 
 ```powershell
-php server/bin/selftest.php      # backend
-cd web; npm test                 # frontend (vitest)
-cd web; npm run build            # typy + build do ../public
-pwsh ./release.ps1               # pełna paczka wdrożeniowa
+php server/bin/selftest.php    # backend
+cd web; npm test               # frontend (vitest)
+cd web; npx vue-tsc --noEmit   # typy
 ```
 
-Wdrożenie: [DEPLOYMENT.md](DEPLOYMENT.md).
+## Wdrożenie
 
-## Licencje danych
+`bash deploy.sh` puszcza testy, buduje paczkę i wysyła ją przez SSH. Szczegóły, CRON i wymagania hostingu są w
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
-Rozkład i opóźnienia: PKP Polskie Linie Kolejowe S.A. (warunki ponownego wykorzystywania ISP), konwersja GTFS: Mikołaj Kuranowski (mkuran.pl, GTFS-RT na CC BY 4.0). Mapa: © OpenStreetMap, OpenFreeMap. Serwis nie jest powiązany z Kolejami Wielkopolskimi.
+## Licencje
+
+Rozkład i opóźnienia: PKP Polskie Linie Kolejowe S.A. na warunkach ponownego wykorzystywania informacji sektora
+publicznego, konwersja do GTFS: Mikołaj Kuranowski (GTFS-RT na CC BY 4.0). Mapa: © OpenStreetMap, OpenFreeMap.
+Krój Figtree i Inter na licencji OFL. Serwis nie jest powiązany z Kolejami Wielkopolskimi ani Kolejami Małopolskimi.

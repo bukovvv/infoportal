@@ -14,7 +14,8 @@ use KwInfo\Http\ApiException;
  *
  * Ochrona: ciasteczko HttpOnly + Secure + SameSite=Strict tylko dla /api/admin, sesje w storage/sessions
  * (nie we wspólnym /tmp hostingu), wygasanie po bezczynności i po czasie od zalogowania, sprawdzanie
- * nagłówka Origin przy zmianach, blokada po nieudanych logowaniach (z jednego adresu i łącznie).
+ * nagłówka Origin przy zmianach, blokada po nieudanych logowaniach (z jednego adresu i łącznie), rosnąca
+ * przy kolejnych seriach (15 min → 1 h → doba), kod z aplikacji (AdminSecurity), „Wyloguj wszędzie”.
  */
 final class AdminAuth
 {
@@ -26,6 +27,9 @@ final class AdminAuth
     /** nieudane logowania łącznie (z wielu adresów) w oknie FAILURE_WINDOW */
     public const MAX_FAILURES_TOTAL = 40;
     public const FAILURE_WINDOW = 900;
+    /** długość blokady adresu: pierwsza, druga i każda kolejna w ciągu doby */
+    public const LOCKS = [900, 3600, 86400];
+    private static ?string $failureFile = null;
     private const IDLE_TIMEOUT = 2 * 3600;
     private const MAX_LIFETIME = 12 * 3600;
 
@@ -58,15 +62,19 @@ final class AdminAuth
         session_start();
     }
 
-    /** @return array{username: string, csrf: string} */
-    public static function login(string $username, string $password): array
+    /**
+     * Logowanie hasłem i, gdy włączony, kodem z aplikacji (albo zapasowym). Bez kodu przy włączonym 2FA zwraca
+     * ['twoFactor' => true] i nie zakłada sesji: przeglądarka wysyła wtedy hasło jeszcze raz, razem z kodem.
+     * @return array{username: string, csrf: string}|array{twoFactor: true}
+     */
+    public static function login(string $username, string $password, string $code = ''): array
     {
         self::checkOrigin();
         $ip = self::ip();
-        [$fromIp, $total] = self::failures($ip);
-        if ($fromIp >= self::MAX_FAILURES || $total >= self::MAX_FAILURES_TOTAL) {
+        $wait = self::lockedFor($ip);
+        if ($wait > 0) {
             AdminLog::write('login-blocked', null, ['username' => mb_substr(trim($username), 0, 40)]);
-            throw new ApiException('Zbyt wiele nieudanych prób logowania. Spróbuj ponownie za 15 minut.', 429, ['Retry-After' => (string) self::FAILURE_WINDOW]);
+            throw new ApiException('Zbyt wiele nieudanych prób logowania. Spróbuj ponownie ' . self::waitText($wait) . '.', 429, ['Retry-After' => (string) $wait]);
         }
         $hash = self::passwordHash();
         if ($hash === null) {
@@ -78,6 +86,19 @@ final class AdminAuth
             usleep(400_000);
             throw new ApiException('Nieprawidłowa nazwa użytkownika lub hasło.', 401);
         }
+        $used = null;
+        if (AdminSecurity::twoFactorEnabled()) {
+            if (trim($code) === '') {
+                return ['twoFactor' => true];
+            }
+            $used = AdminSecurity::useCode($code, time());
+            if ($used === null) {
+                self::recordFailure($ip);
+                AdminLog::write('login-code-failed');
+                usleep(400_000);
+                throw new ApiException('Nieprawidłowy albo już użyty kod.', 401);
+            }
+        }
         self::start();
         session_regenerate_id(true);
         $_SESSION = [
@@ -85,10 +106,25 @@ final class AdminAuth
             'csrf' => bin2hex(random_bytes(32)),
             'since' => time(),
             'seen' => time(),
+            'gen' => AdminSecurity::generation(),
         ];
-        AdminLog::write('login');
+        AdminLog::write('login', null, $used === 'recovery' ? ['recovery' => true, 'recoveryLeft' => AdminSecurity::status()['recoveryLeft']] : []);
 
         return ['username' => self::USERNAME, 'csrf' => $_SESSION['csrf']];
+    }
+
+    /** Koniec wszystkich sesji admina (także tej), np. po zalogowaniu na cudzym komputerze. */
+    public static function logoutAll(): void
+    {
+        AdminLog::write('logout-all');
+        AdminSecurity::bumpGeneration();
+        self::logout();
+    }
+
+    /** Po włączeniu kodu z aplikacji: inne sesje (zalogowane bez kodu) wygasają, ta zostaje. */
+    public static function keepOnlyThisSession(): void
+    {
+        $_SESSION['gen'] = AdminSecurity::bumpGeneration();
     }
 
     public static function logout(): void
@@ -118,6 +154,11 @@ final class AdminAuth
         }
         $now = time();
         if ($now - (int) ($_SESSION['seen'] ?? 0) > self::IDLE_TIMEOUT || $now - (int) ($_SESSION['since'] ?? 0) > self::MAX_LIFETIME) {
+            $_SESSION = [];
+            session_destroy();
+            return null;
+        }
+        if ((int) ($_SESSION['gen'] ?? 0) !== AdminSecurity::generation()) { // „Wyloguj wszędzie”
             $_SESSION = [];
             session_destroy();
             return null;
@@ -189,34 +230,72 @@ final class AdminAuth
         return null;
     }
 
-    /** @return array{0: int, 1: int} nieudane próby z adresu i łącznie w oknie */
-    public static function failures(string $ip): array
+    /** Inny plik dziennika nieudanych prób (selftest). */
+    public static function useFailureFile(?string $file): void
     {
-        $data = self::failureLog(static fn (array $d): array => $d);
-        $since = time() - self::FAILURE_WINDOW;
-        $count = static fn (array $times): int => count(array_filter($times, static fn (int $t): bool => $t > $since));
-        $total = 0;
-        foreach ($data as $times) {
-            $total += $count($times);
-        }
-
-        return [$count($data[$ip] ?? []), $total];
+        self::$failureFile = $file;
     }
 
-    public static function recordFailure(string $ip): void
+    /** Ile sekund zostało blokady logowania z adresu (0 = można próbować). */
+    public static function lockedFor(string $ip, ?int $now = null): int
     {
-        $since = time() - self::FAILURE_WINDOW;
-        self::failureLog(static function (array $data) use ($ip, $since): array {
-            foreach ($data as $key => $times) {
-                $data[$key] = array_values(array_filter($times, static fn (int $t): bool => $t > $since));
-                if ($data[$key] === []) {
-                    unset($data[$key]);
+        $now ??= time();
+        $d = self::failureLog(static fn (array $d): array => $d);
+        $wait = 0;
+        foreach ($d['l'][$ip] ?? [] as [$start, $length]) {
+            $wait = max($wait, $start + $length - $now);
+        }
+        // łącznie z wielu adresów: czekamy, aż najstarsze próby wypadną z okna
+        $all = array_values(array_filter($d['g'] ?? [], static fn (int $t): bool => $t > $now - self::FAILURE_WINDOW));
+        sort($all);
+        if (count($all) >= self::MAX_FAILURES_TOTAL) {
+            $wait = max($wait, $all[count($all) - self::MAX_FAILURES_TOTAL] + self::FAILURE_WINDOW - $now);
+        }
+
+        return max(0, $wait);
+    }
+
+    /** Zapisuje nieudaną próbę; po MAX_FAILURES z adresu zakłada blokadę (kolejne w ciągu doby dłuższe). Zwraca jej długość albo 0. */
+    public static function recordFailure(string $ip, ?int $now = null): int
+    {
+        $now ??= time();
+        $lock = 0;
+        self::failureLog(static function (array $d) use ($ip, $now, &$lock): array {
+            if (!isset($d['g'])) {
+                $d = ['f' => [], 'g' => [], 'l' => []]; // pusty albo dawny zapis (adres → próby)
+            }
+            $recent = static fn (array $times): array => array_values(array_filter($times, static fn (int $t): bool => $t > $now - self::FAILURE_WINDOW));
+            foreach ($d['f'] as $key => $times) {
+                $d['f'][$key] = $recent($times);
+                if ($d['f'][$key] === []) {
+                    unset($d['f'][$key]);
                 }
             }
-            $data[$ip][] = time();
+            foreach ($d['l'] as $key => $locks) {
+                $d['l'][$key] = array_values(array_filter($locks, static fn (array $l): bool => $l[0] > $now - 2 * 86400));
+                if ($d['l'][$key] === []) {
+                    unset($d['l'][$key]);
+                }
+            }
+            $d['g'] = $recent($d['g']);
+            $d['g'][] = $now;
+            $d['f'][$ip][] = $now;
+            if (count($d['f'][$ip]) >= self::MAX_FAILURES) {
+                $before = count(array_filter($d['l'][$ip] ?? [], static fn (array $l): bool => $l[0] > $now - 86400));
+                $lock = self::LOCKS[min($before, count(self::LOCKS) - 1)];
+                $d['l'][$ip][] = [$now, $lock];
+                unset($d['f'][$ip]);
+            }
 
-            return $data;
+            return $d;
         }, true);
+
+        return $lock;
+    }
+
+    private static function waitText(int $seconds): string
+    {
+        return $seconds <= 5400 ? 'za ' . max(1, (int) ceil($seconds / 60)) . ' min' : 'za ' . (int) ceil($seconds / 3600) . ' godz.';
     }
 
     /**
@@ -226,7 +305,7 @@ final class AdminAuth
      */
     private static function failureLog(callable $change, bool $write = false): array
     {
-        $file = Config::path('storage') . '/login-failures.json';
+        $file = self::$failureFile ?? Config::path('storage') . '/login-failures.json';
         $handle = @fopen($file, 'c+');
         if ($handle === false) {
             return [];

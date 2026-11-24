@@ -67,6 +67,7 @@ const router = createRouter({
         { path: 'wklej', name: 'admin-paste', component: () => import('@/views/admin/AdminPaste.vue') },
         { path: 'stan', name: 'admin-health', component: () => import('@/views/admin/AdminHealth.vue') },
         { path: 'dziennik', name: 'admin-log', component: () => import('@/views/admin/AdminLog.vue') },
+        { path: 'zabezpieczenia', name: 'admin-security', component: () => import('@/views/admin/AdminSecurity.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', name: 'missing', component: () => import('@/views/NotFound.vue') },

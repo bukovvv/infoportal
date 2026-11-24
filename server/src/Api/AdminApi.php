@@ -6,6 +6,8 @@ namespace KwInfo\Api;
 
 use KwInfo\Auth\AdminAuth;
 use KwInfo\Auth\AdminLog;
+use KwInfo\Auth\AdminSecurity;
+use KwInfo\Auth\Totp;
 use KwInfo\Config;
 use KwInfo\Gtfs\GtfsImporter;
 use KwInfo\Http\ApiException;
@@ -28,7 +30,72 @@ final class AdminApi
     {
         $body = Router::body();
 
-        return new Response(['loggedIn' => true] + AdminAuth::login((string) ($body['username'] ?? ''), (string) ($body['password'] ?? '')));
+        $result = AdminAuth::login((string) ($body['username'] ?? ''), (string) ($body['password'] ?? ''), (string) ($body['code'] ?? ''));
+
+        return new Response(['loggedIn' => !isset($result['twoFactor'])] + $result);
+    }
+
+    public function logoutAll(): Response
+    {
+        AdminAuth::require(true);
+        AdminAuth::logoutAll();
+
+        return new Response(['loggedIn' => false]);
+    }
+
+    public function security(): Response
+    {
+        AdminAuth::require(false);
+
+        return new Response(AdminSecurity::status());
+    }
+
+    /** Krok 1 włączania kodu z aplikacji: nowy sekret (do wpisania w aplikacji) czeka w sesji na potwierdzenie kodem. */
+    public function twoFactorSetup(): Response
+    {
+        AdminAuth::require(true);
+        if (AdminSecurity::twoFactorEnabled()) {
+            throw new ApiException('Kod z aplikacji jest już włączony.', 409);
+        }
+        $_SESSION['totp_pending'] = $secret = Totp::secret();
+
+        return new Response(['secret' => $secret, 'uri' => Totp::uri($secret, 'admin', 'zanimwyjdziesz.pl')]);
+    }
+
+    /** Krok 2: kod z aplikacji potwierdza, że sekret jest dobrze wpisany; zwraca kody zapasowe (pokazywane raz). */
+    public function twoFactorEnable(): Response
+    {
+        AdminAuth::require(true);
+        $secret = (string) ($_SESSION['totp_pending'] ?? '');
+        if ($secret === '') {
+            throw new ApiException('Zacznij od nowa: kliknij „Włącz kod z aplikacji”.', 409);
+        }
+        $codes = AdminSecurity::enable($secret, (string) (Router::body()['code'] ?? ''), time());
+        if ($codes === null) {
+            throw new ApiException('Kod się nie zgadza. Sprawdź, czy klucz jest dobrze wpisany i czy zegar telefonu się nie spieszy.', 422);
+        }
+        unset($_SESSION['totp_pending']);
+        AdminAuth::keepOnlyThisSession();
+        AdminLog::write('2fa-enable');
+
+        return new Response(['recoveryCodes' => $codes] + AdminSecurity::status());
+    }
+
+    public function twoFactorDisable(): Response
+    {
+        AdminAuth::require(true);
+        $wait = AdminAuth::lockedFor(AdminAuth::ip());
+        if ($wait > 0) {
+            throw new ApiException('Zbyt wiele błędnych kodów. Spróbuj później.', 429, ['Retry-After' => (string) $wait]);
+        }
+        if (AdminSecurity::useCode((string) (Router::body()['code'] ?? ''), time()) === null) {
+            AdminAuth::recordFailure(AdminAuth::ip());
+            throw new ApiException('Nieprawidłowy albo już użyty kod.', 422);
+        }
+        AdminSecurity::disable();
+        AdminLog::write('2fa-disable');
+
+        return new Response(AdminSecurity::status());
     }
 
     /** Testowa wersja 2.0 (makieta „Tarcza” z server/v20) — tylko z sesją panelu; strona /v20 pokazuje ją w ramce. */

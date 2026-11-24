@@ -31,7 +31,7 @@ onMounted(load)
       <h1 id="h-log" class="text-headline-medium font-weight-bold">Dziennik panelu</h1>
       <v-btn variant="text" prepend-icon="refresh" :loading="loading" @click="load">Odśwież</v-btn>
     </div>
-    <p class="text-body-medium muted">Logowania i zmiany komunikatów z ostatnich 180 dni (najnowsze na górze). Po 5 nieudanych próbach z jednego adresu logowanie jest blokowane na 15 minut.</p>
+    <p class="text-body-medium muted">Logowania i zmiany komunikatów z ostatnich 180 dni (najnowsze na górze). Po 5 nieudanych próbach z jednego adresu logowanie jest blokowane na 15 minut, przy kolejnych seriach w ciągu doby na godzinę, a potem na dobę.</p>
     <v-alert v-if="error" color="error-container" icon="error">{{ error }}</v-alert>
     <v-skeleton-loader v-else-if="!entries" type="list-item-two-line@4" color="transparent" />
     <v-card v-else color="surface-container-low">

@@ -12,13 +12,17 @@ export const useAdmin = defineStore('admin', () => {
     setCsrf(session.value.csrf)
   }
 
-  async function login(username: string, password: string) {
-    session.value = await api.admin.login(username, password)
-    setCsrf(session.value.csrf)
+  /** Zwraca 'code', gdy hasło jest dobre, ale konto ma włączony kod z aplikacji (sesji jeszcze nie ma). */
+  async function login(username: string, password: string, code?: string): Promise<'ok' | 'code'> {
+    const res = await api.admin.login(username, password, code)
+    if (!res.loggedIn && res.twoFactor) return 'code'
+    session.value = res
+    setCsrf(res.csrf)
+    return 'ok'
   }
 
-  async function logout() {
-    await api.admin.logout().catch(() => undefined)
+  async function logout(everywhere = false) {
+    await (everywhere ? api.admin.logoutAll() : api.admin.logout()).catch(() => undefined)
     session.value = { loggedIn: false, configured: session.value?.configured }
     setCsrf(undefined)
   }

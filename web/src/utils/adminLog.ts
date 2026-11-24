@@ -6,6 +6,10 @@ const ACTIONS: Record<string, { label: string; icon: string; tone?: 'warn' | 'er
   logout: { label: 'Wylogowanie', icon: 'logout' },
   'login-failed': { label: 'Nieudane logowanie', icon: 'lock', tone: 'warn' },
   'login-blocked': { label: 'Logowanie zablokowane (za dużo prób)', icon: 'gpp_bad', tone: 'error' },
+  'login-code-failed': { label: 'Błędny kod z aplikacji', icon: 'lock', tone: 'warn' },
+  'logout-all': { label: 'Wylogowanie wszędzie', icon: 'devices' },
+  '2fa-enable': { label: 'Włączony kod z aplikacji', icon: 'verified_user' },
+  '2fa-disable': { label: 'Wyłączony kod z aplikacji', icon: 'shield', tone: 'warn' },
   'notice-create': { label: 'Dodany komunikat', icon: 'add' },
   'notice-update': { label: 'Zmieniony komunikat', icon: 'edit' },
   'notice-delete': { label: 'Usunięty komunikat', icon: 'delete' },
@@ -18,6 +22,8 @@ export const logInfo = (action: string) => ACTIONS[action] ?? { label: action, i
 export function logSummary(e: AdminLogEntry): string {
   const before = e.detail.before as Record<string, unknown> | null | undefined
   const after = e.detail.after as Record<string, unknown> | null | undefined
+  if (e.detail.recovery) return `Kodem zapasowym (zostało: ${String(e.detail.recoveryLeft)})`
+  if (e.detail.cli) return 'Z serwera (admin-2fa.php)'
   if (e.detail.username !== undefined) return `Nazwa użytkownika: ${String(e.detail.username) || '(pusta)'}`
   const title = String((after ?? before)?.title ?? '')
   if (!before || !after) return title

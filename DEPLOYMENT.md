@@ -17,6 +17,7 @@ bash deploy.sh
 Wymaga pliku `deploy.env` (wzór: `deploy.env.example`) i klucza `~/.ssh/infoportal_kw_deploy` dodanego w DirectAdmin → Klucze SSH. Skrypt uruchamia testy, buduje paczkę, wysyła ją przez SSH, podmienia kod (zachowując `server/storage` i hasło), przy pierwszej instalacji importuje rozkład i na końcu wykonuje preflight oraz sprawdza `/api/status`.
 
 Hasło administratora ustawia się lokalnie poleceniem `php server/bin/set-admin-password.php` (zapisuje tylko hash; `deploy.sh` wysyła go na serwer).
+Kod z aplikacji (2FA) włącza się w panelu: Zabezpieczenia. Sekret i kody zapasowe leżą w `server/storage/admin-security.json` na serwerze (wdrożenie ich nie rusza). Awaryjnie, przez SSH: `php server/bin/admin-2fa.php --disable` (logowanie samym hasłem) albo `--logout-all`.
 
 Stan na serwerze `h89.seohost.pl` (DirectAdmin):
 

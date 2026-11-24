@@ -333,8 +333,16 @@ export interface AdminLogEntry {
   detail: Record<string, unknown>
 }
 
+export interface AdminSecurity {
+  twoFactor: boolean
+  recoveryLeft: number
+  since: number | null
+}
+
 export interface AdminSession {
   loggedIn: boolean
+  /** hasło dobre, potrzebny kod z aplikacji */
+  twoFactor?: boolean
   configured?: boolean
   username?: string
   csrf?: string

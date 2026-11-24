@@ -47,6 +47,11 @@ if (!Config::get('admin_enabled')) {
 $router->get('/admin/session', [$admin, 'session']);
 $router->post('/admin/login', [$admin, 'login']);
 $router->post('/admin/logout', [$admin, 'logout']);
+$router->post('/admin/logout-all', [$admin, 'logoutAll']);
+$router->get('/admin/security', [$admin, 'security']);
+$router->post('/admin/2fa/setup', [$admin, 'twoFactorSetup']);
+$router->post('/admin/2fa/enable', [$admin, 'twoFactorEnable']);
+$router->post('/admin/2fa/disable', [$admin, 'twoFactorDisable']);
 $router->get('/admin/notices', [$admin, 'notices']);
 $router->post('/admin/notices', [$admin, 'createNotice']);
 $router->put('/admin/notices/{id}', [$admin, 'updateNotice']);

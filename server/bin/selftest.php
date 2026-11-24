@@ -620,5 +620,47 @@ check('pojazd KW: ten sam numer w sobotę — parowóz po południu, szynobus ra
     && $kwLookup->forTrip(['77246 Retro'], 20261121, 59000)['kind'] === 'steam' && $kwLookup->forTrip(['77246'], 20261121, 40000) === null
     && $kwLookup->forTrip(['17216/7'], 20270105, 21600)['kind'] === 'emu' && $kwLookup->forTrip(['77246'], 20270105, 26400)['kind'] === 'dmu');
 
+// logowanie do panelu: kod z aplikacji (wektor z RFC 6238: sekret „12345678901234567890”, t = 59 s → …287082)
+$rfc = KwInfo\Auth\Totp::base32('12345678901234567890');
+check('2FA: kod TOTP zgodny z RFC 6238, base32 w obie strony',
+    KwInfo\Auth\Totp::code($rfc, KwInfo\Auth\Totp::step(59)) === '287082' && KwInfo\Auth\Totp::code($rfc, KwInfo\Auth\Totp::step(1111111109)) === '081804'
+    && KwInfo\Auth\Totp::unbase32($rfc) === '12345678901234567890');
+$secFile = sys_get_temp_dir() . '/kw-selftest-security-' . bin2hex(random_bytes(4)) . '.json';
+KwInfo\Auth\AdminSecurity::useFile($secFile);
+$t0 = 1_800_000_000;
+$sec = KwInfo\Auth\Totp::secret();
+$codes = KwInfo\Auth\AdminSecurity::enable($sec, KwInfo\Auth\Totp::code($sec, KwInfo\Auth\Totp::step($t0)), $t0);
+$next = KwInfo\Auth\Totp::code($sec, KwInfo\Auth\Totp::step($t0 + 30));
+check('2FA: włączenie kodem, kod jednorazowy, ±30 s, kody zapasowe raz',
+    KwInfo\Auth\AdminSecurity::enable($sec, '000000', $t0) === null
+    && is_array($codes) && count($codes) === KwInfo\Auth\AdminSecurity::RECOVERY_CODES && KwInfo\Auth\AdminSecurity::twoFactorEnabled()
+    && KwInfo\Auth\AdminSecurity::useCode(KwInfo\Auth\Totp::code($sec, KwInfo\Auth\Totp::step($t0)), $t0) === null // ten sam kod co przy włączeniu
+    && KwInfo\Auth\AdminSecurity::useCode($next, $t0 + 50) === 'totp' && KwInfo\Auth\AdminSecurity::useCode($next, $t0 + 50) === null
+    && KwInfo\Auth\AdminSecurity::useCode(strtoupper(str_replace('-', '', $codes[0])), $t0) === 'recovery'
+    && KwInfo\Auth\AdminSecurity::useCode($codes[0], $t0) === null && KwInfo\Auth\AdminSecurity::status()['recoveryLeft'] === KwInfo\Auth\AdminSecurity::RECOVERY_CODES - 1);
+$gen = KwInfo\Auth\AdminSecurity::generation();
+KwInfo\Auth\AdminSecurity::disable();
+check('2FA: wyłączenie i „Wyloguj wszędzie” (pokolenie sesji)', !KwInfo\Auth\AdminSecurity::twoFactorEnabled() && KwInfo\Auth\AdminSecurity::bumpGeneration() === $gen + 1);
+KwInfo\Auth\AdminSecurity::useFile(null);
+@unlink($secFile);
+$failFile = sys_get_temp_dir() . '/kw-selftest-failures-' . bin2hex(random_bytes(4)) . '.json';
+KwInfo\Auth\AdminAuth::useFailureFile($failFile);
+$lockAt = static function (int $at): int {
+    $lock = 0;
+    for ($i = 0; $i < KwInfo\Auth\AdminAuth::MAX_FAILURES; $i++) {
+        $lock = KwInfo\Auth\AdminAuth::recordFailure('192.0.2.1', $at + $i);
+    }
+    return $lock;
+};
+$first = $lockAt($t0);
+$free = KwInfo\Auth\AdminAuth::lockedFor('192.0.2.1', $t0 + 1000) === 0 && KwInfo\Auth\AdminAuth::lockedFor('192.0.2.9', $t0 + 10) === 0;
+$second = $lockAt($t0 + 1000);
+$third = $lockAt($t0 + 5000);
+check('logowanie: blokada rośnie 15 min → 1 h → doba, inne adresy wolne',
+    $first === 900 && KwInfo\Auth\AdminAuth::lockedFor('192.0.2.1', $t0 + 10) > 800 && $free && $second === 3600 && $third === 86400
+    && KwInfo\Auth\AdminAuth::lockedFor('192.0.2.1', $t0 + 5010) > 86000 && $lockAt($t0 + 3 * 86400) === 900);
+KwInfo\Auth\AdminAuth::useFailureFile(null);
+@unlink($failFile);
+
 echo PHP_EOL . "Wynik: {$passed} OK, {$failed} błędów" . PHP_EOL;
 exit($failed > 0 ? 1 : 0);
