@@ -101,11 +101,9 @@ function resolve(v){const q=norm(v);if(!q)return null;return STATIONS.find(s=>no
 const KOL={PKM1:'#3A76C2',PKM2:'#EA1A35',PKM3:'#3F9236',PKM4:'#823D8C',PKM5:'#E8B120',KW:'#E6000A',SKA1:'#00B1EB',SKA2:'#E82F89',SKA3:'#FBBA21',K3:'#E84D0F',K5:'#F29EC4',K7:'#008C36',K22:'#95C11F',K32:'#69BFAC',K33:'#951A80',K52:'#BD1621',K63:'#4464AC',K71:'#28235B'};
 const AGN={KW:'Koleje Wielkopolskie',KML:'Koleje Małopolskie',PR:'POLREGIO',IC:'PKP Intercity'};
 const AGL=a=>a==='KML'?'KMŁ':a;
-const KAT={KW:'Osobowy',KML:'Osobowy',REG:'REGIO',IR:'interREGIO',IC:'Intercity',TLK:'TLK',EIC:'Express Intercity',EIP:'Express Intercity Premium',EC:'EuroCity',EN:'EuroNight'};
 function linia(route,ag,isBus){ag=ag||R.ag;const sh=route?.short||AGL(ag);if(route?.color)KOL[sh]=route.color;
- const przysp=/(\d| )P$/.test(sh),b=sh.replace(/ ?P$/,''),lin_=/^(PKM|SKA|K)\d/.test(b); // „KW P”, „K7P” — przyspieszony
- const kat=isBus?'Autobus zastępczy':(KAT[b]||(lin_?(ag==='PR'?'REGIO':'Osobowy'):''))+(przysp?' przyspieszony':'');
- return{id:route?.id||sh,badge:isBus?'BUS':lin_?b:AGL(ag),linia:lin_&&!isBus?b:'',kat,color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
+ const b=sh.replace(/ ?P$/,''),lin_=/^(PKM|SKA|K)\d/.test(b); // „K7P” — linia K7 (przyspieszony)
+ return{id:route?.id||sh,badge:isBus?'BUS':lin_?b:AGL(ag),linia:lin_&&!isBus?b:'',color:route?.color||KOL[sh]||'#8A8F98',ag,kto:AGN[ag]||ag}}
 // plakietka bez powtórzenia przewoźnika obok numeru („KW” + „KW 77100”) — wtedy sama kropka w kolorze linii
 const linN=l=>l.badge===AGL(l.ag)?`<span class="lin" style="--c:${l.color}"></span>`:lin(l);
 const linesOf=n=>{const s=new Set();return(SBN.get(n)?.lines||[]).map(x=>x.replace(/ ?P$/,'')).filter(x=>!s.has(x)&&s.add(x)).map(x=>({id:x,badge:x,color:KOL[x]||'#8A8F98'}))};
@@ -367,8 +365,8 @@ function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
  let osie='';c.legs.forEach((g,n)=>{
   if(n){const p=c.legs[n-1];osie+=`<div class="przes">${ic('pieszo',18)}Przesiadka na stacji ${krotko(g.t.st[g.i].n)} · ${g.dep-p.arr} min</div>`}
   const kr=kurs(g.t.id); // relacja całego pociągu, gdy kurs już wczytany
-  osie+=`<section class="plyta kol" style="gap:10px"><div class="kol" style="gap:2px;padding:0 2px"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${g.t.l.color}"></span><b>${[g.t.l.kat||g.t.l.kto,g.t.l.linia].filter(Boolean).join(' · ')}</b><button class="tekstowy" style="height:28px;color:var(--tusz)" data-a="poc" data-id="${g.t.id}">${g.t.label}</button></div>${g.t.l.nazwa?`<span class="nazwa-p">„${esc(g.t.l.nazwa)}”</span>`:''}
-   <span class="dr maly">Przewoźnik: ${g.t.l.kto}. ${kropka(kr?`Pociąg relacji: ${krotko(esc(kr.origin))} – ${krotko(esc(kr.destination))}`:`Kierunek: ${krotko(esc(g.t.kier))}`)}</span></div><div>${postoje(g,day)}</div></section>`});
+  osie+=`<section class="plyta kol" style="gap:10px"><div class="kol" style="gap:2px;padding:0 2px"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${g.t.l.color}"></span><button class="tekstowy" style="height:28px;color:var(--tusz);font-size:17px;font-weight:700;padding:0" data-a="poc" data-id="${g.t.id}">${g.t.label}</button></div>${g.t.l.nazwa?`<span class="nazwa-p">„${esc(g.t.l.nazwa)}”</span>`:''}
+   <span class="dr maly">Przewoźnik: ${g.t.l.kto}.${g.t.l.linia?' Linia '+g.t.l.linia+'.':''} ${kropka(kr?`Pociąg relacji: ${krotko(esc(kr.origin))} – ${krotko(esc(kr.destination))}`:`Kierunek: ${krotko(esc(g.t.kier))}`)}</span></div><div>${postoje(g,day)}</div></section>`});
  el.innerHTML=`<div class="kol" style="gap:10px">
   <div class="detal-gl"><button class="kolo wroc" data-a="detal-zamknij" aria-label="Wróć do listy połączeń">${ic('wroc')}</button><b>${bkrotko(cFrom(c))} → ${bkrotko(cTo(c))}</b><button class="kolo" data-a="udostepnij" aria-label="Udostępnij">${ic('udost')}</button></div>
   <section class="blok kol" style="gap:6px">${desk()?`<p class="wielkie num">${hm(c.dep+d)} → ${hm(cArr(c))}</p><p>${day?w.sub:w.gl+(doOdj(c)>=0?', pociąg odjeżdża '+zaIle(doOdj(c)):'')}</p>`:`<div class="wiersz" style="gap:16px">${tarcza(w.m)}<div style="min-width:0"><p class="wielkie num">${w.gl}</p><p>${w.sub}</p></div></div>`}
@@ -981,7 +979,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  else for(let k=0;k<=L;k++)os+=row(k);
  const POJ={emu:'zespół elektryczny',dmu:'szynobus',steam:'parowóz',diesel:'lokomotywa spalinowa'},vt=t.vt;
  ark(`<section class="blok kol" style="gap:12px">
-  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${t.l.color}"></span><span class="dr maly">${[t.l.kat,t.l.linia,t.l.kto].filter(Boolean).join(' · ')}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}</h2>${t.l.nazwa?`<p class="nazwa-p">„${esc(t.l.nazwa)}”</p>`:''}</div>${zamk}</div>
+  <div class="wiersz rozsun" style="align-items:flex-start"><div style="min-width:0"><div class="wiersz zawin" style="gap:4px 10px"><span class="lin" style="--c:${t.l.color}"></span><span class="dr maly">${[t.l.linia,t.l.kto].filter(Boolean).join(' · ')}</span></div><h2 class="num" style="font-size:26px;line-height:1.2">${t.label}</h2>${t.l.nazwa?`<p class="nazwa-p">„${esc(t.l.nazwa)}”</p>`:''}</div>${zamk}</div>
   <div class="wiersz" style="gap:16px">${t.odw?'':tarcza(m)}<div style="min-width:0"><p class="num" style="font-weight:700;font-size:19px;line-height:1.25">${gl}</p><p class="dr">${sub}</p></div></div>
   <div><div class="bieg" style="--c:${c};--p:${post}%"><i></i></div>
   <div class="wiersz rozsun maly num" style="align-items:flex-start;margin-top:8px"><span><b>${hm(tm(0))}</b><br>${bkrotko(t.st[0].n)}</span><span style="text-align:right"><b>${hm(tm(L))}</b><br>${bkrotko(t.st[L].n)}</span></div></div>
