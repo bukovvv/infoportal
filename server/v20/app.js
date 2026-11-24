@@ -282,7 +282,7 @@ function region(id){S.region=id;R=REG[id];R.id=id;LINES=R.lines;POS=R.pos;WAZNE=
  Object.assign(S,z,{from:R.hub,to:R.cel,station:R.hub,when:null,day:0,kier:'odj',sel:null,selDay:0,mapSel:null,bezp:false,minT:5,bez:[],sch:{set:'reg',linia:null,stacja:null}});
  document.documentElement.dataset.region=id;zamknijListe();mapaStop()}
 const pismo=()=>document.documentElement.style.setProperty('--f',`'${S.font}',system-ui,-apple-system,'Segoe UI',sans-serif`);
-const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font,ulga:S.ulga}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
+const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font,ulga:S.ulga,pktOkres:S.pktOkres}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
 async function zmienRegion(id){if(id===S.region)return;save();region(id);try{await wczytajStacje()}catch(e){toast('Nie udało się wczytać listy stacji.');return}save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2800)}
 
@@ -987,6 +987,22 @@ function rONas(){const W=R.id==='wlkp';
  <section class="blok kol" style="gap:14px"><h2 style="font-size:24px">Wesprzyj nas</h2><p>Wesprzyj nas na buycoffee.to/zanimwyjdziesz. Za każde wsparcie dziękujemy!</p>
   <a class="glowny" style="text-decoration:none;max-width:280px" href="https://buycoffee.to/zanimwyjdziesz" target="_blank" rel="noopener">Postaw kawę</a></section>`}
 
+/* punktualność pociągu (GET /punctuality — te same dane co w 1.0: opóźnienie na stacji końcowej, na czas do 5 min) */
+let PKT_CZEKA=false;
+const dataPL=s=>{const d=new Date(s+'T12:00:00');return d.getDate()+' '+MIES[d.getMonth()]};
+function punktualnosc(t){if(t.l.badge==='BUS')return'';const okres=S.pktOkres||30,r=dane(`/punctuality?number=${encodeURIComponent(t.num)}&agency=${t.l.ag}&days=${okres}`,900);PKT_CZEKA=r===undefined;
+ const seg=`<div class="na-papierze"><div class="seg">${[7,30,90].map(d=>`<button data-a="pkt-okres" data-k="${d}" aria-pressed="${okres===d}">${d} dni</button>`).join('')}</div></div>`;
+ let tresc;
+ if(r===undefined)tresc='<p class="dr maly">Wczytujemy…</p>';
+ else if(!r||r.runs<5)tresc=`<p class="dr" style="font-size:14px">Za mało przejazdów w tym okresie, żeby policzyć punktualność.${r?.since?` Dane zbieramy od ${dataPL(r.since)}.`:''}</p>`;
+ else{const proc=Math.round(r.share),kl=proc>=90?'ok':proc>=75?'opoz':'zle',min=v=>v!=null?'+'+Math.round(v)+' min':'—';
+  tresc=`<div class="pkt-gl"><b class="pkt-proc ${kl}">${proc}%</b><span>przejazdów na czas<br><small>do ${r.threshold} min opóźnienia na stacji końcowej</small></span></div>
+  <div class="fakty"><div><span>średnio</span><b>${min(r.avgDelay)}</b></div><div><span>najwięcej</span><b>${min(r.maxDelay)}</b></div><div><span>odwołane</span><b>${r.cancelled}</b></div><div><span>przejazdy</span><b>${r.runs}</b></div></div>
+  <div><div class="pkt-slupki" role="img" aria-label="Opóźnienia ostatnich ${pl(r.recent.length,'przejazdu','przejazdów','przejazdów')}">${r.recent.map(x=>`<i class="${x.cancelled?'odw':x.delay>r.threshold?'pozn':'ok'}" style="--h:${x.cancelled?100:Math.max(8,Math.min(100,x.delay/30*100))}%" title="${dataPL(x.date)}: ${x.cancelled?'odwołany':x.delay?'+'+x.delay+' min':'na czas'}"></i>`).join('')}</div>
+  <div class="wiersz rozsun dr maly" style="margin-top:4px"><span>${dataPL(r.recent[0].date)}</span><span>${dataPL(r.recent.at(-1).date)}</span></div></div>
+  <div class="pkt-leg dr maly"><span><i class="ok"></i>na czas</span><span><i class="pozn"></i>opóźniony</span><span><i class="odw"></i>odwołany</span></div>`}
+ return `<section class="plyta kol" style="gap:12px"><div class="wiersz rozsun zawin" style="gap:8px"><b>Punktualność</b>${seg}</div>${tresc}</section>`}
+
 /* ---------- arkusze ---------- */
 let AZ=0;
 function blokada(){const okno=$('#ark').firstChild&&!$('.tlo-ark.zamyka')&&!$('.tlo-ark.boczny'),detal=$('#detal').classList.contains('otwarty')&&!desk();
@@ -1021,10 +1037,11 @@ function arkPociag(id){const nowa=ARK?.a!==id;S.mapSel=id;stacjaWyb(null);const 
  <section class="plyta kol" style="gap:12px"><div class="fakty"><div><span>czas jazdy</span><b>${dur(t.arr-t.dep)}</b></div>${t.km?`<div><span>odległość</span><b>${t.km} km</b></div>`:''}<div><span>stacje</span><b>${L+1}</b></div>${vt?`<div><span>pojazd</span><b>${POJ[vt.kind]||'pociąg'}</b></div>`:''}</div>
   ${vt?.bikes||vt?.wheelchair?`<div class="wiersz zawin" style="gap:6px">${vt.bikes?'<span class="znak neutr">miejsca na rowery</span>':''}${vt.wheelchair?'<span class="znak neutr">miejsce na wózek</span>':''}</div>`:''}
   ${t.trimmed?`<p class="dr maly">${kropka(`Pociąg relacji ${krotko(esc(t.origin))} – ${krotko(esc(t.destination))}`)} Pokazujemy stacje w regionie.</p>`:''}${t.gps&&R.id==='mal'?'<p class="dr maly">Pozycja na żywo dzięki Kolejom Małopolskim.</p>':''}</section>
+ ${punktualnosc(t)}
  ${KOM().filter(n=>trwa(n)&&oOdcinku(n,t,0,L)).sort((a,b)=>waga(a)-waga(b)).map(kpas).join('')}
  <section class="plyta">${os}</section>
  <div class="strony">${t.shape.length?`<button class="drugi" data-a="poc-mapa">${ic('mapa',18)}Pokaż na mapie</button>`:''}<button class="drugi" data-a="poc-link" data-n="${t.nums[0]||t.num}">${ic('udost',18)}Udostępnij</button></div>`);
- ARK={f:arkPociag,a:id};zapiszAdres(nowa)}
+ ARK={f:arkPociag,a:id,czeka:PKT_CZEKA};zapiszAdres(nowa)}
 function arkStacja(n){const b=tablica(n,'dep',5);
  ark(`<div class="wiersz rozsun"><div style="min-width:0"><h2 style="font-size:24px">${krotko(n)}</h2><div class="wiersz zawin" style="gap:10px">${linesOf(n).map(lin).join('')}</div></div>${zamk}</div>
  ${oStacji(n).map(kpas).join('')}
@@ -1222,6 +1239,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
    if(!pushTu())break;const stare=r.pow;r.pow={okna,at:Date.now()};ark('');PW=null;rMoje();
    powiadomTrase(r).then(()=>{save();rMoje();toast('Zapisano powiadomienia o trasie.')}).catch(e=>{r.pow=stare;save();rMoje();toast(e.message)});break}
   case'pw-wylacz':{const r=S.routes[PW.i];wylaczTrase(r).catch(()=>{});r.pow=null;save();ark('');PW=null;rMoje();toast('Powiadomienia o trasie są wyłączone.');break}
+  case'pkt-okres':S.pktOkres=+el.dataset.k;save();if(ARK?.f===arkPociag)arkPociag(ARK.a);break;
   case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
   case'poc-link':udostepnij('Pociąg '+el.dataset.n,'https://zanimwyjdziesz.pl'+regP()+'/pociag/'+el.dataset.n);break;
