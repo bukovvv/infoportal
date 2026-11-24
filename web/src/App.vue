@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, provide, watch } from 'vue'
+import { TARCZA_ICONS } from '@/plugins/tarczaIcons'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay, useTheme } from 'vuetify'
 import BrandMark from '@/components/BrandMark.vue'
@@ -39,6 +40,7 @@ watch(() => theme.current.value.colors.band, (color) => {
 
 // przed rozwiązaniem trasy (pierwsze wczytanie) adres z paska — bez mignięcia paska i menu portalu w panelu
 const isAdmin = computed(() => (route.matched.length ? route.path : location.pathname).startsWith('/admin'))
+provide(TARCZA_ICONS, isAdmin) // w panelu ikony wersji 2.0 (plugins/MsIcon.ts)
 const isStart = computed(() => route.name === 'start')
 // BTK i komunikaty tylko w regionach, które je mają (Małopolska: Start, Mapa, Odjazdy)
 const nav = computed(() => [
