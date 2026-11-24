@@ -199,7 +199,7 @@ function onCode() {
 .tz-pole { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 10px 16px 8px; border-radius: 16px; background: var(--papier); cursor: text; transition: box-shadow .15s; }
 .tz-pole:focus-within { box-shadow: inset 0 0 0 2px var(--tusz); }
 .tz-pole > span { font-size: 12px; font-weight: 600; color: var(--tusz-2); }
-.tz-pole input { all: unset; font: 600 17px/1.5 inherit; font-family: inherit; color: var(--tusz); width: 100%; min-width: 0; }
+.tz-pole input { all: unset; font-weight: 600; font-size: 17px; line-height: 1.5; font-family: inherit; color: var(--tusz); width: 100%; min-width: 0; }
 .tz-pole:has(.tz-oko) { padding-right: 56px; }
 .tz-pole input:-webkit-autofill, .tz-pole input:-webkit-autofill:hover, .tz-pole input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--tusz); caret-color: var(--tusz); -webkit-box-shadow: 0 0 0 1000px var(--papier) inset; transition: background-color 9999s;
@@ -213,7 +213,7 @@ function onCode() {
 .tz-kod input::placeholder { color: var(--kreska); }
 .tz-kod > span { text-align: center; }
 .tz-glowny {
-  height: 56px; border-radius: 28px; border: 0; background: var(--akcja); color: var(--na-akcji); font: 700 17px/1 inherit; font-family: inherit;
+  height: 56px; border-radius: 28px; border: 0; background: var(--akcja); color: var(--na-akcji); font-weight: 700; font-size: 17px; line-height: 1; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; margin-top: 4px; transition: filter .15s, transform .12s;
 }
 .tz-glowny:hover { filter: brightness(1.08); }
@@ -221,7 +221,7 @@ function onCode() {
 .tz-glowny:disabled { cursor: progress; filter: saturate(.7); }
 .tz-krec { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--na-akcji) 35%, transparent); border-top-color: var(--na-akcji); animation: tz-krec .7s linear infinite; }
 .tz-wiersz { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.tz-tekstowy { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 20px; border: 0; background: none; color: var(--tusz); font: 600 14px/1 inherit; font-family: inherit; cursor: pointer; }
+.tz-tekstowy { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; border-radius: 20px; border: 0; background: none; color: var(--tusz); font-weight: 600; font-size: 14px; line-height: 1; font-family: inherit; cursor: pointer; }
 .tz-tekstowy:hover { background: var(--plyta-2); }
 .tz-blad { margin: 2px 4px 0; font-size: 14px; line-height: 1.4; font-weight: 600; color: var(--akcja-tekst); }
 .tz-blad.blokada, .tz-uwaga { margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--opoz-tlo); color: var(--opoz); font-size: 14px; line-height: 1.4; font-weight: 600; }
