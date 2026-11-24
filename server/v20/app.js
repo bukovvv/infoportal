@@ -971,7 +971,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  const nw=now(),d=delay(t),L=t.st.length-1,c=t.l.color,tm=k=>t.st[k].t+(t.st[k].d??d),ni=t.st.findIndex((s,k)=>tm(k)>=nw),przed=nw<tm(0),po=ni<0,dz=dzien(t.dep);
  const post=po?100:przed?0:Math.max(2,Math.min(98,Math.round((nw-tm(0))/Math.max(1,tm(L)-tm(0))*100)));
  const m=przed?tm(0)-nw:po?0:tm(ni)-nw,p0=peron(t,0).p;
- const gl=t.odw?'Pociąg odwołany':przed?'Odjazd '+(dz?etykDnia(dz).toLowerCase()+' ':'')+'o '+hm(tm(0)):po?'Pociąg dojechał do stacji końcowej':'Następna stacja: '+krotko(t.st[ni].n);
+ const gl=t.odw?'Pociąg odwołany':przed?'Odjazd '+(dz?etykDnia(dz).toLowerCase()+' ':'')+'o '+hm(tm(0)):po?'Pociąg zakończył bieg.':'Następna stacja: '+krotko(t.st[ni].n);
  const sub=t.odw?'Wybierz inne połączenie.':przed?(wKole(m)||dz?'':zaIle(m)+' · ')+krotko(t.st[0].n)+(p0?', peron '+p0:''):po?'Przyjazd o '+hm(tm(L)):'Przyjazd o '+hm(tm(ni))+(wKole(m)?'':', '+zaIle(m));
  const row=k=>wierszPostoju(t,k,{c,cls:(k===0?'p ':'')+(k===L?'k ':'')+(k===0||k===L||(k===ni&&!przed)?'gl':''),dodatek:k===ni&&!przed?'<span class="znak neutr">następna</span>':''});
  let os='';
