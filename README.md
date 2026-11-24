@@ -1,65 +1,114 @@
-# zanimwyjdziesz.pl 1.0
+# zanimwyjdziesz.pl
 
-Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże, komunikaty oraz zakładka Bus-Tramwaj-Kolej (taryfa wspólnego biletu KW + POLREGIO + ZTM Poznań). Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite. Krój: Figtree (OFL), hostowany lokalnie.
+Nieoficjalny serwis informacji pasażerskiej dla osób podróżujących koleją w Wielkopolsce. Rozkład jazdy, wyszukiwarka połączeń, odjazdy, opóźnienia i komunikaty w jednym miejscu.
 
-## Licencja kodu
+**Strona:** https://zanimwyjdziesz.pl
 
-Oryginalny kod źródłowy i dokumentacja projektu, w zakresie praw przysługujących właścicielowi repozytorium, są udostępnione na licencji MIT. Szczegóły znajdują się w pliku [LICENSE](LICENSE).
+## Co znajdziesz w serwisie?
 
-Licencja MIT nie obejmuje zewnętrznych bibliotek, pakietów, fontów, ikon, danych, plików vendored, certyfikatów, materiałów marki ani znaków towarowych. Te elementy pozostają na warunkach ich autorów, dostawców lub właścicieli. Zobacz [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) przed dalszym wykorzystaniem lub redystrybucją.
+- **Wyszukiwarka połączeń** — pociągi Kolei Wielkopolskich, POLREGIO i PKP Intercity na stacjach w Wielkopolsce. Można wybrać dzień i godzinę odjazdu albo przyjazdu, przewoźników oraz liczbę przesiadek (do dwóch).
+- **Odjazdy i przyjazdy** — tablice dla poszczególnych stacji, z peronami, opóźnieniami i informacjami o odwołanych pociągach.
+- **Strona pociągu** — trasa, rozkładowe postoje, bieżące opóźnienie i dostępne statystyki punktualności.
+- **Mapa pociągów** — mapa połączeń Kolei Wielkopolskich. Pozycje są szacowane na podstawie rozkładu jazdy i opóźnień, a nie pobierane z urządzeń GPS w pociągach.
+- **Schemat połączeń** — interaktywny schemat linii i stacji Kolei Wielkopolskich.
+- **Komunikaty** — informacje o utrudnieniach przypisane do konkretnych pociągów, stacji i linii. Pojawiają się również przy wynikach wyszukiwania i na tablicach.
+- **Moje podróże** — obserwowanie wybranego połączenia, odliczanie do odjazdu, opóźnienia i komunikaty. Można też włączyć powiadomienia.
+- **Moje trasy** — zapisane relacje, które można szybko sprawdzić ponownie. Dla trasy można ustawić powiadomienia o kursach.
+- **Ulubione stacje** — szybki dostęp do najbliższych odjazdów z wybranych stacji.
+- **Bus-Tramwaj-Kolej** — informacje o wspólnym bilecie w aglomeracji poznańskiej: cennik, strefy, zasady i kalkulator ceny.
 
-## Źródła danych
+Serwis nie wymaga zakładania konta i nie wyświetla reklam. Można go również dodać do ekranu głównego telefonu.
 
-| Dane | Źródło | Odświeżanie |
+## Dane
+
+Rozkład i dane bieżące są pobierane przez serwer i przetwarzane cyklicznie. Wyszukiwarka i tablice korzystają z lokalnej bazy danych oraz plików przygotowanych przez zadania CRON — każde wyszukiwanie nie odpytuje osobno zewnętrznych serwisów.
+
+| Dane | Źródło | Aktualizacja |
 |---|---|---|
-| Rozkład jazdy | GTFS `polish_trains.zip` z [mkuran.pl](https://mkuran.pl/gtfs/) (PKP PLK), filtr agencji KW | codziennie (CRON) |
-| Opóźnienia, odwołania | GTFS-Realtime mkuran.pl | co ok. 2 min |
-| Pozycje GPS | wyłączone (`gps_enabled`), bo Mapa BILKOM od dawna nie zwraca pozycji | — |
-| Pozycje pociągów | wyliczane z rozkładu i opóźnień PLK wzdłuż kształtu trasy | co minutę |
-| Podkład mapy | OpenFreeMap (bez klucza API), kolory MD3 | — |
-| Pojazdy (zestawienia, rysunki) | vagonWEB.cz — **wyłączone** (`vagonweb_enabled`) do czasu zgody serwisu; działają tylko ręczne przypisania | — |
+| Rozkład jazdy | GTFS z [mkuran.pl](https://mkuran.pl/gtfs/), na podstawie danych PKP PLK; w serwisie filtrowany i uzupełniany o obsługiwanych przewoźników | codziennie |
+| Opóźnienia i odwołania | GTFS-Realtime PKP PLK udostępniany przez [mkuran.pl](https://mkuran.pl/gtfs/) | co ok. 2 minuty |
+| Pozycje na mapie | Wyliczane na podstawie rozkładu i opóźnień | co minutę |
+| Podkład mapy | [OpenFreeMap](https://openfreemap.org/) i dane [OpenStreetMap](https://www.openstreetmap.org/copyright) | — |
 
-Zapytania pasażerów nie odpytują zewnętrznych serwisów — czytają `gtfs.sqlite` i plik `live.json` budowany przez CRON.
+**Ważne:** mapa nie pokazuje rzeczywistego sygnału GPS z pociągu. Pozycja jest estymacją i może różnić się od faktycznego położenia składu. Podobnie dane o opóźnieniach zależą od dostępności źródła PKP PLK. Gdy feed jest niedostępny, serwis może pokazywać sam rozkład jazdy.
 
-## Struktura
+Więcej informacji o źródłach i prywatności znajduje się także na stronie [O nas](https://zanimwyjdziesz.pl/o-nas).
+
+## Technologie
+
+- **Frontend:** Vue 3, TypeScript, Vuetify 4 (Material Design 3), Pinia, Vite.
+- **Mapa:** MapLibre GL.
+- **Backend:** PHP 8.1+ bez frameworka.
+- **Bazy danych:** SQLite.
+- **Font:** Figtree.
+
+## Struktura projektu
 
 ```text
-server/          PHP 8.1+ (bez frameworka)
-  src/Gtfs/        import GTFS, rozkład dnia, wyszukiwarka połączeń, estymacja pozycji
-  src/Live/        klienci GPS, dekoder GTFS-RT, budowa live.json
-  src/Api/         publiczne i administracyjne JSON API
-  src/Vehicles/    zestawienia pociągów z vagonWEB (pojazd na stronie pociągu)
-  bin/             import-gtfs, refresh-live, fetch-vehicles, selftest, preflight, import-legacy-notices
-  storage/         bazy i pliki generowane (poza gitem)
-public/          katalog dokumentów: zbudowany frontend + api/index.php
-web/             Vue 3 + Vite + TypeScript + Vuetify 4 (blueprint MD3) + Pinia + MapLibre
-docs/            makieta MD3
-legacy/          poprzednia wersja 0.x (tylko wgląd)
+server/
+  src/
+    Api/          publiczne i administracyjne API
+    Auth/         logowanie do panelu administratora
+    Gtfs/         import GTFS, rozkład i wyszukiwarka połączeń
+    Live/         opóźnienia i dane na żywo
+    Notices/      komunikaty
+    Push/         powiadomienia
+    Stats/        statystyki punktualności
+  bin/            import, odświeżanie danych, kopie i testy
+  storage/        bazy danych i pliki generowane przez serwer
+
+web/              frontend Vue 3 + TypeScript
+public/           zbudowany frontend i punkt wejścia API
+docs/             dokumentacja i materiały projektu
+legacy/           poprzednia wersja 0.x (do wglądu)
 ```
 
 ## Praca lokalna
 
-```powershell
-php server/bin/import-gtfs.php                                   # rozkład
-php server/bin/refresh-live.php                                  # dane na żywo (ręcznie, zamiast CRON-a)
-php server/bin/fetch-vehicles.php --limit=10                     # pojazdy z vagonWEB (bez --limit: wszystkie, ok. 15 min)
-php -S localhost:8080 -t public server/dev-router.php            # API (+ zbudowany frontend)
-node web/node_modules/vite/bin/vite.js web                       # frontend z HMR na :5173 (proxy /api)
+Wymagany jest PHP 8.1+ z rozszerzeniami `curl`, `pdo_sqlite`, `mbstring`, `json`, `openssl` i `zip`. Do pracy nad frontendem potrzebny jest Node.js i npm.
+
+Najpierw, z katalogu głównego repozytorium, zaimportuj rozkład i uruchom lokalne API:
+
+```bash
+php server/bin/import-gtfs.php
+php server/bin/refresh-live.php
+php -S localhost:8080 -t public server/dev-router.php
 ```
 
-Panel administratora: `/admin`, użytkownik `admin`, hasło ustawione przez `php server/bin/set-admin-password.php` (po zmianie: wdrożenie wysyła hash na serwer). Hasło `kw-demo` działa tylko lokalnie na `php -S` i tylko bez pliku `server/config/admin-password.php`.
+W drugim terminalu uruchom frontend:
+
+```bash
+cd web
+npm ci
+npm run dev
+```
+
+Frontend będzie dostępny pod adresem http://localhost:5173. Vite przekazuje zapytania `/api` do lokalnego serwera PHP działającego na porcie 8080.
 
 ## Testy i build
 
-```powershell
-php server/bin/selftest.php      # backend
-cd web; npm test                 # frontend (vitest)
-cd web; npm run build            # typy + build do ../public
-pwsh ./release.ps1               # pełna paczka wdrożeniowa
+Z katalogu głównego:
+
+```bash
+php server/bin/selftest.php
 ```
 
-Wdrożenie: [DEPLOYMENT.md](DEPLOYMENT.md).
+Testy i komendy frontendu uruchamiaj w katalogu `web`:
 
-## Licencje danych
+```bash
+npm test
+npm run typecheck
+npm run build
+```
 
-Rozkład i opóźnienia: PKP Polskie Linie Kolejowe S.A. (warunki ponownego wykorzystywania ISP), konwersja GTFS: Mikołaj Kuranowski (mkuran.pl, GTFS-RT na CC BY 4.0). Mapa: © OpenStreetMap, OpenFreeMap. Serwis nie jest powiązany z Kolejami Wielkopolskimi.
+Build frontendu trafia do katalogu `public/`.
+
+Szczegóły konfiguracji serwera, CRON-a i wdrożenia: [DEPLOYMENT.md](DEPLOYMENT.md).
+
+## Licencja
+
+Oryginalny kod źródłowy i dokumentacja projektu są udostępnione na licencji MIT, w zakresie praw przysługujących właścicielowi repozytorium. Licencja nie obejmuje bibliotek, pakietów, fontów, ikon, danych, materiałów marki ani znaków towarowych należących do innych podmiotów.
+
+Przed dalszym wykorzystaniem lub redystrybucją sprawdź [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Dane rozkładowe i dane o opóźnieniach podlegają warunkom ich dostawców, a dane OpenStreetMap — licencji ODbL.
+
+zanimwyjdziesz.pl jest niezależnym serwisem i nie jest oficjalną stroną Kolei Wielkopolskich, POLREGIO, PKP Intercity ani PKP Polskich Linii Kolejowych.
