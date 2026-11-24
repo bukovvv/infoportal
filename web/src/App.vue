@@ -123,7 +123,21 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
           <template #activator="{ props }">
             <v-btn v-bind="props" :icon="mdAndUp ? themeIcon : 'more_vert'" variant="text" aria-label="Motyw, ustawienia i informacje" class="mr-1" />
           </template>
-          <v-list density="compact" nav>
+          <!-- w panelu: okno w stylu wersji 2.0 (styles/tarcza.css) -->
+          <div v-if="isAdmin" class="tarcza tz-menu">
+            <p class="tz-menu-gl">Motyw</p>
+            <div class="tz-seg" role="radiogroup" aria-label="Motyw">
+              <button v-for="t in themes" :key="t.value" type="button" role="radio" :aria-checked="ui.theme === t.value" @click="ui.setTheme(t.value)">
+                <v-icon :icon="t.icon" size="18" />{{ t.label }}
+              </button>
+            </div>
+            <router-link to="/o-nas" class="tz-menu-a">
+              <span class="tz-menu-ik"><v-icon icon="info" size="20" /></span>
+              <span class="tz-menu-t"><b>O nas</b><small>Skąd mamy dane, prywatność, wsparcie</small></span>
+              <v-icon icon="arrow_forward" size="18" />
+            </router-link>
+          </div>
+          <v-list v-else density="compact" nav>
             <v-list-subheader>Motyw</v-list-subheader>
             <v-list-item v-for="t in themes" :key="t.value" :prepend-icon="t.icon" :title="t.label" :active="ui.theme === t.value" @click="ui.setTheme(t.value)" />
             <v-divider class="my-1" />

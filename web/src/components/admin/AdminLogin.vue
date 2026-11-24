@@ -167,7 +167,7 @@ function onCode() {
 
 /* zdjęcie na całym tle; z prawej przechodzi w kolor strony, żeby formularz był czytelny, a pociąg z lewej został widoczny */
 .tz-tlo { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
-.tz-tlo img { width: 100%; height: 100%; object-fit: cover; object-position: 85% 48%; display: block; animation: tz-zoom 1.8s cubic-bezier(.2, .8, .2, 1) both; }
+.tz-tlo img { width: 100%; height: 100%; object-fit: cover; object-position: 85% 85%; display: block; animation: tz-zoom 1.8s cubic-bezier(.2, .8, .2, 1) both; }
 .tz-tlo::after {
   content: ""; position: absolute; inset: 0;
   background: linear-gradient(270deg, transparent 34%, color-mix(in srgb, var(--papier) 45%, transparent) 58%, color-mix(in srgb, var(--papier) 88%, transparent) 78%);
@@ -232,9 +232,9 @@ function onCode() {
 
 /* telefon i wąskie okno (karta zasłoniłaby pociąg): zdjęcie u góry, karta wjeżdża na nie od dołu */
 @media (max-width: 1099px) {
-  .tz { display: block; padding: 0 0 32px; }
+  .tz { display: block; justify-items: normal; padding: 0 0 32px; }
   .tz-tlo { position: relative; inset: auto; height: clamp(220px, 40vh, 360px); }
-  .tz-tlo img { object-position: 85% 55%; }
+  .tz-tlo img { position: absolute; left: 0; bottom: 0; height: 120%; object-position: 70% 100%; }
   .tz-tlo::after { background: linear-gradient(180deg, transparent 55%, var(--papier)); }
   .tz-in { max-width: 480px; margin: -72px auto 0; padding: 0 12px; box-sizing: border-box; }
   .tz-karta { background: var(--plyta); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 -8px 30px rgba(10, 12, 16, .16); }
