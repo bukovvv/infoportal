@@ -95,10 +95,8 @@ function onCode() {
         <div class="tz-tresc">
           <div class="tz-gl">
             <h1>{{ step === 'password' ? 'Zaloguj się' : recovery ? 'Kod zapasowy' : 'Pokaż kod' }}</h1>
-            <p class="tz-dr">
-              {{ step === 'password'
-                ? 'Tylko dla osób, które publikują komunikaty.'
-                : recovery
+            <p v-if="step === 'code'" class="tz-dr">
+              {{ recovery
                   ? 'Wpisz jeden z kodów zapasowych pokazanych przy włączaniu kodu z aplikacji. Każdy działa tylko raz.'
                   : 'Otwórz aplikację z kodami (Google Authenticator, Aegis…) i przepisz 6 cyfr dla zanimwyjdziesz.pl.' }}
             </p>
@@ -142,20 +140,14 @@ function onCode() {
             </div>
           </form>
 
-          <ul class="tz-info">
-            <li><v-icon icon="lock" size="16" />Sesja wygasa po 2 h bezczynności.</li>
-            <li><v-icon icon="shield" size="16" />Po 5 błędnych próbach logowanie stoi 15 min, każda kolejna blokada trwa dłużej.</li>
-          </ul>
+          <p class="tz-info">
+            <v-icon icon="lock" size="16" />Sesja wygasa po 2 h bezczynności.
+          </p>
         </div>
       </div>
     </div>
   </section>
 </template>
-
-<style>
-@font-face { font-family: 'Inter Tarcza'; font-style: normal; font-display: swap; font-weight: 100 900; src: url('@/assets/fonts/inter-latin-ext.woff2') format('woff2-variations'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: 'Inter Tarcza'; font-style: normal; font-display: swap; font-weight: 100 900; src: url('@/assets/fonts/inter-latin.woff2') format('woff2-variations'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-</style>
 
 <style scoped>
 /* paleta i kształty z wersji 2.0 (server/v20/index.html) */
@@ -166,7 +158,7 @@ function onCode() {
   position: relative; overflow: hidden; isolation: isolate;
   min-height: calc(100dvh - 64px); background: var(--papier); color: var(--tusz);
   font-family: 'Inter Tarcza', system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: -0.005em;
-  display: grid; align-items: center; justify-items: end; box-sizing: border-box; padding: 40px clamp(16px, 7vw, 120px);
+  display: grid; align-items: center; justify-items: start; box-sizing: border-box; padding: 40px clamp(16px, 7vw, 120px);
 }
 .tz.ciemny {
   --papier: #0E1013; --plyta: #181B20; --plyta-2: #252930; --kreska: #343943; --tusz: #F1F3F6; --tusz-2: #A3ABB7;
@@ -175,10 +167,10 @@ function onCode() {
 
 /* zdjęcie na całym tle; z prawej przechodzi w kolor strony, żeby formularz był czytelny, a pociąg z lewej został widoczny */
 .tz-tlo { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
-.tz-tlo img { width: 100%; height: 100%; object-fit: cover; object-position: 30% 58%; display: block; animation: tz-zoom 1.8s cubic-bezier(.2, .8, .2, 1) both; }
+.tz-tlo img { width: 100%; height: 100%; object-fit: cover; object-position: 85% 48%; display: block; animation: tz-zoom 1.8s cubic-bezier(.2, .8, .2, 1) both; }
 .tz-tlo::after {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent 34%, color-mix(in srgb, var(--papier) 45%, transparent) 58%, color-mix(in srgb, var(--papier) 88%, transparent) 78%);
+  background: linear-gradient(270deg, transparent 34%, color-mix(in srgb, var(--papier) 45%, transparent) 58%, color-mix(in srgb, var(--papier) 88%, transparent) 78%);
 }
 
 .tz-in { position: relative; width: 100%; max-width: 420px; animation: tz-in .5s .15s cubic-bezier(.2, .9, .25, 1) both; }
@@ -208,7 +200,11 @@ function onCode() {
 .tz-pole:focus-within { box-shadow: inset 0 0 0 2px var(--tusz); }
 .tz-pole > span { font-size: 12px; font-weight: 600; color: var(--tusz-2); }
 .tz-pole input { all: unset; font: 600 17px/1.5 inherit; font-family: inherit; color: var(--tusz); width: 100%; min-width: 0; }
-.tz-pole:has(.tz-oko) input { padding-right: 44px; }
+.tz-pole:has(.tz-oko) { padding-right: 56px; }
+.tz-pole input:-webkit-autofill, .tz-pole input:-webkit-autofill:hover, .tz-pole input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--tusz); caret-color: var(--tusz); -webkit-box-shadow: 0 0 0 1000px var(--papier) inset; transition: background-color 9999s;
+}
+.tz-pole input::selection { background: color-mix(in srgb, var(--tusz) 22%, transparent); }
 .tz-oko { position: absolute; right: 8px; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--tusz-2); background: none; border: 0; cursor: pointer; }
 .tz-oko:hover { background: var(--plyta-2); color: var(--tusz); }
 .tz-kod { padding: 12px 16px 14px; }
@@ -229,17 +225,16 @@ function onCode() {
 .tz-tekstowy:hover { background: var(--plyta-2); }
 .tz-blad { margin: 2px 4px 0; font-size: 14px; line-height: 1.4; font-weight: 600; color: var(--akcja-tekst); }
 .tz-blad.blokada, .tz-uwaga { margin: 0; padding: 12px 16px; border-radius: 16px; background: var(--opoz-tlo); color: var(--opoz); font-size: 14px; line-height: 1.4; font-weight: 600; }
-.tz-info { list-style: none; margin: 0; padding: 12px 2px 0; border-top: 1px solid var(--kreska); display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.4; color: var(--tusz-2); }
-.tz-info li { display: flex; gap: 8px; align-items: flex-start; }
-.tz-info .v-icon { flex: none; margin-top: 1px; }
+.tz-info { margin: 0; padding: 12px 2px 0; border-top: 1px solid var(--kreska); display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 1.4; color: var(--tusz-2); }
+.tz-info .v-icon { flex: none; }
 .tz :focus-visible { outline: 2px solid var(--tusz); outline-offset: 2px; }
 .tz-pole input:focus-visible { outline: none; }
 
-/* telefon: zdjęcie u góry (czoło pociągu), karta wjeżdża na nie od dołu */
-@media (max-width: 899px) {
+/* telefon i wąskie okno (karta zasłoniłaby pociąg): zdjęcie u góry, karta wjeżdża na nie od dołu */
+@media (max-width: 1099px) {
   .tz { display: block; padding: 0 0 32px; }
   .tz-tlo { position: relative; inset: auto; height: clamp(220px, 40vh, 360px); }
-  .tz-tlo img { object-position: 24% 62%; }
+  .tz-tlo img { object-position: 85% 55%; }
   .tz-tlo::after { background: linear-gradient(180deg, transparent 55%, var(--papier)); }
   .tz-in { max-width: 480px; margin: -72px auto 0; padding: 0 12px; box-sizing: border-box; }
   .tz-karta { background: var(--plyta); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 -8px 30px rgba(10, 12, 16, .16); }

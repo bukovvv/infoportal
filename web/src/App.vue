@@ -81,10 +81,11 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 <template>
   <v-app>
     <!-- pasek przed menu bocznym: na komputerze biegnie przez całą szerokość, logo jest tylko w nim -->
-    <v-app-bar :elevation="0" color="band" height="64" scroll-behavior="elevate" :scroll-threshold="4" class="app-bar">
+    <!-- w panelu (/admin) pasek w stylu wersji 2.0: jasny/ciemny jak strona, krój Inter, pigułki -->
+    <v-app-bar :elevation="0" :color="isAdmin ? undefined : 'band'" height="64" :scroll-behavior="isAdmin ? undefined : 'elevate'" :scroll-threshold="4" :class="['app-bar', { 'tarcza tz-bar': isAdmin }]">
       <template #prepend>
         <router-link v-if="(isStart || mdAndUp) && !isAdmin" to="/" class="brand-logo" aria-label="zanimwyjdziesz.pl – start"><img :src="logoOnBand" alt="zanimwyjdziesz.pl" height="40"></router-link>
-        <router-link v-else to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark on-band :size="36" /></router-link>
+        <router-link v-else to="/" class="brand-mark ml-3" aria-label="zanimwyjdziesz.pl – start"><BrandMark :on-band="!isAdmin" :size="36" /></router-link>
         <span v-if="mdAndUp && !isStart && !isAdmin" class="bar-divider" aria-hidden="true" />
       </template>
       <v-app-bar-title v-if="!isStart || isAdmin" class="text-title-large app-title">{{ title }}</v-app-bar-title>
@@ -168,7 +169,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
       </div>
     </v-navigation-drawer>
 
-    <v-main>
+    <v-main :class="{ 'z-navbar': !isAdmin }">
       <router-view v-slot="{ Component }">
         <component :is="Component" />
       </router-view>
@@ -214,6 +215,13 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 .navbar .nav-item { width: auto; }
 .navbar .nav-ind { width: 64px; }
 .app-title { font-size: 22px; }
+.tz-bar { background: var(--papier) !important; color: var(--tusz) !important; box-shadow: none !important; border-bottom: 1px solid var(--kreska); }
+.tz-bar .app-title { font-family: inherit !important; font-weight: 700; letter-spacing: -0.02em !important; font-size: 19px; }
+.tz-bar :deep(.v-btn) { font-family: inherit; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.tz-bar :deep(.v-btn--variant-text) { background: var(--plyta); color: var(--tusz); margin-inline-end: 8px !important; }
+.tz-bar :deep(.v-btn--variant-text:not(.v-btn--icon)) { height: 40px; padding-inline: 16px; }
+.tz-bar :deep(.v-btn--variant-text:hover) { background: var(--plyta-2); }
+.tz-bar :deep(.v-btn__overlay) { display: none; }
 .app-bar :deep(.v-toolbar__content) { padding-inline: 4px 8px; }
 .brand-logo { display: block; flex: none; margin-inline-start: 12px; }
 /* na komputerze logo stoi nad menu bocznym (88 px), tytuł widoku zaczyna się nad treścią */
@@ -228,7 +236,7 @@ const searchFab = () => router.push({ name: 'start', hash: '#szukaj' })
 /* „Kup bilet” na grafitowym pasku: jasny przycisk z tekstem w kolorze paska */
 .ticket-btn { background: rgb(var(--v-theme-band-accent)) !important; color: rgb(var(--v-theme-on-band-accent)) !important; font-weight: 700; }
 @media (max-width: 839px) {
-  :deep(.v-main) { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
+  :deep(.v-main.z-navbar) { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }
   .kw-snack { margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (max-width: 480px) {
