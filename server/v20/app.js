@@ -399,7 +399,7 @@ async function stylMapy(){BAZA??=fetch('https://tiles.openfreemap.org/styles/pos
   else if(l.type==='line'){if(id.startsWith('waterway'))p['line-color']=p2;else if(id.startsWith('railway'))p['line-color']=id.includes('dash')?bg:kr;else if(id.startsWith('boundary'))p['line-color']=t2;else if(id.includes('casing'))p['line-color']=kr;else if(/^(highway|road|aeroway|tunnel)/.test(id))p['line-color']=pl}
   else if(l.type==='symbol'&&l.layout?.['text-field']){p['text-color']=t2;p['text-halo-color']=bg}}
  // jak w obecnej wersji: bez tarcz i nazw dróg, lotnisk, granic gmin, rzek, dróg lokalnych i nazwy województwa; nazwy po polsku
- s.layers=s.layers.filter(l=>!/shield|highway-name|aeroway|airport|boundary_3|boundary_disputed|waterway|water_name_line|highway_path|highway_minor|road_pier|road_area_pier|label_state/.test(l.id));
+ s.layers=s.layers.filter(l=>!/oneway|shield|highway-name|aeroway|airport|boundary_3|boundary_disputed|waterway|water_name_line|highway_path|highway_minor|road_pier|road_area_pier|label_state/.test(l.id));
  for(const l of s.layers){if(l.layout?.['text-field']&&l.id.startsWith('label_'))l.layout['text-field']=['coalesce',['get','name:pl'],['get','name']];if(l.id==='label_village')l.minzoom=11}
  return s}
 // stacja pod punktem mapy (pole dotyku 12 px) i wyróżnienie wybranej stacji
