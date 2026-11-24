@@ -35,7 +35,7 @@ const LAST=22*60+40;
 /* ---------- narzędzia ---------- */
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
-const hm=m=>pad(Math.floor(m/60)%24)+':'+pad(m%60);
+const hm=m=>{m=((m%1440)+1440)%1440;return pad(Math.floor(m/60))+':'+pad(m%60)};
 const norm=s=>s.toLowerCase().replace(/ł/g,'l').normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
 const krotko=s=>s.replace('Wielkopolskie','Wlkp.').replace('Wielkopolski','Wlkp.').replace('koło Poznania','k. Poznania');
 const bkrotko=s=>krotko(s).replace('Główny','Gł.');
@@ -189,7 +189,7 @@ if(!REG[S.region])S.region='wlkp'; if(!FONTS.includes(S.font))S.font='Inter';
 function region(id){S.region=id;R=REG[id];R.id=id;LINES=R.lines;POS=R.pos;WAZNE=R.wazne; // trasy i podróże osobno dla każdego regionu
  const z=czyt('zw3-tarcza@'+id)||{routes:[{a:R.hub,b:R.cel}],trips:[],przyklad:true};
  Object.assign(S,z,{from:R.hub,to:R.cel,station:R.hub,when:null,day:0,kier:'odj',sel:null,selDay:0,mapSel:null,bezp:false,minT:5,bez:[],sch:{set:'reg',linia:null,stacja:null}});
- document.documentElement.dataset.region=id;zamknijListe();$('#mapa-okno').innerHTML=''}
+ document.documentElement.dataset.region=id;zamknijListe();mapaStop()}
 const pismo=()=>document.documentElement.style.setProperty('--f',`'${S.font}',system-ui,-apple-system,'Segoe UI',sans-serif`);
 const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
 async function zmienRegion(id){if(id===S.region)return;save();region(id);try{await wczytajStacje()}catch(e){toast('Nie udało się wczytać listy stacji.');return}save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
@@ -292,64 +292,99 @@ function rDetal(){const el=$('#detal'),c=S.sel&&cFromKey(S.sel),day=S.selDay;
 function rStacje(){if(document.activeElement!==$('#stacja'))$('#stacja').value=S.station;
  $('#tryb').innerHTML=[['dep','Odjazdy'],['arr','Przyjazdy']].map(([k,t])=>`<button data-a="tryb" data-k="${k}" aria-pressed="${S.tryb===k}">${t}</button>`).join('');
  $('#szybkie').innerHTML=R.szybkie.filter(s=>s!==S.station).slice(0,3).map(s=>`<button class="chip" style="height:40px" data-a="stacja" data-s="${s}">${bkrotko(s)}</button>`).join('');
- const b=tablica(S.station,S.tryb,12),ks=oStacji(S.station);
+ const b=tablica(S.station,S.tryb,desk()?20:12),ks=oStacji(S.station);
  const nad=ks.map(kpas).join('')+btkPodp([S.station]);$('#st-kom').hidden=!nad;$('#st-kom').innerHTML=nad;
  $('#tablica').innerHTML=tabl(b,S.tryb)}
 const tabl=(b,mode)=>b===undefined?'<p class="pusto">Wczytujemy tablicę…</p>':!b?'<p class="pusto">Nie udało się pobrać tablicy. Spróbuj ponownie za chwilę.</p>':b.length?b.map(x=>rzad(x,mode)).join(''):'<p class="pusto">W najbliższej dobie nie ma tu pociągów.</p>';
 function rzad(x,mode){const d=x.delay||0,ag=x.agency||R.ag,l=linia(x.route,ag,x.isBus),tm=mn(x.scheduled),m=tm+d-now(),kier=mode==='dep'?x.destination:x.origin,num=krNum(x.number);
  return `<button class="rzad" data-a="poc" data-id="${esc(x.key)}"><span class="g ${d||x.cancelled?'op':''}">${x.cancelled?`<s>${hm(tm)}</s>`:hm(tm+d)}${d&&!x.cancelled?`<s>${hm(tm)}</s>`:''}</span>
  <span class="c"><b>${mode==='dep'?'':'ze stacji '}${krotko(esc(kier))}</b><span>${lin(l)}<span>${AGL(ag)} ${num}</span><span>${x.cancelled?'odwołany':x.skipped?'nie zatrzyma się':zaIle(m)+(d?' · +'+d+' min':'')}</span>${ag==='IC'?'<span>osobny bilet</span>':''}${KOM().some(n=>trwa(n)&&n.poc.some(p=>pasuje(p,ag,numery(x.number))))?'<span class="znak op" style="padding:1px 7px;font-size:12px">komunikat</span>':''}</span></span>${x.platform?`<span class="pe">peron<b>${x.platform}</b></span>`:''}</button>`}
-/* mapa: prawdziwa sieć i pozycje pociągów (/network, /live) rysowane w jednym SVG, bez podkładu z kafelkami */
-let MP=null;
-function rzut(net){if(MP?.net===net)return MP;let a=180,b=-180,c=90,d=-90;
- for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
- const cos=Math.cos((c+d)/2*Math.PI/180),K=900/((b-a)*cos),pad=30,p=(lon,lat)=>[(lon-a)*cos*K+pad,(d-lat)*K+pad];
- const linie=[...net.features].sort((x,y)=>y.properties.partner-x.properties.partner).map(f=>{let o=[],q=null;
-  for(const[x,y]of f.geometry.coordinates){const r=p(x,y);if(!q||Math.hypot(r[0]-q[0],r[1]-q[1])>1.5){o.push(r[0].toFixed(1)+','+r[1].toFixed(1));q=r}}
-  const pr=f.properties.partner;return `<polyline points="${o.join(' ')}" fill="none" stroke="${pr?'var(--kreska)':f.properties.color}" stroke-width="${pr?2:3.5}" stroke-linejoin="round" stroke-linecap="round"/>`}).join('');
- return MP={net,p,vb:[0,0,Math.round(900+2*pad),Math.round((d-c)*K+2*pad)],linie}}
-function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),ok=$('#mapa-okno');
- if(!net){ok.innerHTML=`<p class="pusto">${net===null?'Nie udało się wczytać mapy.':'Wczytujemy mapę…'}</p>`;return}
- const M=rzut(net),tr=(live?.trains||[]).filter(t=>t.key);
+/* mapa: MapLibre i podkład OpenFreeMap jak w obecnej wersji, przemalowany na barwy Tarczy (zmienne CSS motywu) */
+let ML=null,MAP=null,MAPST='',BAZA=null;const MKP=new Map();let MKK=[];
+const cssv=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const desk=()=>matchMedia('(min-width:920px)').matches;
+async function stylMapy(){BAZA??=fetch('https://tiles.openfreemap.org/styles/positron').then(r=>r.ok?r.json():Promise.reject(r.status)).catch(e=>{BAZA=null;throw e});
+ const s=structuredClone(await BAZA),bg=cssv('--papier'),pl=cssv('--plyta'),p2=cssv('--plyta-2'),kr=cssv('--kreska'),t2=cssv('--tusz-2');
+ for(const l of s.layers){const id=l.id,p=(l.paint??={});
+  if(l.type==='background')p['background-color']=bg;
+  else if(l.type==='fill'){if(id.startsWith('water'))p['fill-color']=p2;else if(/wood|park|grass/.test(id))p['fill-color']=pl;else if(id==='building'||/^land(use|cover)/.test(id)){p['fill-color']=bg;if(id==='building')p['fill-outline-color']=kr}else if(/^(road|aeroway)/.test(id))p['fill-color']=pl}
+  else if(l.type==='line'){if(id.startsWith('waterway'))p['line-color']=p2;else if(id.startsWith('railway'))p['line-color']=id.includes('dash')?bg:kr;else if(id.startsWith('boundary'))p['line-color']=t2;else if(id.includes('casing'))p['line-color']=kr;else if(/^(highway|road|aeroway|tunnel)/.test(id))p['line-color']=pl}
+  else if(l.type==='symbol'&&l.layout?.['text-field']){p['text-color']=t2;p['text-halo-color']=bg}}
+ // jak w obecnej wersji: bez tarcz i nazw dróg, lotnisk, granic gmin, rzek, dróg lokalnych i nazwy województwa; nazwy po polsku
+ s.layers=s.layers.filter(l=>!/shield|highway-name|aeroway|airport|boundary_3|boundary_disputed|waterway|water_name_line|highway_path|highway_minor|road_pier|road_area_pier|label_state/.test(l.id));
+ for(const l of s.layers){if(l.layout?.['text-field']&&l.id.startsWith('label_'))l.layout['text-field']=['coalesce',['get','name:pl'],['get','name']];if(l.id==='label_village')l.minzoom=11}
+ return s}
+function mapaStop(){if(MAP)MAP.remove();MAP=null;MAPST='';MKP.clear();MKK=[];$('#mapa-okno').innerHTML=''}
+async function mapaStart(){const key=R.id+(ciemny()?'d':'j');if(MAPST===key)return;mapaStop();MAPST=key;const el=$('#mapa-okno');
+ try{ML??=await import('./maplibre-gl.mjs');const style=await stylMapy();if(MAPST!==key)return;const h=SBN.get(R.hub);
+  const m=MAP=new ML.Map({container:el,style,center:h?[h.lon,h.lat]:[17,52],zoom:8,dragRotate:false,pitchWithRotate:false,touchPitch:false,attributionControl:{compact:true}});
+  m.touchZoomRotate.disableRotation();m.addControl(new ML.NavigationControl({showCompass:false}),'top-left');
+  m.on('load',()=>{warstwy(m);m._ok=true;rMapa()});m.on('moveend',uklad);
+  m.on('click',ev=>{if(ev.originalEvent.target.closest?.('.mpoc,.mkom'))return;const p=ev.point,f=m.queryRenderedFeatures([[p.x-12,p.y-12],[p.x+12,p.y+12]],{layers:['st0','st1','st2']});if(f[0])arkStacja(f[0].properties.name)});
+ }catch(e){if(MAPST===key){MAPST='';el.innerHTML='<p class="pusto">Nie udało się wczytać mapy. Spróbuj ponownie za chwilę.</p>'}}}
+function warstwy(m){const e={type:'FeatureCollection',features:[]},pap=cssv('--papier'),tu=cssv('--tusz'),t2=cssv('--tusz-2'),lr={'line-join':'round','line-cap':'round'},w=(a,b)=>['interpolate',['linear'],['zoom'],7,a,13,b];
+ for(const s of['siec','kurs','stacje','utr'])m.addSource(s,{type:'geojson',data:e});
+ m.addLayer({id:'siec-p',type:'line',source:'siec',filter:['==',['get','partner'],true],layout:lr,paint:{'line-color':['get','color'],'line-opacity':.35,'line-width':w(1,3)}});
+ m.addLayer({id:'siec',type:'line',source:'siec',filter:['!=',['get','partner'],true],layout:lr,paint:{'line-color':['get','color'],'line-width':w(2,6)}});
+ m.addLayer({id:'kurs-tlo',type:'line',source:'kurs',layout:lr,paint:{'line-color':pap,'line-width':w(8,14)}});
+ m.addLayer({id:'kurs',type:'line',source:'kurs',layout:lr,paint:{'line-color':['get','color'],'line-width':w(4,9)}});
+ m.addLayer({id:'utr',type:'circle',source:'utr',paint:{'circle-radius':w(7,13),'circle-opacity':0,'circle-stroke-color':cssv('--opoz'),'circle-stroke-width':2.5}});
+ // stacje według ważności: 3 węzeł regionu, 2 ważne, 1 ≥ 80 kursów (od przybliżenia 8), 0 przystanki (od 9,5)
+ for(const[r,z,zt]of[[0,9.5,10.5],[1,8,9],[2,0,0]]){const f=r<2?['==',['get','r'],r]:['>=',['get','r'],2];
+  m.addLayer({id:'st'+r,type:'circle',source:'stacje',minzoom:z,filter:f,paint:{'circle-radius':['match',['get','r'],3,6.5,2,5,1,4,3],'circle-color':pap,'circle-stroke-color':tu,'circle-stroke-width':r>=2?2.5:1.5}});
+  m.addLayer({id:'stn'+r,type:'symbol',source:'stacje',minzoom:zt,filter:f,layout:{'text-field':['get','l'],'text-font':[r>=2?'Noto Sans Bold':'Noto Sans Regular'],'text-size':r>=2?13:11.5,'text-anchor':'left','text-offset':[.8,0],'text-optional':true},paint:{'text-color':r>=2?tu:t2,'text-halo-color':pap,'text-halo-width':1.5}})}}
+function rMapa(){const net=dane('/network',3600),live=dane('/live',30,'live'),tr=(live?.trains||[]).filter(t=>t.key);
  $('#mapa-opis').textContent='W ruchu: '+pl(tr.length,'pociąg','pociągi','pociągów')+' · godz. '+hm(now());
- let g=M.linie;
- const sel=S.mapSel&&kurs(S.mapSel);
- if(sel?.shape?.length)g+=`<polyline points="${sel.shape.map(([y,x])=>M.p(x,y).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--papier)" stroke-width="9" stroke-linejoin="round"/><polyline points="${sel.shape.map(([y,x])=>M.p(x,y).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${sel.l.color}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>`;
- let zn=''; // utrudnienia: przerywany pierścień przy stacjach komunikatu i koło z wykrzyknikiem
- for(const n of KOM()){if(!trwa(n)||n.sev==='info')continue;const sts=n.st.length?n.st:n.lines.flatMap(id=>schLinia(id)?.stations||[]);
-  const pts=sts.map(s=>SBN.get(s)).filter(Boolean).map(s=>M.p(s.lon,s.lat));if(!pts.length)continue;
-  for(const q of pts)g+=`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="9" fill="none" stroke="var(--opoz)" stroke-width="2.500" stroke-dasharray="4 4"/>`;
-  const q=pts[Math.floor(pts.length/2)];
-  zn+=`<g class="kmap ${n.sev}" data-a="kom" data-id="${n.id}" transform="translate(${(q[0]+18).toFixed(1)},${(q[1]-18).toFixed(1)})" tabindex="0" role="button" aria-label="${cap(RODZ[n.sev])}: ${n.tyt}"><circle r="12"/><text y="5.500" text-anchor="middle">!</text></g>`}
- const naj=STN.filter(s=>s.kw!==false||R.id!=='wlkp').map(s=>s.daily).sort((a,b)=>b-a)[14]||0;
- for(const s of STN){if(R.id==='wlkp'&&s.kw===false)continue;const[x,y]=M.p(s.lon,s.lat),w=WAZNE.includes(s.name)||s.daily>=naj,r=s.name===R.hub?6:w?4.500:2.500;
-  g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="var(--papier)" stroke="var(--tusz)" stroke-width="${w?2.500:1.500}"/>${w?`<text x="${(x+9).toFixed(1)}" y="${(y+4).toFixed(1)}" class="wazna">${R.etyk?R.etyk(s.name):bkrotko(s.name)}</text>`:''}<circle class="st-hit" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10" data-a="stacja-ark" data-s="${s.name}" tabindex="0" role="button" aria-label="Stacja ${s.name}"/>`}
- g+=zn;
- // pastylka, która zasłoniłaby inną, staje się kołem w kolorze linii (pierwszeństwo: wybrany, opóźnione)
- const zajete=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
- for(const t of [...tr].sort((a,b)=>(b.key===S.mapSel)-(a.key===S.mapSel)||(b.delay||0)-(a.delay||0))){
-  const[x,y]=M.p(t.lon,t.lat),d=t.delay||0,txt=krNum(t.number).split('/')[0]+(d?' +'+d:''),wd=txt.length*7+10,sel=S.mapSel===t.key,col=t.route?.color||KOL[t.route?.short]||'#8A8F98';
-  const box=[x-10,y-11,x+16+wd,y+11],pig=sel||!zajete.some(b=>kol(b,box));if(pig)zajete.push(box);
-  g+=`<g class="poc" data-a="poc" data-id="${esc(t.key)}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})" tabindex="0" role="button" aria-label="Pociąg ${AGL(t.agency||R.ag)} ${krNum(t.number)}">${sel?'<circle r="16" fill="none" stroke="var(--tusz)" stroke-width="2.500"/>':''}${pig?`<rect x="6" y="-11" width="${wd}" height="22" rx="11" fill="var(--tusz)"/><circle r="10" fill="${col}" stroke="var(--papier)" stroke-width="2.500"/><text x="16" y="4">${txt}</text>`:`<circle r="6" fill="${col}" stroke="var(--papier)" stroke-width="2"/>`}</g>`}
- const first=!ok.querySelector('svg'),sl=ok.scrollLeft,[vx,vy,vw,vh]=M.vb,h=SBN.get(R.hub);
- ok.innerHTML=`<svg viewBox="${vx} ${vy} ${vw} ${vh}" role="img" aria-label="Mapa linii z jadącymi pociągami">${g}</svg>`;
- ok.scrollLeft=first&&h?Math.max(0,M.p(h.lon,h.lat)[0]/vw*ok.scrollWidth-ok.clientWidth/2):sl}
+ mapaStart();const m=MAP;if(!m?._ok)return;m.resize();
+ if(net&&m._net!==net){m._net=net;m.getSource('siec').setData(net);let a=180,b=-180,c=90,d=-90;
+  for(const f of net.features)for(const[x,y]of f.geometry.coordinates){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
+  m._bb=[[a,c],[b,d]];if(!m._fit){m._fit=1;m.fitBounds(m._bb,{padding:30,duration:0})}}
+ if(m._stn!==STN){m._stn=STN;m.getSource('stacje').setData({type:'FeatureCollection',features:STN.filter(s=>R.id!=='wlkp'||s.kw!==false).map(s=>({type:'Feature',
+  properties:{name:s.name,l:R.etyk?R.etyk(s.name):bkrotko(s.name),r:s.name===R.hub?3:WAZNE.includes(s.name)?2:s.daily>=80?1:0},geometry:{type:'Point',coordinates:[s.lon,s.lat]}}))})}
+ // trasa wybranego pociągu; „Pokaż na mapie” dopasowuje widok do całej trasy, dotknięta pastylka — nie
+ if(!S.mapSel)S.mapFit=false;
+ const sel=S.mapSel?kurs(S.mapSel):null,shape=sel?.shape?.length?sel.shape.map(([y,x])=>[x,y]):null;
+ if(m._sel!==sel){m._sel=sel;m.getSource('kurs').setData(shape?{type:'Feature',properties:{color:sel.l.color},geometry:{type:'LineString',coordinates:shape}}:{type:'FeatureCollection',features:[]})}
+ if(S.mapFit&&shape){S.mapFit=false;let a=180,b=-180,c=90,d=-90;for(const[x,y]of shape){if(x<a)a=x;if(x>b)b=x;if(y<c)c=y;if(y>d)d=y}
+  m.fitBounds([[a,c],[b,d]],{padding:desk()?{top:48,bottom:48,left:48,right:480}:40})}
+ // utrudnienia: pierścień przy stacjach komunikatu i koło z wykrzyknikiem
+ const ut=[],kk=[];
+ for(const n of KOM()){if(!trwa(n)||n.sev==='info')continue;const sts=(n.st.length?n.st:n.lines.flatMap(id=>schLinia(id)?.stations||[])).map(s=>SBN.get(s)).filter(Boolean);if(!sts.length)continue;
+  for(const s of sts)ut.push({type:'Feature',properties:{},geometry:{type:'Point',coordinates:[s.lon,s.lat]}});kk.push([n,sts[Math.floor(sts.length/2)]])}
+ const kkey=kk.map(([n])=>n.id+n.sev).join();
+ if(m._kk!==kkey){m._kk=kkey;m.getSource('utr').setData({type:'FeatureCollection',features:ut});MKK.forEach(x=>x.remove());
+  MKK=kk.map(([n,s])=>{const el=document.createElement('button');el.className='mkom '+n.sev;el.dataset.a='kom';el.dataset.id=n.id;el.textContent='!';el.setAttribute('aria-label',cap(RODZ[n.sev])+': '+n.tyt.replace(/&[a-z]+;/g,''));
+   return new ML.Marker({element:el,offset:[18,-18]}).setLngLat([s.lon,s.lat]).addTo(m)})}
+ // pociągi: pastylki HTML; pozycję ustawia MapLibre (transform), wygląd w klasie .mpoc
+ const jest=new Set();
+ for(const t of tr){jest.add(t.key);const d=t.delay||0,col=t.route?.color||KOL[t.route?.short]||'#8A8F98',h=`<i style="--c:${col}"></i><b>${krNum(t.number).split('/')[0]}${d?` <em>+${d}</em>`:''}</b>`;
+  let o=MKP.get(t.key);
+  if(!o){const el=document.createElement('div');el.className='mpoc';el.dataset.a='poc';el.dataset.id=t.key;el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label','Pociąg '+AGL(t.agency||R.ag)+' '+krNum(t.number));
+   o={el,mk:new ML.Marker({element:el,anchor:'left',offset:[-11,0]}).setLngLat([t.lon,t.lat]).addTo(m)};MKP.set(t.key,o)}
+  else o.mk.setLngLat([t.lon,t.lat]);
+  if(o.h!==h){o.h=h;o.el.innerHTML=h}o.d=d;o.w=30+(krNum(t.number).split('/')[0].length+(d?String(d).length+2:0))*7;o.el.classList.toggle('wybrany',t.key===S.mapSel)}
+ for(const[k,o]of MKP)if(!jest.has(k)){o.mk.remove();MKP.delete(k)}
+ uklad()}
+// pastylka, która zasłoniłaby inną, staje się kołem w kolorze linii (pierwszeństwo: wybrany, opóźnione)
+function uklad(){if(!MAP)return;const zaj=[],kol=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3],wyb=o=>o.el.classList.contains('wybrany');
+ for(const o of [...MKP.values()].sort((a,b)=>wyb(b)-wyb(a)||b.d-a.d)){const p=MAP.project(o.mk.getLngLat()),box=[p.x-11,p.y-11,p.x+o.w,p.y+11],pig=wyb(o)||!zaj.some(x=>kol(x,box));if(pig)zaj.push(box);o.el.classList.toggle('kropka',!pig)}}
 function rMoje(){const el=$('#v-moje');
  const trasy=S.routes.map((r,i)=>{const all=nast(r),cs=(all||[]).filter(c=>doOdj(c)>=0).slice(0,3);
   return `<section class="plyta"><div class="wiersz rozsun"><h2 style="min-width:0">${bkrotko(r.a)} → ${bkrotko(r.b)}</h2><span class="wiersz" style="gap:6px"><button class="kolo" style="background:var(--papier)" data-a="trasa-odwroc" data-i="${i}" aria-label="Odwróć kierunek trasy">${ic('zamien',18)}</button><button class="kolo" style="background:var(--papier)" data-a="trasa-usun" data-i="${i}" aria-label="Przestań obserwować trasę">${ic('zamknij',18)}</button></span></div>
   ${cs.length?cs.map(c=>`<button class="nast" data-a="sel" data-k="${cKey(c)}" data-d="0"><span class="wiersz" style="gap:10px"><span class="num">${hm(c.dep+cDelay(c))} → ${hm(cArr(c))}</span>${c.legs.map(l=>lin(l.t.l)).join('')}</span>${stan(c,dzien(c.dep))}</button>`).join(''):`<p class="pusto">${all===undefined?'Sprawdzamy połączenia…':all===null?'Nie udało się pobrać połączeń.':'Nie ma najbliższych połączeń na tej trasie.'}</p>`}
   <button class="tekstowy" data-a="trasa-szukaj" data-i="${i}">Więcej połączeń ${ic('strz',16)}</button></section>`}).join('');
  const pod=S.trips.map(t=>{const day=offDz(t.dz);let c=CON[t.k];if(!c&&day>=0&&t.a){const l=polaczenia(t.a,t.b,{min:day*1440+t.m-1,n:3,ttl:300});c=l&&l.find(x=>x.k===t.k)}return{c,day}}).filter(x=>x.c&&x.day>=0&&(x.day>0||cArr(x.c)>=now()-10));
- el.innerHTML=`<h1>Moje</h1>
+ el.innerHTML=`<h1>Moje</h1><div class="moje-gl"><div class="kol" style="gap:12px">
   <section class="plyta kol" style="gap:10px"><div class="wiersz rozsun zawin"><div style="min-width:0;flex:1 1 220px"><b>Dojście na stację</b><p class="dr" style="font-size:14px">Podaj, ile minut idziesz na stację. Pokażemy, o której wyjść z domu.</p></div>
    <div class="krok"><button data-a="walk" data-d="-1" aria-label="Zmniejsz czas dojścia o minutę">−</button><b>${S.walk?S.walk+' min':'nie podano'}</b><button data-a="walk" data-d="1" aria-label="Zwiększ czas dojścia o minutę">+</button></div></div></section>
   <h2 style="padding:8px 4px 0">Moje trasy${S.przyklad&&S.routes.length?' <span class="dr maly" style="font-weight:500">(przykład)</span>':''}</h2>
   ${trasy||'<div class="plyta pusto">Nie obserwujesz żadnej trasy. Wyszukaj połączenie i wybierz „Obserwuj trasę”.</div>'}
   <h2 style="padding:8px 4px 0">Moje podróże</h2>
   ${pod.length?`<div class="kol" style="gap:8px">${pod.map(x=>`<div class="kol" style="gap:4px">${x.day?`<p class="dr maly" style="padding:0 4px">${etykDnia(x.day)}, ${pelnaData(x.day)}</p>`:''}${polKarta(x.c,false,x.day)}</div>`).join('')}</div>`:'<div class="plyta pusto">Nie obserwujesz żadnej podróży. Otwórz szczegóły połączenia i wybierz „Obserwuj podróż”.</div>'}
+  </div><aside class="kol moje-bok" style="gap:12px"><h2 style="padding:8px 4px 0">Ustawienia</h2>
   <section class="plyta wiersz rozsun zawin"><b>Region</b><div class="seg">${Object.entries(REG).map(([k,r])=>`<button data-a="region" data-k="${k}" aria-pressed="${S.region===k}">${r.nazwa}</button>`).join('')}</div></section>
   <section class="plyta wiersz rozsun zawin"><b>Motyw</b><div class="seg">${[['system','Automatyczny'],['light','Jasny'],['dark','Ciemny']].map(([k,t])=>`<button data-a="motyw-ust" data-k="${k}" aria-pressed="${S.theme===k}">${t}</button>`).join('')}</div></section>
-  <div class="wiersz zawin" style="gap:8px">${R.id==='wlkp'?`<a class="drugi" href="#btk">Bilet Bus-Tramwaj-Kolej ${ic('strz',16)}</a>`:''}<a class="drugi" href="#onas">O nas ${ic('strz',16)}</a><a class="drugi" href="#schemat">Schemat połączeń ${ic('strz',16)}</a><a class="drugi" href="#system">System projektowy „Tarcza” ${ic('strz',16)}</a></div>`}
+  <div class="wiersz zawin" style="gap:8px">${R.id==='wlkp'?`<a class="drugi" href="#btk">Bilet Bus-Tramwaj-Kolej ${ic('strz',16)}</a>`:''}<a class="drugi" href="#onas">O nas ${ic('strz',16)}</a><a class="drugi" href="#schemat">Schemat połączeń ${ic('strz',16)}</a><a class="drugi" href="#system">System projektowy „Tarcza” ${ic('strz',16)}</a></div></aside></div>`}
 function rBtk(){const el=$('#v-btk'),b=S.btk;
  if(R.id!=='wlkp'){el.innerHTML=`<h1>Bus-Tramwaj-Kolej</h1><div class="plyta pusto">Bilet Bus-Tramwaj-Kolej jest ważny tylko w Wielkopolsce. Zmień region, żeby zobaczyć ceny.</div>`;return}
  const st=b.st?btkSt(b.st):null,z=st?st.z:null,opc=z&&z!=='A'?Object.keys(bWiersz(z).p):[];
@@ -831,7 +866,7 @@ function rONas(){const W=R.id==='wlkp',a=bkrotko(R.hub),b=bkrotko(R.cel);
   <a class="glowny" style="text-decoration:none;max-width:280px" href="https://buycoffee.to/zanimwyjdziesz" target="_blank" rel="noopener">Postaw kawę</a></section>`}
 
 /* ---------- arkusze ---------- */
-function ark(html){if(!html)ARK=null;$('#ark').innerHTML=html?`<div class="tlo-ark" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
+function ark(html){if(!html)ARK=null;$('#ark').innerHTML=html?`<div class="tlo-ark${view==='mapa'?' boczny':''}" data-a="ark-tlo"><div class="ark" role="dialog" aria-modal="true">${html}</div></div>`:''}
 const zamk=`<button class="kolo" data-a="ark-zamknij" aria-label="Zamknij">${ic('zamknij')}</button>`;
 function arkPociag(id){S.mapSel=id;const t=kurs(id);
  if(!t){ark(`<div class="wiersz rozsun"><h2 style="font-size:24px">Pociąg</h2>${zamk}</div><p class="pusto">${t===null?'Nie udało się pobrać danych pociągu.':'Wczytujemy dane pociągu…'}</p>`);ARK={f:arkPociag,a:id,czeka:true};return}
@@ -878,14 +913,15 @@ function arkKiedy(){if(!P){const t=S.when??now();P={day:S.day,h:Math.floor(t/60)
 function rKomunikaty(){const f=S.kfiltr||'wsz';
  const moje=n=>S.routes.some(r=>(nast(r)||[]).some(c=>c.legs.some(g=>oOdcinku(n,g.t,g.i,g.j))));
  const l=KOM().filter(n=>n.do==null||n.do>=0).filter(n=>f==='wsz'||(f==='utr'?n.sev!=='info':moje(n))).sort((a,b)=>waga(a)-waga(b)||a.od-b.od);
+ const sel=desk()&&(l.find(n=>n.id===S.kSel)||l[0]);
  $('#v-komunikaty').innerHTML=`<h1>Komunikaty</h1>
  <div class="na-papierze"><div class="seg">${[['wsz','Wszystkie'],['utr','Utrudnienia'],['moje','Na moich trasach']].map(([k,t])=>`<button data-a="kfiltr" data-k="${k}" aria-pressed="${f===k}">${t}</button>`).join('')}</div></div>
- ${l.length?l.map(n=>`<button class="kom" data-a="kom" data-id="${n.id}">${kzn(n)}<span><span class="t">${n.tyt}</span><span class="o">${n.tr.split('\n')[0]}</span>
-  <span class="meta"><span>${RODZ[n.sev]}</span><span>${okres(n)}</span><span>${kStan(n)}</span>${n.lines.map(schLinia).filter(Boolean).map(l=>lin({badge:l.badge||l.name,color:l.color})).join('')}</span></span></button>`).join(''):`<div class="plyta pusto">${KR===undefined?'Wczytujemy komunikaty…':f==='moje'?'Na Twoich trasach nie ma teraz komunikatów.':f==='utr'?'Nie ma teraz utrudnień.':'Nie ma teraz komunikatów.'}</div>`}`}
-function arkKomunikat(id){const n=KOM().find(x=>x.id===id);if(!n)return;
+ <div class="kom-gl"><div class="kol" style="gap:8px">${l.length?l.map(n=>`<button class="kom" data-a="kom" data-id="${n.id}" aria-current="${!!sel&&sel.id===n.id}">${kzn(n)}<span><span class="t">${n.tyt}</span><span class="o">${n.tr.split('\n')[0]}</span>
+  <span class="meta"><span>${RODZ[n.sev]}</span><span>${okres(n)}</span><span>${kStan(n)}</span>${n.lines.map(schLinia).filter(Boolean).map(l=>lin({badge:l.badge||l.name,color:l.color})).join('')}</span></span></button>`).join(''):`<div class="plyta pusto">${KR===undefined?'Wczytujemy komunikaty…':f==='moje'?'Na Twoich trasach nie ma teraz komunikatów.':f==='utr'?'Nie ma teraz utrudnień.':'Nie ma teraz komunikatów.'}</div>`}</div>${sel?`<aside class="kom-panel plyta kol" style="gap:14px">${komHtml(sel,'')}</aside>`:''}</div>`}
+function komHtml(n,zam){
  const bl=n.tr.split('\n\n').map(b=>b.startsWith('- ')?`<ul>${b.split('\n').map(x=>`<li>${x.slice(2)}</li>`).join('')}</ul>`:`<p>${b}</p>`).join('');
  const ls=n.lines.map(schLinia).filter(Boolean),pc=n.poc;
- ark(`<div class="wiersz rozsun" style="align-items:flex-start"><div class="wiersz" style="gap:10px">${kzn(n)}<div><b>${cap(RODZ[n.sev])}</b><p class="dr maly">${okres(n)} · ${kStan(n)}</p></div></div>${zamk}</div>
+ return `<div class="wiersz rozsun" style="align-items:flex-start"><div class="wiersz" style="gap:10px">${kzn(n)}<div><b>${cap(RODZ[n.sev])}</b><p class="dr maly">${okres(n)} · ${kStan(n)}</p></div></div>${zam}</div>
  <h2 style="font-size:22px;line-height:1.25;text-wrap:balance">${n.tyt}</h2>
  <div class="tresc">${bl}</div>
  ${ls.length||n.st.length||pc.length?`<section class="plyta kol" style="gap:12px"><b>Czego dotyczy</b>
@@ -893,7 +929,8 @@ function arkKomunikat(id){const n=KOM().find(x=>x.id===id);if(!n)return;
   ${n.st.length?`<div class="kol" style="gap:4px"><span class="dr maly">${n.st.length===1?'Stacja':'Stacje'}</span><div class="wiersz zawin" style="gap:6px">${n.st.map(s=>`<button class="chip" style="height:40px" data-a="stacja" data-s="${s}">${bkrotko(s)}</button>`).join('')}</div></div>`:''}
   ${pc.length?`<div class="kol" style="gap:4px"><span class="dr maly">Pociągi</span><div class="wiersz zawin" style="gap:6px">${pc.map(p=>`<button class="chip" style="height:40px" data-a="poc-nr" data-n="${p}">${p}</button>`).join('')}</div></div>`:''}
  </section>`:'<p class="dr maly">Komunikat dotyczy wszystkich linii.</p>'}
- `)}
+ `}
+function arkKomunikat(id){const n=KOM().find(x=>x.id===id);if(!n)return;if(view==='komunikaty'&&desk()){S.kSel=id;rKomunikaty();return}ark(komHtml(n,zamk))}
 /* opcje wyszukiwania: jedno okno zamiast rzędu przełączników w formularzu */
 let O=null;
 function arkOpcje(){if(!O)O={bezp:S.bezp,minT:S.minT,bez:[...S.bez]};
@@ -907,7 +944,8 @@ function arkOpcje(){if(!O)O={bezp:S.bezp,minT:S.minT,bez:[...S.bez]};
 const VIEWS=[['szukaj','Szukaj'],['stacje','Stacje'],['mapa','Mapa'],['komunikaty','Komunikaty'],['moje','Moje'],['system','System'],['btk','Bilet BTK'],['schemat','Schemat'],['onas','O nas']];
 let view='szukaj';
 function go(v){location.hash=v;if(view===v)route()}
-function route(){const h=location.hash.slice(1);view=VIEWS.some(x=>x[0]===h)?h:'szukaj';
+function route(){const h=location.hash.slice(1);if($('.tlo-ark.boczny'))ark(''); // panel z boku mapy nie przechodzi na inne widoki
+ view=VIEWS.some(x=>x[0]===h)?h:'szukaj';
  VIEWS.forEach(([k])=>$('#v-'+k).hidden=k!==view);
  const a={system:'moje',btk:'moje',onas:'moje',schemat:'mapa'}[view]||view;
  $('#menu').innerHTML=VIEWS.slice(0,6).map(([k,t])=>`<a href="#${k}" ${k===(view==='system'?view:a)?'aria-current="page"':''}>${t}</a>`).join('');
@@ -916,7 +954,7 @@ function route(){const h=location.hash.slice(1);view=VIEWS.some(x=>x[0]===h)?h:'
  render();window.scrollTo(0,0)}
 function render(){({szukaj:()=>{rWyjazd();rWyniki()},stacje:rStacje,mapa:rMapa,komunikaty:rKomunikaty,moje:rMoje,system:rSystem,btk:rBtk,schemat:rSchemat,onas:rONas})[view]()}
 function motyw(){const r=document.documentElement;if(S.theme==='system')r.removeAttribute('data-theme');else r.dataset.theme=S.theme;
- const dark=S.theme==='dark'||(S.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);$('#motyw').innerHTML=ic(dark?'slonce':'ksiezyc');if(view==='schemat')rSchemat()}
+ const dark=S.theme==='dark'||(S.theme==='system'&&matchMedia('(prefers-color-scheme:dark)').matches);$('#motyw').innerHTML=ic(dark?'slonce':'ksiezyc');if(view==='schemat')rSchemat();else if(view==='mapa')rMapa()}
 function formularz(){$('#skad').value=S.from;$('#dokad').value=S.to;
  const k=S.kier==='prz'?'Przyjazd':'Odjazd';
  $('#kiedy').innerHTML=ic('zegar',18)+(S.when==null&&!S.day?k+': teraz':k+': '+etykDnia(S.day).toLowerCase()+', '+hm(S.when??now()));
@@ -972,12 +1010,13 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'obserwuj-podroz':{const dz=iso(S.selDay),k=S.trips.findIndex(t=>t.k===S.sel&&t.dz===dz);if(k<0){{const c=cFromKey(S.sel);S.trips.push({k:S.sel,dz,a:cFrom(c),b:cTo(c),m:((c.dep%1440)+1440)%1440})};toast('Dodano podróż do zakładki „Moje”.')}else{S.trips.splice(k,1);toast('Nie obserwujesz już tej podróży.')}save();rDetal();break}
   case'obserwuj-trase':{const k=S.routes.findIndex(r=>(r.a===S.from&&r.b===S.to)||(r.a===S.to&&r.b===S.from));
    if(k<0){if(S.przyklad){S.routes=[];S.przyklad=false}S.routes.unshift({a:S.from,b:S.to});toast('Dodano trasę do zakładki „Moje”.')}else{S.routes.splice(k,1);S.przyklad=false;toast('Nie obserwujesz już tej trasy.')}save();rWyjazd();rWyniki();break}
-  case'na-mape':{const c=cFromKey(S.sel);S.mapSel=c.legs[0].t.id;$('#detal').classList.remove('otwarty');go('mapa');break}
+  case'na-mape':{const c=cFromKey(S.sel);S.mapSel=c.legs[0].t.id;S.mapFit=true;$('#detal').classList.remove('otwarty');go('mapa');break}
   case'poc':arkPociag(el.dataset.id);if(view==='mapa')rMapa();break;
-  case'poc-mapa':ark('');go('mapa');break;
+  case'poc-mapa':S.mapFit=true;ark('');go('mapa');break;
+  case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
   case'poc-link':{const u='https://zanimwyjdziesz.pl'+(R.id==='mal'?'/malopolska':'')+'/pociag/'+el.dataset.n;(navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>toast('Skopiowano link do pociągu.')).catch(()=>toast(u));break}
-  case'ark-zamknij':ark('');P=O=null;break;
+  case'ark-zamknij':ark('');P=O=null;if(view==='mapa'&&S.mapSel){S.mapSel=null;rMapa()}break;
   case'stacja-ark':arkStacja(el.dataset.s);break;
   case'stacja':S.station=el.dataset.s;ark('');if(view!=='stacje')go('stacje');else rStacje();break;
   case'stad':S.from=el.dataset.s;if(S.to===S.from)S.to=S.from===R.hub?R.cel:R.hub;S.when=null;S.day=0;S.kier='odj';ark('');formularz();szukaj();go('szukaj');break;
@@ -988,7 +1027,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
   case'trasa-szukaj':{const r=S.routes[i];S.from=r.a;S.to=r.b;S.when=null;S.day=0;S.kier='odj';formularz();szukaj();if(view!=='szukaj')go('szukaj');else $('#wyniki').scrollIntoView({block:'start'});break}
  }});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){ark('');P=O=null;$('#detal').classList.remove('otwarty')}
- if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a]')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
+ if((e.key==='Enter'||e.key===' ')&&e.target.matches('svg [data-a],.mpoc')){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}});
 $('#f').addEventListener('submit',e=>{e.preventDefault();if(czytaj())szukaj()});
 ['skad','dokad'].forEach(id=>$('#'+id).addEventListener('change',()=>{if(resolve($('#skad').value)&&resolve($('#dokad').value)&&czytaj())szukaj()}));
 ['skad','dokad','stacja'].forEach(id=>$('#'+id).addEventListener('focus',e=>e.target.select()));

@@ -1,4 +1,4 @@
-<!doctype html><html lang="pl"><head><meta charset=utf-8><meta name=robots content=noindex><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html lang="pl"><head><meta charset=utf-8><meta name=robots content=noindex><link rel=stylesheet href=maplibre-gl.css><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>zanimwyjdziesz 2.0 Tarcza</title>
 <style>
 /* Układ: koło = przycisk i stacja, płyta = treść. Bez obrysów i cieni; jedna ciemna płyta na ekran (najbliższy wyjazd), jedna czerwień (główny przycisk). */
@@ -389,6 +389,32 @@ button.kpas:hover{background:var(--plyta-2)}
   .waski{max-width:720px}
 }
 @media (max-width:520px){.slownik{grid-template-columns:minmax(0,1fr)}.slownik b{margin-top:6px}}
+
+/* mapa MapLibre: pastylki pociągów i znaczniki utrudnień (HTML) */
+#mapa-okno{height:65vh;min-height:360px;overflow:hidden}
+.mpoc{display:flex;align-items:center;gap:5px;height:22px;padding:0 9px 0 2px;border-radius:11px;background:var(--tusz);color:var(--papier);font:700 11px/1 var(--f);white-space:nowrap;cursor:pointer}
+.mpoc i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px var(--papier)}
+.mpoc em{font-style:normal;color:var(--opoz-tlo)}
+.mpoc.kropka{padding:0 0 0 5px;background:none}.mpoc.kropka b{display:none}.mpoc.kropka i{width:12px;height:12px}
+.mpoc.wybrany{z-index:2;box-shadow:0 0 0 2px var(--papier),0 0 0 4.5px var(--tusz)}
+.mkom{width:26px;height:26px;padding:0;border-radius:50%;border:2.5px solid var(--plyta);font:700 15px/1 var(--f);display:grid;place-items:center;cursor:pointer}
+.mkom.utr{background:var(--opoz-tlo);color:var(--opoz)}.mkom.pow{background:var(--opoz);color:var(--papier)}
+.maplibregl-ctrl-group{border-radius:var(--r-m)!important;overflow:hidden}
+.kom[aria-current="true"]{background:var(--plyta-2)}
+.moje-gl,.kom-gl{display:flex;flex-direction:column;gap:12px}
+@media (min-width:920px){
+  #mapa-okno{height:calc(100vh - 200px)}
+  .tlo-ark.boczny{inset:96px 32px 24px auto;background:none;pointer-events:none;align-items:flex-start}
+  .tlo-ark.boczny .ark{pointer-events:auto;width:420px;max-height:100%;box-shadow:0 16px 48px rgba(0,0,0,.28)}
+  #v-stacje{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px 28px;align-items:start}
+  #v-stacje>h1{grid-column:1/-1}
+  #v-stacje>:not(h1):not(#tablica){grid-column:1}
+  #v-stacje>#tablica{grid-column:2;grid-row:2/span 3}
+  .moje-gl{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:28px;align-items:start}
+  .moje-bok{position:sticky;top:88px}
+  .kom-gl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;align-items:start}
+  .kom-panel{position:sticky;top:88px;max-height:calc(100vh - 110px);overflow:auto;padding:24px}
+}
 </style>
 
 <header class="gora"><div class="gora-in">
@@ -425,7 +451,7 @@ button.kpas:hover{background:var(--plyta-2)}
     <div id="detal" class="detal"></div>
   </section>
 
-  <section id="v-stacje" class="kol waski" hidden>
+  <section id="v-stacje" class="kol" hidden>
     <h1>Stacje</h1>
     <div class="plyta kol" style="gap:10px">
       <label class="pole"><span>Stacja</span><input id="stacja" data-lista="stacje" role="combobox" aria-autocomplete="list" aria-controls="lista" aria-expanded="false" autocomplete="off" name="tablica-stacja"></label>
@@ -438,18 +464,18 @@ button.kpas:hover{background:var(--plyta-2)}
     <div class="plyta" id="tablica" style="padding:8px"></div>
   </section>
 
-  <section id="v-komunikaty" class="kol waski" hidden></section>
+  <section id="v-komunikaty" class="kol" hidden></section>
   <section id="v-btk" class="kol waski" hidden></section>
   <section id="v-schemat" class="kol" hidden></section>
   <section id="v-onas" class="kol onas" hidden></section>
 
   <section id="v-mapa" class="kol" hidden>
-    <div class="wiersz rozsun zawin"><h1>Mapa</h1><span class="wiersz zawin" style="gap:8px 14px"><span class="dr" id="mapa-opis"></span><a class="drugi" href="#schemat">Schemat połączeń</a></span></div>
+    <div class="wiersz rozsun zawin"><h1>Mapa</h1><span class="wiersz zawin" style="gap:8px 14px"><span class="dr" id="mapa-opis"></span><button class="drugi" data-a="mapa-cala">Cała sieć</button><a class="drugi" href="#schemat">Schemat połączeń</a></span></div>
     <div class="mapa-okno" id="mapa-okno"></div>
-    <p class="dr maly">Wybierz stację, żeby zobaczyć odjazdy, albo pociąg, żeby zobaczyć jego trasę. Przerywana linia z wykrzyknikiem oznacza utrudnienie. Położenie pociągów obliczamy z rozkładu i opóźnień.</p>
+    <p class="dr maly">Wybierz stację, żeby zobaczyć odjazdy, albo pociąg, żeby zobaczyć jego trasę. Koło z wykrzyknikiem oznacza utrudnienie. Położenie pociągów obliczamy z rozkładu i opóźnień.</p>
   </section>
 
-  <section id="v-moje" class="kol waski" hidden></section>
+  <section id="v-moje" class="kol" hidden></section>
   <section id="v-system" class="kol" hidden></section>
 </main>
 

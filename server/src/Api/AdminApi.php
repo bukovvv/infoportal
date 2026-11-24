@@ -35,7 +35,9 @@ final class AdminApi
     public function v20(array $p): FileResponse
     {
         AdminAuth::require(false);
-        $types = ['index.html' => 'text/html; charset=utf-8', 'app.js' => 'text/javascript; charset=utf-8', 'inter-latin.woff2' => 'font/woff2', 'inter-latin-ext.woff2' => 'font/woff2'];
+        $types = ['index.html' => 'text/html; charset=utf-8', 'app.js' => 'text/javascript; charset=utf-8', 'inter-latin.woff2' => 'font/woff2', 'inter-latin-ext.woff2' => 'font/woff2',
+            // MapLibre (kopia z web/node_modules/maplibre-gl/dist — przy aktualizacji biblioteki podmienić)
+            'maplibre-gl.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl-shared.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl-worker.mjs' => 'text/javascript; charset=utf-8', 'maplibre-gl.css' => 'text/css; charset=utf-8'];
         $type = $types[$p['file']] ?? throw new ApiException('Nie znaleziono pliku.', 404);
 
         return new FileResponse(dirname(__DIR__, 2) . '/v20/' . $p['file'], $type, 0, true);
