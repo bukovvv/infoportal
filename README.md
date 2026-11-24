@@ -2,6 +2,12 @@
 
 Nieoficjalny serwis pasażerski Kolei Wielkopolskich: wyszukiwarka połączeń, tablice odjazdów, mapa pociągów na żywo, obserwowane podróże, komunikaty oraz zakładka Bus-Tramwaj-Kolej (taryfa wspólnego biletu KW + POLREGIO + ZTM Poznań). Interfejs w Material Design 3 (Vue 3 + Vuetify 4), backend w PHP z SQLite. Krój: Figtree (OFL), hostowany lokalnie.
 
+## Licencja kodu
+
+Oryginalny kod źródłowy i dokumentacja projektu, w zakresie praw przysługujących właścicielowi repozytorium, są udostępnione na licencji MIT. Szczegóły znajdują się w pliku [LICENSE](LICENSE).
+
+Licencja MIT nie obejmuje zewnętrznych bibliotek, pakietów, fontów, ikon, danych, plików vendored, certyfikatów, materiałów marki ani znaków towarowych. Te elementy pozostają na warunkach ich autorów, dostawców lub właścicieli. Zobacz [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) przed dalszym wykorzystaniem lub redystrybucją.
+
 ## Źródła danych
 
 | Dane | Źródło | Odświeżanie |
