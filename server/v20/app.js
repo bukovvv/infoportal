@@ -307,15 +307,18 @@ function polKarta(c,sel,day=0){const x=c.legs[0],pr=peron(x.t,x.i);
  ${km.length?`<span class="kpas">${kzn(km[0],1)}<b>${km[0].tyt}</b>${km.length>1?`<em>i ${pl(km.length-1,'kolejny','kolejne','kolejnych')}</em>`:''}</span>`:''}</button>`}
 const kropka=s=>/\.$/.test(s)?s:s+'.'; // „Ostrów Wlkp.” bez drugiej kropki
 function odcinekKursu(g){const k=kurs(g.t.id);if(!k)return null;const A=g.t.st[0].n,B=g.t.st.at(-1).n,i=k.st.findIndex(s=>s.n===A),j=k.st.findIndex((s,x)=>x>i&&s.n===B);return i<0||j<0?null:{k,i,j}}
-function postoje(g,day=0){const o=odcinekKursu(g);if(!o)return osKursu(g.t,g.i,g.j,true,day); // przed wczytaniem kursu — dane z wyszukiwarki
- const{k,i,j}=o,km0=k.st[i].km,c=g.t.l.color,nw=now();
+// wiersz postoju kursu k (x — indeks postoju; i, j — pierwsza i ostatnia pokazana stacja): przyjazd i odjazd,
+// peron i tor, postój, km od pierwszej pokazanej stacji; dodatek — np. plakietka „następna”
+function wierszPostoju(k,x,{i=0,j=k.st.length-1,km0=k.st[i].km,cls='',c,dodatek=''}){const s=k.st[x],first=x===i,last=x===j,nw=now(),dw=!first&&!last&&s.prz!=null&&s.odj!=null?s.odj-s.prz:0;
  const T=(m,d)=>m==null?'':d?`<span class="op">${hm(m+d)}</span><s>${hm(m)}</s>`:hm(m);
- const row=(x,cls)=>{const s=k.st[x],first=x===i,last=x===j,dw=!first&&!last&&s.prz!=null&&s.odj!=null?s.odj-s.prz:0;
-  const czas=first?T(s.odj,s.dd):last?T(s.prz,s.dp):dw>0?`<small>${T(s.prz,s.dp)}</small>${T(s.odj,s.dd)}`:T(s.odj??s.prz,s.dd??s.dp);
-  const tm=last?s.prz+(s.dp||0):(s.odj??s.prz)+(s.dd||0);
-  const pod=[s.skip?'pociąg się tu nie zatrzyma':'',s.p?'peron '+s.p+(s.tor?' · tor '+s.tor:''):'',dw>=2?'postój '+dw+' min':''].filter(Boolean).join(' · ');
-  const km=!first&&s.km!=null&&km0!=null?Math.round(s.km-km0):null;
-  return `<div class="os pos ${cls} ${tm<nw?'byl':''}" style="--c:${c}"><time>${czas}</time><div class="sz"><i></i></div><div class="n"><span><b class="nz">${krotko(s.n)}</b>${pod?`<small>${pod}</small>`:''}</span>${km!=null?`<em>${km} km</em>`:''}</div></div>`};
+ const czas=first?T(s.odj,s.dd):last?T(s.prz,s.dp):dw>0?`<small>${T(s.prz,s.dp)}</small>${T(s.odj,s.dd)}`:T(s.odj??s.prz,s.dd??s.dp);
+ const tm=last?s.prz+(s.dp||0):(s.odj??s.prz)+(s.dd||0);
+ const pod=[s.skip?'pociąg się tu nie zatrzyma':'',s.p?'peron '+s.p+(s.tor?' · tor '+s.tor:''):'',dw>=2?'postój '+dw+' min':''].filter(Boolean).join(' · ');
+ const km=!first&&s.km!=null&&km0!=null?Math.round(s.km-km0):null;
+ return `<div class="os pos ${cls} ${tm<nw?'byl':''}" style="--c:${c}"><time>${czas}</time><div class="sz"><i></i></div><div class="n"><span><span class="nz-w"><b class="nz">${krotko(s.n)}</b>${dodatek}</span>${pod?`<small>${pod}</small>`:''}</span>${km!=null?`<em>${km} km</em>`:''}</div></div>`}
+function postoje(g,day=0){const o=odcinekKursu(g);if(!o)return osKursu(g.t,g.i,g.j,true,day); // przed wczytaniem kursu — dane z wyszukiwarki
+ const{k,i,j}=o,km0=k.st[i].km,c=g.t.l.color;
+ const row=(x,cls)=>wierszPostoju(k,x,{i,j,km0,cls,c});
  let h=row(i,'gl p');const sr=[];for(let x=i+1;x<j;x++)sr.push(row(x,''));
  if(sr.length){const otw=S.rozw?.has(g.t.id);h+=`<div class="os" style="--c:${c}"><span></span><div class="sz"></div><button class="chip" style="justify-self:start;height:36px" data-a="rozwin" data-k="${g.t.id}" aria-expanded="${!!otw}">${pl(sr.length,'przystanek','przystanki','przystanków')} po drodze ${ic(otw?'gora':'dol',14)}</button></div><div ${otw?'':'hidden'}>${sr.join('')}</div>`}
  return h+row(j,'gl k')}
@@ -968,8 +971,7 @@ function arkPociag(id){S.mapSel=id;const t=kurs(id);
  const m=przed?tm(0)-nw:po?0:tm(ni)-nw,p0=peron(t,0).p;
  const gl=t.odw?'Pociąg odwołany':przed?'Odjazd '+(dz?etykDnia(dz).toLowerCase()+' ':'')+'o '+hm(tm(0)):po?'Pociąg dojechał do stacji końcowej':'Następna stacja: '+krotko(t.st[ni].n);
  const sub=t.odw?'Wybierz inne połączenie.':przed?(wKole(m)||dz?'':zaIle(m)+' · ')+krotko(t.st[0].n)+(p0?', peron '+p0:''):po?'Przyjazd o '+hm(tm(L)):'Przyjazd o '+hm(tm(ni))+(wKole(m)?'':', '+zaIle(m));
- const row=k=>{const s=t.st[k],pr=peron(t,k),cls=(k===0?'p ':'')+(k===L?'k ':'')+(k===0||k===L||(k===ni&&!przed)?'gl ':'')+(po||k<ni?'byl':'');
-  return `<div class="os ${cls}" style="--c:${c}"><time>${s.skip?`<s>${hm(s.t)}</s>`:hm(tm(k))}</time><div class="sz"><i></i></div><div class="n"><span>${krotko(s.n)}${k===ni&&!przed?' <span class="znak neutr" style="margin-left:6px">następna</span>':''}</span>${pr.p?`<small>peron ${pr.p}</small>`:''}</div></div>`};
+ const row=k=>wierszPostoju(t,k,{c,cls:(k===0?'p ':'')+(k===L?'k ':'')+(k===0||k===L||(k===ni&&!przed)?'gl':''),dodatek:k===ni&&!przed?'<span class="znak neutr">następna</span>':''});
  let os='';
  if(!po&&ni>1){os+=`<div class="os" style="--c:${c}"><span></span><div class="sz"></div><button class="chip" style="justify-self:start;height:36px" data-a="rozwin" aria-expanded="false">${pl(ni,'stacja','stacje','stacji')} za pociągiem ${ic('dol',14)}</button></div><div hidden>${t.st.slice(0,ni).map((s,k)=>row(k)).join('')}</div>`;for(let k=ni;k<=L;k++)os+=row(k)}
  else for(let k=0;k<=L;k++)os+=row(k);
