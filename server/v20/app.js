@@ -282,7 +282,7 @@ function region(id){S.region=id;R=REG[id];R.id=id;LINES=R.lines;POS=R.pos;WAZNE=
  Object.assign(S,z,{from:R.hub,to:R.cel,station:R.hub,when:null,day:0,kier:'odj',sel:null,selDay:0,mapSel:null,bezp:false,minT:5,bez:[],sch:{set:'reg',linia:null,stacja:null}});
  document.documentElement.dataset.region=id;zamknijListe();mapaStop()}
 const pismo=()=>document.documentElement.style.setProperty('--f',`'${S.font}',system-ui,-apple-system,'Segoe UI',sans-serif`);
-const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font,ulga:S.ulga,pktOkres:S.pktOkres}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
+const save=()=>{try{localStorage.setItem('zw3-tarcza-ust',JSON.stringify({walk:S.walk,theme:S.theme,region:S.region,font:S.font,ulga:S.ulga,pktOkres:S.pktOkres,pktZwin:S.pktZwin}));localStorage.setItem('zw3-tarcza@'+S.region,JSON.stringify({routes:S.routes,trips:S.trips,przyklad:S.przyklad}))}catch(e){}};
 async function zmienRegion(id){if(id===S.region)return;save();region(id);try{await wczytajStacje()}catch(e){toast('Nie udało się wczytać listy stacji.');return}save();ark('');$('#detal').classList.remove('otwarty');formularz();szukaj();route();toast('Wybrany region: '+R.nazwa+'.')}
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>e.hidden=true,2800)}
 
@@ -1001,7 +1001,8 @@ function punktualnosc(t){if(t.l.badge==='BUS')return'';const okres=S.pktOkres||3
   <div><div class="pkt-slupki" role="img" aria-label="Opóźnienia ostatnich ${pl(r.recent.length,'przejazdu','przejazdów','przejazdów')}">${r.recent.map(x=>`<i class="${x.cancelled?'odw':x.delay>r.threshold?'pozn':'ok'}" style="--h:${x.cancelled?100:Math.max(8,Math.min(100,x.delay/30*100))}%" title="${dataPL(x.date)}: ${x.cancelled?'odwołany':x.delay?'+'+x.delay+' min':'na czas'}"></i>`).join('')}</div>
   <div class="wiersz rozsun dr maly" style="margin-top:4px"><span>${dataPL(r.recent[0].date)}</span><span>${dataPL(r.recent.at(-1).date)}</span></div></div>
   <div class="pkt-leg dr maly"><span><i class="ok"></i>na czas</span><span><i class="pozn"></i>opóźniony</span><span><i class="odw"></i>odwołany</span></div>`}
- return `<section class="plyta kol" style="gap:12px"><div class="wiersz rozsun zawin" style="gap:8px"><b>Punktualność</b>${seg}</div>${tresc}</section>`}
+ const zw=!!S.pktZwin,mini=r&&r.runs>=5?`<span class="pkt-mini ${Math.round(r.share)>=90?'ok':Math.round(r.share)>=75?'opoz':'zle'}">${Math.round(r.share)}% na czas</span>`:'';
+ return `<section class="plyta kol" style="gap:12px"><button class="pkt-nagl" data-a="pkt-zwin" aria-expanded="${!zw}"><b>Punktualność</b>${zw?mini:''}${ic(zw?'dol':'gora',18)}</button>${zw?'':`<div>${seg}</div>${tresc}`}</section>`}
 
 /* ---------- arkusze ---------- */
 let AZ=0;
@@ -1239,6 +1240,7 @@ document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!
    if(!pushTu())break;const stare=r.pow;r.pow={okna,at:Date.now()};ark('');PW=null;rMoje();
    powiadomTrase(r).then(()=>{save();rMoje();toast('Zapisano powiadomienia o trasie.')}).catch(e=>{r.pow=stare;save();rMoje();toast(e.message)});break}
   case'pw-wylacz':{const r=S.routes[PW.i];wylaczTrase(r).catch(()=>{});r.pow=null;save();ark('');PW=null;rMoje();toast('Powiadomienia o trasie są wyłączone.');break}
+  case'pkt-zwin':S.pktZwin=!S.pktZwin;save();if(ARK?.f===arkPociag)arkPociag(ARK.a);break;
   case'pkt-okres':S.pktOkres=+el.dataset.k;save();if(ARK?.f===arkPociag)arkPociag(ARK.a);break;
   case'mapa-cala':if(MAP?._bb)MAP.fitBounds(MAP._bb,{padding:30});break;
   case'poc-nr':fetch(API()+'/trains?q='+encodeURIComponent(el.dataset.n)).then(r=>r.json()).then(j=>{const x=j.trains?.[0];if(x)arkPociag(x.key);else toast('Nie znaleźliśmy tego pociągu w rozkładzie.')}).catch(()=>toast('Nie udało się wyszukać pociągu.'));break;
