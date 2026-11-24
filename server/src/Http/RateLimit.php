@@ -46,7 +46,7 @@ final class RateLimit
         flock($handle, LOCK_UN);
         fclose($handle);
         if (random_int(1, 500) === 1) {
-            self::cleanup($dir, $now);
+            self::cleanup($dir);
         }
         if ($count > $max) {
             $retry = ($slot + 1) * $window - $now;
@@ -66,10 +66,11 @@ final class RateLimit
         return $salt;
     }
 
-    private static function cleanup(string $dir, int $now): void
+    /** Usuwa pliki nieużywane od doby — według zegara, bo daty plików są prawdziwe (test z podanym $now kasowałby wszystkie). */
+    private static function cleanup(string $dir): void
     {
         foreach (glob($dir . '/*') ?: [] as $file) {
-            if (filemtime($file) < $now - 86400) {
+            if (filemtime($file) < time() - 86400) {
                 @unlink($file);
             }
         }
