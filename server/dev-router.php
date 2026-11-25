@@ -19,6 +19,11 @@ if ($path !== '/' && is_file($public . rtrim($path, '/') . '/index.html')) {
     readfile($public . rtrim($path, '/') . '/index.html'); // katalog z index.html (np. /v20/), jak DirectoryIndex
     return true;
 }
+if (preg_match('#^/v2(/|$)#', $path) && is_file($public . '/v2/index.html')) {
+    header('Content-Type: text/html; charset=utf-8');
+    readfile($public . '/v2/index.html'); // wersja 2.0 (vue-router pod /v2), jak reguła w .htaccess
+    return true;
+}
 if (is_file($public . '/index.html')) {
     header('Content-Type: text/html; charset=utf-8');
     readfile($public . '/index.html');

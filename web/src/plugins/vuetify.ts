@@ -225,6 +225,12 @@ const tarczaDark: ThemeDefinition = {
   },
 }
 
+// wersja 2.0 w Małopolsce: akcja w stonowanym niebieskim, ciemna płyta granatowa (jak data-region="mal" w makiecie)
+if (region.id === 'malopolska') {
+  Object.assign(tarcza.colors!, { primary: '#2A55B0', 'on-primary': '#FFFFFF', band: '#141C29' })
+  Object.assign(tarczaDark.colors!, { primary: '#B3C6F2', 'on-primary': '#141C29', band: '#1F2736' })
+}
+
 const aliases: Record<string, string> = {
   collapse: 'keyboard_arrow_up', complete: 'check', cancel: 'cancel', close: 'close', delete: 'cancel', clear: 'close',
   success: 'check_circle', info: 'info', warning: 'warning', error: 'error', prev: 'chevron_left', next: 'chevron_right',

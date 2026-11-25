@@ -34,8 +34,22 @@ function materialSymbols(): Plugin {
   }
 }
 
+/** Serwer deweloperski: adresy wersji 2.0 (/v2/odjazdy/…) → v2/index.html, jak reguła w public/.htaccess. */
+function v2Fallback(): Plugin {
+  return {
+    name: 'v2-fallback',
+    configureServer(server) {
+      server.middlewares.use((req, _res, next) => {
+        const path = (req.url ?? '').split('?')[0]
+        if (/^\/v2(\/|$)/.test(path) && !/\.\w+$/.test(path)) req.url = '/v2/index.html'
+        next()
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [vue(), vuetify({ autoImport: true }), materialSymbols()],
+  plugins: [vue(), vuetify({ autoImport: true }), materialSymbols(), v2Fallback()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
@@ -53,6 +67,12 @@ export default defineConfig({
     emptyOutDir: false,
     assetsDir: 'assets',
     chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        v2: fileURLToPath(new URL('./v2/index.html', import.meta.url)),
+      },
+    },
   },
   test: {
     environment: 'jsdom',

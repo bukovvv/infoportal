@@ -100,6 +100,7 @@ export const REGION_LIST: Region[] = Object.values(REGIONS).filter((r) => !r.adm
 
 /** Region z adresu strony: /malopolska i wszystko pod nim — Małopolska, reszta — Wielkopolska. */
 export function regionFromPath(pathname: string): Region {
+  pathname = pathname.replace(/^\/v2(?=\/|$)/, '') // shortcut: wersja 2.0 pod /v2 do czasu podmiany 1.0, potem usunąć
   return Object.values(REGIONS).find((r) => r.base && (pathname === r.base || pathname.startsWith(r.base + '/'))) ?? REGIONS[DEFAULT_REGION]
 }
 

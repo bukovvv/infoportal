@@ -9,6 +9,10 @@ describe('region', () => {
     expect(regionFromPath('/malopolska/odjazdy/80416').id).toBe('malopolska')
     // tylko cały segment adresu
     expect(regionFromPath('/malopolskaxyz').id).toBe('wielkopolska')
+    // wersja 2.0 pod /v2
+    expect(regionFromPath('/v2/malopolska/mapa').id).toBe('malopolska')
+    expect(regionFromPath('/v2').id).toBe('wielkopolska')
+    expect(regionFromPath('/v2malopolska').id).toBe('wielkopolska')
   })
 
   it('buduje adresy w regionie', () => {

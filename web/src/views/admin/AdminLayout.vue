@@ -62,6 +62,7 @@ const items = computed(() => [
             <!-- podgląd rozkładu całej Polski to osobny region (pełne wczytanie), stąd zwykły link -->
             <a href="/nowyrj27" class="side-item minor"><v-icon icon="manage_search" size="20" /><span>Nowy RJ 2026/27</span></a>
             <a href="/v20" class="side-item minor"><v-icon icon="visibility" size="20" /><span>Wersja 2.0 (test)</span></a>
+            <a href="/v2/admin" class="side-item minor"><v-icon icon="visibility" size="20" /><span>Panel 2.0 (test)</span></a>
           </div>
           <p v-if="mdAndUp" class="side-foot">Sesja wygasa po 2 h bezczynności. Niezapisany formularz zostaje w tej przeglądarce.</p>
         </nav>
