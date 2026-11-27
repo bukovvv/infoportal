@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { ApiError } from '@/api/client'
+import foto from '@/assets/login-pociag.webp'
+import fotoMaly from '@/assets/login-pociag-maly.webp'
 import { useAdmin } from '@/stores/admin'
 
-// Logowanie do panelu 2.0: ciemna płyta z godziną i krokiem, pod nią pola i jeden czerwony przycisk.
+// Logowanie do panelu 2.0: obok zdjęcie Elfa KW (na telefonie nad formularzem), ciemna płyta z godziną i krokiem,
+// pod nią pola i jeden czerwony przycisk.
 // Bez kodu z aplikacji serwer odpowiada { twoFactor: true } — wtedy drugi krok wysyła hasło jeszcze raz z kodem.
 const admin = useAdmin()
 
@@ -69,6 +72,11 @@ function onCode(v: string) {
 </script>
 
 <template>
+  <div class="log-uklad">
+  <figure class="log-foto">
+    <img :src="foto" :srcset="`${fotoMaly} 820w, ${foto} 1600w`" sizes="(min-width: 920px) 60vw, 100vw" alt="Elf Kolei Wielkopolskich (EN76) na zaśnieżonym torze" decoding="async" fetchpriority="high">
+    <figcaption>Elf · Koleje Wielkopolskie</figcaption>
+  </figure>
   <section class="logowanie" aria-labelledby="h-log">
     <div class="blok log-blok">
       <div class="wiersz rozsun">
@@ -111,10 +119,17 @@ function onCode(v: string) {
     </form>
     <p class="podp log-stopka">Po 5 błędnych próbach logowanie blokuje się na 15 minut, przy kolejnych seriach na godzinę, a potem na dobę.</p>
   </section>
+  </div>
 </template>
 
 <style scoped>
-.logowanie { width: 100%; max-width: 440px; margin: 24px auto 0; display: flex; flex-direction: column; gap: 12px; }
+.log-uklad { display: grid; gap: 16px; align-items: stretch; }
+@media (min-width: 920px) { .log-uklad { grid-template-columns: minmax(0, 1.25fr) minmax(360px, 440px); gap: 24px; margin-top: 8px; min-height: min(640px, calc(100dvh - 120px)); } }
+.log-foto { position: relative; margin: 0; border-radius: var(--r-l); overflow: hidden; background: var(--blok); height: 200px; }
+@media (min-width: 920px) { .log-foto { height: auto; } }
+.log-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 58% 55%; }
+.log-foto figcaption { position: absolute; left: 16px; bottom: 16px; height: 32px; padding: 0 14px; border-radius: 16px; display: inline-flex; align-items: center; background: rgba(20, 23, 28, .72); color: #F1F3F6; font-size: 13px; font-weight: 600; backdrop-filter: blur(6px); }
+.logowanie { width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
 .log-blok { display: flex; flex-direction: column; gap: 8px; padding: 24px; }
 .log-blok h1 { font-size: 34px; }
 .log-godz { font-size: 15px; font-weight: 700; }

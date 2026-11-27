@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '@/api/client'
+import foto from '@/assets/login-pociag-maly.webp'
 import { useAdmin } from '@/stores/admin'
 import { healthSummary, sourceRows, type Health } from '@/utils/adminHealth'
 import { noticeState, stampMs } from '@/utils/adminNotices'
@@ -70,6 +71,8 @@ const facts = computed(() => {
 
   <!-- jedyna ciemna płyta na ekranie -->
   <section class="blok teraz" aria-labelledby="h-teraz">
+    <!-- kolejowy akcent: Elf KW z prawej, przechodzi w kolor płyty (na telefonie u góry) -->
+    <img class="teraz-foto" :src="foto" alt="" decoding="async">
     <span class="dr">Teraz</span>
     <h2 id="h-teraz">{{ headline }}</h2>
     <p v-if="severities" class="dr">{{ severities }}</p>
@@ -133,7 +136,14 @@ const facts = computed(() => {
 
 <style scoped>
 .pierwsza::first-letter { text-transform: uppercase; }
-.teraz { display: flex; flex-direction: column; gap: 6px; padding: 22px 24px 24px; }
+.teraz { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 6px; padding: 22px 24px 24px; }
+.teraz > :not(.teraz-foto) { position: relative; }
+.teraz-foto { position: absolute; top: 0; right: 0; width: 52%; height: 100%; object-fit: cover; object-position: 60% 50%; -webkit-mask-image: linear-gradient(to right, transparent, #000 55%); mask-image: linear-gradient(to right, transparent, #000 55%); opacity: .9; pointer-events: none; }
+@media (min-width: 920px) { .teraz > :not(.teraz-foto) { max-width: 60%; } }
+@media (max-width: 919px) {
+  .teraz { padding-top: 170px; }
+  .teraz-foto { width: 100%; height: 190px; object-position: 58% 60%; -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent); mask-image: linear-gradient(to bottom, #000 45%, transparent); }
+}
 .teraz h2 { font-size: 26px; line-height: 1.2; letter-spacing: -.02em; }
 .fakty-adm { display: grid; gap: 8px; margin: 14px 0 16px; padding-top: 14px; border-top: 1px solid var(--blok-tor); }
 .fakt { display: grid; grid-template-columns: 10px 150px minmax(0, 1fr); align-items: baseline; gap: 10px; font-size: 14px; }
