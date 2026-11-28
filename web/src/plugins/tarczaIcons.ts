@@ -74,6 +74,7 @@ export const TZ_ICONS: Record<string, string> = {
   notifications: '<path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
   directions_walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M10 21l2-6-2.5-2.5 1-5 3 3 3 1M9.5 12.5L7 13M12 15l3 2 1 4"/>',
   swap_vert: '<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>',
+  my_location: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
   electric_bolt: '<path d="M13 3L5 13h6l-1 8 8-10h-6z"/>',
   accessible: '<circle cx="11" cy="4.5" r="1.6"/><path d="M11 7.5v6h5l2 5"/><path d="M8 10.5a5.5 5.5 0 1 0 7.5 6.5"/>',
   pedal_bike: '<circle cx="6" cy="16" r="3.5"/><circle cx="18" cy="16" r="3.5"/><path d="M6 16l4-7h5l3 7M10 9L8.5 6H7M15 9l-1.5-3H16"/>',

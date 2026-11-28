@@ -24,7 +24,7 @@ const router = createRouter({
   history: createWebHistory('/v2' + region.base),
   routes: [
     { path: '/', name: 'szukaj', component: () => import('./views/SearchView.vue') },
-    { path: '/odjazdy/:id?', name: 'stacje', component: Placeholder, meta: { title: 'Stacje' } },
+    { path: '/odjazdy/:id?', name: 'stacje', component: () => import('./views/StationsView.vue') },
     { path: '/mapa', name: 'mapa', component: Placeholder, meta: { title: 'Mapa' } },
     { path: '/komunikaty/:id?', name: 'komunikaty', component: Placeholder, meta: { title: 'Komunikaty' } },
     { path: '/moje', name: 'moje', component: Placeholder, meta: { title: 'Moje' } },
