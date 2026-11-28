@@ -16,3 +16,11 @@ describe('v2/util', () => {
     expect(short('Gniezno')).toBe('Gniezno')
   })
 })
+
+describe('minutesBetween', async () => {
+  const { minutesBetween } = await import('./util')
+  it('liczy minuty jak na zegarze, bez sekund', () => {
+    expect(minutesBetween('2026-11-28T18:07:30+01:00', '2026-11-28T18:21:00+01:00')).toBe(14)
+    expect(minutesBetween('2026-11-28T23:58:00+01:00', '2026-11-29T00:03:00+01:00')).toBe(5)
+  })
+})

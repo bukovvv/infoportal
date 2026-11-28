@@ -6,7 +6,7 @@ import { api } from '@/api/client'
 import type { Connection, ConnectionsResult } from '@/api/types'
 import { useNotices, useStations } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
-import { useRoutes } from '@/stores/routes'
+import { ends, useRoutes, type SavedRoute } from '@/stores/routes'
 import { read, useUi, write } from '@/stores/ui'
 import { warsawNow } from '@/utils/format'
 import { region } from '@/utils/region'
@@ -15,6 +15,7 @@ import ConnCard from '../components/ConnCard.vue'
 import ConnDetail from '../components/ConnDetail.vue'
 import NextDeparture from '../components/NextDeparture.vue'
 import OptionsArk from '../components/OptionsArk.vue'
+import StartExtras from '../components/StartExtras.vue'
 import StationPole from '../components/StationPole.vue'
 import WhenArk from '../components/WhenArk.vue'
 import { connKey, dayChip, fullDate, hm } from '../util'
@@ -132,9 +133,34 @@ function watchRoute() {
 // wybrane połączenie: na komputerze szczegóły obok listy, na telefonie na całym ekranie po dotknięciu
 const sel = ref<Connection | null>(null)
 const detailOpen = ref(false)
+/** zamknięcie szczegółów; bez wyników (podróż ze startu) wraca też na komputerze do startu */
+function closeDetail() {
+  detailOpen.value = false
+  if (!result.value) sel.value = null
+}
 function select(c: Connection) {
   sel.value = c
   detailOpen.value = true
+}
+
+/** „Moje trasy” na starcie: wyszukiwarka od teraz z opcjami trasy (kierunek jak na karcie). */
+function searchRoute(r: SavedRoute) {
+  const e = ends(r)
+  from.value = e.from.id
+  to.value = e.to.id
+  options.value = { ...r.options, agencies: [...r.options.agencies] }
+  arriveBy.value = false
+  custom.value = false
+  void search()
+}
+
+/** popularna trasa ze startu: od teraz, z bieżącymi opcjami */
+function pickRoute(a: string, b: string) {
+  from.value = a
+  to.value = b
+  arriveBy.value = false
+  custom.value = false
+  void search()
 }
 
 let timer = 0
@@ -190,10 +216,12 @@ const optionsCount = computed(() => changedCount(options.value))
           </template>
         </template>
       </div>
+      <StartExtras v-if="!mdAndUp && !result" :now="now" @open="select" @route="searchRoute" @pick="pickRoute" />
     </div>
 
     <div class="detal" :class="{ otwarty: detailOpen && !!sel }">
-      <ConnDetail v-if="sel" :key="connKey(sel)" :c="sel" :now="now" @close="detailOpen = false" />
+      <ConnDetail v-if="sel" :key="connKey(sel)" :c="sel" :now="now" :back="!result" @close="closeDetail" />
+      <StartExtras v-else-if="mdAndUp" :now="now" @open="select" @route="searchRoute" @pick="pickRoute" />
     </div>
 
     <WhenArk v-model="whenOpen" v-model:date="date" v-model:time="time" v-model:arrive-by="arriveBy" @apply="whenApplied" />

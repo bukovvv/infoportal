@@ -26,6 +26,8 @@ export const trainName = (number: string) => number.trim().split(/\s+/).slice(1)
 /** Skrót nazwy stacji jak na tablicach: „Poznań Główny” → „Poznań Gł.”. */
 export const short = (name: string) => name.replace(/ Główny$/, ' Gł.').replace(/ Wielkopolski(e)?$/, ' Wlkp.')
 
+/** minuty między godzinami tak, jak je widać (bez sekund): 18:07:30 → 18:21 = 14 min */
+export const minutesBetween = (a: string, b: string) => Math.floor(new Date(b).getTime() / 60_000) - Math.floor(new Date(a).getTime() / 60_000)
 export const minutesFrom = (iso: string, now = Date.now()) => Math.round((new Date(iso).getTime() - now) / 60_000)
 /** „teraz”, „za 12 min”, „za 1 h 5 min”. */
 export const inWords = (m: number) => (m <= 0 ? 'teraz' : `za ${duration(m)}`)

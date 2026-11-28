@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useDisplay } from 'vuetify'
-import type { Connection, Leg } from '@/api/types'
+import type { Connection } from '@/api/types'
 import { useNotices } from '@/stores/data'
 import { useJourneys } from '@/stores/journeys'
 import { useUi } from '@/stores/ui'
 import { warsawNow } from '@/utils/format'
 import { downloadIcs } from '@/utils/ics'
 import { connectionUrl, shareConnection } from '@/utils/share'
-import { addDays, depDelay, dur, expArr, expDep, fullDate, hm, inDial, inWords, lineOf, minutesFrom, plural, short, trainName, trainShort } from '../util'
+import { addDays, depDelay, dur, expArr, expDep, fullDate, hm, inDial, inWords, minutesFrom, short } from '../util'
 import Dial from './Dial.vue'
+import LegPlate from './LegPlate.vue'
+import TransferBlock from './TransferBlock.vue'
 
 // Szczegóły połączenia (makieta: rDetal): ciemna płyta z godzinami, kafle, komunikaty, każdy pociąg na własnej płycie
 // z postojami, „Do kalendarza”, „Powiadom mnie” i „Obserwuj podróż”. Na telefonie na całym ekranie, na komputerze obok listy.
-const props = defineProps<{ c: Connection; now: number }>()
+const props = defineProps<{ c: Connection; now: number; back?: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const notices = useNotices()
 const journeys = useJourneys()
@@ -35,13 +37,6 @@ const alerts = computed(() => notices.forConnection(props.c))
 const saved = computed(() => journeys.has(props.c))
 const notifying = computed(() => !!journeys.list.find((j) => j.id === journeys.idOf(props.c))?.notify)
 
-// postoje odcinka: wsiadanie, stacje pośrednie (zwinięte), wysiadanie
-const open = ref(new Set<string>())
-const toggle = (k: string) => { const s = new Set(open.value); if (!s.delete(k)) s.add(k); open.value = s }
-const stops = (l: Leg) => (l.stops ?? []).filter((s) => !s.skipped)
-const past = (iso: string, d: number | null | undefined) => new Date(iso).getTime() + (d ?? 0) * 60_000 < props.now
-const at = (iso: string, d: number | null | undefined) => hm(new Date(new Date(iso).getTime() + (d ?? 0) * 60_000).toISOString())
-const wait = (i: number) => Math.round((new Date(props.c.legs[i].departure).getTime() - new Date(props.c.legs[i - 1].arrival).getTime()) / 60_000)
 
 function watchJourney() {
   if (saved.value) {
@@ -57,7 +52,7 @@ function watchJourney() {
 <template>
   <div class="kol" style="gap: 10px">
     <div class="detal-gl">
-      <button type="button" class="kolo wroc" aria-label="Wróć do listy połączeń" @click="emit('close')"><v-icon icon="arrow_back" /></button>
+      <button type="button" class="kolo wroc" :class="{ zawsze: back }" :aria-label="back ? 'Wróć' : 'Wróć do listy połączeń'" @click="emit('close')"><v-icon icon="arrow_back" /></button>
       <b>{{ short(c.legs[0].from.name) }} → {{ short(c.legs.at(-1)!.to.name) }}</b>
       <button type="button" class="kolo" aria-label="Udostępnij" @click="shareConnection(c)"><v-icon icon="share" /></button>
     </div>
@@ -77,6 +72,7 @@ function watchJourney() {
       <div class="kafle" style="margin-top: 8px">
         <div v-if="first.platform" class="kafel"><span>peron</span><b>{{ first.platform }}<small v-if="first.track"> · tor {{ first.track }}</small></b></div>
         <div class="kafel"><span>czas jazdy</span><b>{{ dur(c.durationMinutes) }}</b></div>
+        <div class="kafel"><span>przesiadki</span><b>{{ c.legs.length - 1 || 'brak' }}</b></div>
         <div v-if="c.distanceKm" class="kafel"><span>odległość</span><b>{{ c.distanceApprox ? 'ok. ' : '' }}{{ Math.round(c.distanceKm) }} km</b></div>
       </div>
     </section>
@@ -86,42 +82,8 @@ function watchJourney() {
     </p>
 
     <template v-for="(l, i) in c.legs" :key="l.key">
-      <div v-if="i" class="przes"><v-icon icon="directions_walk" size="18" />Przesiadka na stacji {{ short(l.from.name) }} · {{ wait(i) }} min</div>
-      <section class="plyta kol" style="gap: 10px">
-        <div class="kol" style="gap: 2px; padding: 0 2px">
-          <div class="wiersz zawin" style="gap: 4px 10px">
-            <span class="lin" :style="{ '--c': lineOf(l).color }" />
-            <b class="poc">{{ trainShort(l) }}</b>
-          </div>
-          <span v-if="trainName(l.number)" class="nazwa-p">„{{ trainName(l.number) }}”</span>
-          <span class="dr maly">Przewoźnik: {{ lineOf(l).company }}.{{ lineOf(l).line ? ` Linia ${lineOf(l).line}.` : '' }} Kierunek: {{ short(l.headsign) }}.</span>
-          <span v-if="l.agency === 'IC'" class="dr maly">Bilety KW i POLREGIO tu nie obowiązują, potrzebny bilet PKP Intercity.</span>
-          <span v-else-if="l.agency === 'PR' && l.kwTickets === false" class="dr maly">Na tym odcinku potrzebny bilet POLREGIO.</span>
-        </div>
-        <div>
-          <div class="os gl p" :class="{ byl: past(l.departure, l.departureDelay) }" :style="{ '--c': lineOf(l).color }">
-            <time>{{ at(l.departure, l.departureDelay) }}</time><div class="sz"><i /></div>
-            <div class="n"><span>{{ short(l.from.name) }}</span><small v-if="l.platform">peron {{ l.platform }}{{ l.track ? ` · tor ${l.track}` : '' }}</small></div>
-          </div>
-          <template v-if="stops(l).length">
-            <div class="os" :style="{ '--c': lineOf(l).color }">
-              <span /><div class="sz" />
-              <button type="button" class="chip" style="justify-self: start; height: 36px" :aria-expanded="open.has(l.key)" @click="toggle(l.key)">
-                {{ stops(l).length }} {{ plural(stops(l).length, 'przystanek', 'przystanki', 'przystanków') }} po drodze <v-icon :icon="open.has(l.key) ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" size="14" />
-              </button>
-            </div>
-            <div v-if="open.has(l.key)">
-              <div v-for="s in stops(l)" :key="s.id" class="os" :class="{ byl: past(s.departure, s.delay) }" :style="{ '--c': lineOf(l).color }">
-                <time>{{ at(s.departure, s.delay) }}</time><div class="sz"><i /></div><div class="n"><span>{{ short(s.name) }}</span><small v-if="s.requestOnly">na żądanie</small></div>
-              </div>
-            </div>
-          </template>
-          <div class="os gl k" :class="{ byl: past(l.arrival, l.arrivalDelay) }" :style="{ '--c': lineOf(l).color }">
-            <time>{{ at(l.arrival, l.arrivalDelay) }}</time><div class="sz"><i /></div>
-            <div class="n"><span>{{ short(l.to.name) }}</span><small v-if="l.arrivalPlatform">peron {{ l.arrivalPlatform }}</small></div>
-          </div>
-        </div>
-      </section>
+      <TransferBlock v-if="i" :from="c.legs[i - 1]" :to="l" />
+      <LegPlate :leg="l" :now="now" />
     </template>
 
     <div class="strony">
@@ -137,6 +99,7 @@ function watchJourney() {
 </template>
 
 <style scoped>
-.poc { font-size: 17px; font-weight: 700; }
+.detal-gl:has(.wroc.zawsze) { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+.detal-gl .wroc.zawsze { display: grid; }
 .kpas { margin: 0; padding: 0 4px; }
 </style>
