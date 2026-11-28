@@ -23,7 +23,7 @@ export const ADMIN_TABS = [
 const router = createRouter({
   history: createWebHistory('/v2' + region.base),
   routes: [
-    { path: '/', name: 'szukaj', component: Placeholder, meta: { title: 'Dokąd jedziesz?' } },
+    { path: '/', name: 'szukaj', component: () => import('./views/SearchView.vue') },
     { path: '/odjazdy/:id?', name: 'stacje', component: Placeholder, meta: { title: 'Stacje' } },
     { path: '/mapa', name: 'mapa', component: Placeholder, meta: { title: 'Mapa' } },
     { path: '/komunikaty/:id?', name: 'komunikaty', component: Placeholder, meta: { title: 'Komunikaty' } },
