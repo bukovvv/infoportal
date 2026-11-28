@@ -33,9 +33,11 @@ const rows = computed<TripStop[] | null>(() => {
 })
 const middle = computed(() => (rows.value ? rows.value.slice(1, -1) : (l.value.stops ?? [])).filter((s) => !s.skipped))
 const open = ref(false)
+const showAmenities = ref(false)
 
 const minutes = computed(() => minutesBetween(l.value.departure, l.value.arrival))
 const vehicle = computed(() => l.value.vehicleType ?? trip.value?.vehicleType ?? null)
+const amenities = computed(() => (vehicle.value ? vehicleAmenities(vehicle.value) : []))
 const relation = computed(() => (trip.value ? `${short(trip.value.origin)} – ${short(trip.value.destination)}` : ''))
 
 const plus = (iso: string | null, d: number | null | undefined) => (iso ? new Date(new Date(iso).getTime() + (d ?? 0) * 60_000).toISOString() : null)
@@ -87,9 +89,19 @@ const cache = new Map<string, Trip>()
       <span><v-icon icon="schedule" size="16" />{{ dur(minutes) }}</span>
       <span v-if="leg.distanceKm"><v-icon icon="route" size="16" />{{ Math.round(leg.distanceKm) }} km</span>
       <span>{{ leg.stopsBetween ? `${leg.stopsBetween} ${plural(leg.stopsBetween, 'przystanek', 'przystanki', 'przystanków')} po drodze` : 'bez przystanków po drodze' }}</span>
-      <span v-if="vehicle"><v-icon :icon="vehicle.kind === 'emu' ? 'electric_bolt' : 'train'" size="16" />{{ VEHICLE_KINDS[vehicle.kind].short }}</span>
-      <span v-for="a in vehicle ? vehicleAmenities(vehicle).filter((x) => x.on) : []" :key="a.icon"><v-icon :icon="a.icon" size="16" />{{ a.label.toLowerCase() }}</span>
       <span v-if="leg.isBus"><v-icon icon="warning" size="16" />autobus zastępczy</span>
+    </div>
+    <!-- pojazd: typ zawsze, wyposażenie dopiero po kliknięciu -->
+    <div v-if="vehicle" class="pojazd">
+      <p><span class="dr">Typ pojazdu:</span> <b>{{ VEHICLE_KINDS[vehicle.kind].short }}</b></p>
+      <template v-if="amenities.length">
+        <button type="button" class="wyp-przycisk" :aria-expanded="showAmenities" @click="showAmenities = !showAmenities">
+          <span class="dr">Wyposażenie</span> {{ showAmenities ? 'zwiń' : 'pokaż' }}<v-icon :icon="showAmenities ? 'keyboard_arrow_up' : 'keyboard_arrow_down'" size="16" />
+        </button>
+        <ul v-if="showAmenities" class="wyp">
+          <li v-for="a in amenities" :key="a.icon" :class="{ brak: !a.on }"><v-icon :icon="a.icon" size="16" />{{ a.label }}</li>
+        </ul>
+      </template>
     </div>
     <p class="dr maly">{{ line.company }}{{ line.line ? ` · linia ${line.line}` : '' }}</p>
     <p v-if="leg.agency === 'IC'" class="bilet-uw">Bilety KW i POLREGIO tu nie obowiązują, potrzebny bilet PKP Intercity.</p>
@@ -130,6 +142,12 @@ const cache = new Map<string, Trip>()
 .poc-nr b { font-weight: 700; }
 .poc-fakty { display: flex; flex-wrap: wrap; gap: 6px; }
 .poc-fakty span { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 15px; background: var(--papier); font-size: 13px; font-weight: 600; }
+.pojazd { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; font-size: 14px; }
+.pojazd b { font-weight: 700; }
+.wyp-przycisk { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; }
+.wyp { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.wyp li { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+.wyp li.brak { color: var(--tusz-2); font-weight: 500; }
 .bilet-uw { font-size: 13px; font-weight: 600; color: var(--opoz); background: var(--opoz-tlo); padding: 8px 12px; border-radius: var(--r-s); }
 .os .n > span { display: flex; flex-direction: column; min-width: 0; }
 .os .n > span small { white-space: normal; }
